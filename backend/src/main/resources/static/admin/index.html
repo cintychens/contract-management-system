@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员控制台 · 智能物流合同管理系统</title>
+
+    <!-- 字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- 引入 Chart.js 用于图表展示 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* ========== 布局 ========== */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ========== 侧边栏（管理员专属样式） ========== */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #0a1a2b 0%, #0e2a3f 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 4px 0 20px rgba(0, 20, 40, 0.3);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 100;
+            border-right: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .sidebar-header {
+            padding: 0 24px 30px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #0a1a2b;
+            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
+        }
+
+        .logo-text h2 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            color: #ffd700;
+        }
+
+        .logo-text p {
+            font-size: 12px;
+            opacity: 0.8;
+            letter-spacing: 0.5px;
+            color: #a0b8cc;
+        }
+
+        .nav-menu {
+            padding: 0 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-radius: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: all 0.25s;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 22px;
+            font-size: 18px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffd700;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(95deg, #ffd700, #ffa500);
+            color: #0a1a2b;
+            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.3);
+        }
+
+        .nav-item.active i {
+            color: #0a1a2b;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: rgba(255, 215, 0, 0.2);
+            margin: 20px 0;
+        }
+
+        .nav-section-title {
+            padding: 10px 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ffd700;
+            opacity: 0.7;
+        }
+
+        /* ========== 主内容区 ========== */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 35px;
+            background: #f0f4f8;
+        }
+
+        /* ========== 顶部导航 ========== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0, 20, 40, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .page-title h1 {
+            font-size: 24px;
+            color: #0a1a2b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title h1 i {
+            color: #ffd700;
+            font-size: 28px;
+            text-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, #ffd700, #ffa500);
+            color: #0a1a2b;
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .notification-badge {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .notification-badge i {
+            font-size: 22px;
+            color: #2d6da0;
+        }
+
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 6px;
+            border-radius: 30px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px 6px 6px;
+            border-radius: 40px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .user-info:hover {
+            background: #fff3cd;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0a1a2b;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .user-details {
+            line-height: 1.4;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: #0a1a2b;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        /* ========== 系统状态卡片 ========== */
+        .system-status {
+            background: linear-gradient(145deg, #0a1a2b, #1a3347);
+            color: white;
+            border-radius: 28px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .system-status h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffd700;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .status-item {
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .status-item i {
+            font-size: 28px;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .status-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 10px 0 5px;
+            color: #ffd700;
+        }
+
+        .status-label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 8px;
+            margin-right: 5px;
+        }
+
+        .indicator-green {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        .indicator-red {
+            background: #ef4444;
+        }
+
+        .indicator-yellow {
+            background: #f59e0b;
+        }
+
+        /* ========== 快捷操作卡片 ========== */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 22px;
+            margin-bottom: 30px;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+        }
+
+        .action-card i {
+            font-size: 40px;
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .action-card h3 {
+            font-size: 18px;
+            color: #0a1a2b;
+            margin-bottom: 8px;
+        }
+
+        .action-card p {
+            font-size: 13px;
+            color: #6b7b8f;
+        }
+
+        /* ========== 内容区域 ========== */
+        .content-section {
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-header h2 {
+            font-size: 20px;
+            color: #0a1a2b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h2 i {
+            color: #ffd700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            color: #0a1a2b;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid #ffd700;
+            color: #0a1a2b;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-outline:hover {
+            background: #fff3cd;
+            border-color: #ffa500;
+        }
+
+        /* ========== 表格样式 ========== */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 12px;
+            color: #4f6f8f;
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 2px solid #ffd700;
+        }
+
+        td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #eef2f6;
+            color: #2d4059;
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-active {
+            background: #e3f7ec;
+            color: #10b981;
+        }
+
+        .status-pending {
+            background: #fff4e0;
+            color: #f59e0b;
+        }
+
+        .status-expired {
+            background: #fee9e9;
+            color: #dc3545;
+        }
+
+        .status-disabled {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .admin-badge-small {
+            background: #ffd700;
+            color: #0a1a2b;
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #ffd700;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #fff3cd;
+            color: #ffa500;
+        }
+
+        .action-btn.danger {
+            color: #dc3545;
+        }
+
+        .action-btn.danger:hover {
+            background: #fee9e9;
+        }
+
+        /* ========== 标签页 ========== */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 30px;
+            font-weight: 600;
+            color: #6b7b8f;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: #fff3cd;
+            color: #0a1a2b;
+        }
+
+        .tab.active {
+            background: #ffd700;
+            color: #0a1a2b;
+        }
+
+        /* ========== 搜索和筛选 ========== */
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border-radius: 30px;
+            padding: 5px 15px;
+            border: 1px solid #eef2f6;
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            padding: 10px;
+            width: 250px;
+            outline: none;
+        }
+
+        .search-box i {
+            color: #ffd700;
+        }
+
+        /* ========== 统计卡片 ========== */
+        .stats-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-mini-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .stat-mini-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 1400px) {
+            .status-grid, .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 90px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .nav-item span,
+            .sidebar .nav-section-title {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 90px;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 14px 0;
+            }
+
+            .nav-item i {
+                width: auto;
+                font-size: 22px;
+            }
+
+            .logo-area {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .status-grid, .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* ========== 模态框 ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 28px;
+            padding: 30px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 2px solid #ffd700;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #0a1a2b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal {
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7b8f;
+        }
+
+        .close-modal:hover {
+            color: #dc3545;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #0a1a2b;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #eef2f6;
+            border-radius: 16px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- 侧边栏导航（管理员专属） -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div class="logo-text">
+                    <h2>智链·合同</h2>
+                    <p>管理控制台</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <div class="nav-section-title">核心管理</div>
+
+            <div class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard', this)">
+                <i class="fas fa-chart-pie"></i>
+                <span>数据总览</span>
+            </div>
+
+            <div class="nav-item" data-tab="users" onclick="switchTab('users', this)">
+                <i class="fas fa-users-cog"></i>
+                <span>用户管理</span>
+            </div>
+
+            <div class="nav-item" data-tab="templates" onclick="switchTab('templates', this)">
+                <i class="fas fa-file-alt"></i>
+                <span>合同模板维护</span>
+            </div>
+
+            <div class="nav-item" data-tab="dictionary" onclick="switchTab('dictionary', this)">
+                <i class="fas fa-book"></i>
+                <span>字段字典管理</span>
+            </div>
+
+            <div class="nav-divider"></div>
+            <div class="nav-section-title">系统监控</div>
+
+            <div class="nav-item" data-tab="logs" onclick="switchTab('logs', this)">
+                <i class="fas fa-history"></i>
+                <span>操作日志</span>
+            </div>
+
+            <div class="nav-item" data-tab="audit" onclick="switchTab('audit', this)">
+                <i class="fas fa-shield-alt"></i>
+                <span>审计记录</span>
+            </div>
+
+            <div class="nav-divider"></div>
+            <div class="nav-section-title">系统配置</div>
+
+            <div class="nav-item" data-tab="parameters" onclick="switchTab('parameters', this)">
+                <i class="fas fa-sliders-h"></i>
+                <span>基础参数</span>
+            </div>
+
+            <div class="nav-item" data-tab="backup" onclick="switchTab('backup', this)">
+                <i class="fas fa-database"></i>
+                <span>数据维护</span>
+            </div>
+
+            <div class="nav-divider"></div>
+            <div class="nav-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>退出登录</span>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <!-- 顶部导航栏 -->
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>
+                    <i class="fas fa-crown"></i>
+                    管理员控制台
+                    <span class="admin-badge">
+                            <i class="fas fa-shield-alt"></i> 管理员
+                        </span>
+                </h1>
+            </div>
+
+            <div class="user-profile">
+                <div class="notification-badge">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge">5</span>
+                </div>
+
+                <div class="user-info" id="userInfo">
+                    <div class="avatar" id="userAvatar">管</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">系统管理员</div>
+                        <div class="user-role" id="userRole">超级管理员</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: #ffd700;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 动态内容区域 - 通过JavaScript切换 -->
+        <div id="content-area">
+            <!-- 默认显示仪表盘 -->
+        </div>
+    </main>
+</div>
+
+<!-- 用户管理模态框 -->
+<div class="modal" id="userModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-edit"></i> 编辑用户</h3>
+            <span class="close-modal" onclick="closeModal('userModal')">&times;</span>
+        </div>
+        <form id="userForm">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="editUsername" readonly>
+            </div>
+            <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="editFullName">
+            </div>
+            <div class="form-group">
+                <label>角色</label>
+                <select id="editRole">
+                    <option value="user">普通用户</option>
+                    <option value="admin">系统管理员</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select id="editStatus">
+                    <option value="active">启用</option>
+                    <option value="disabled">禁用</option>
+                </select>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="resetPassword">
+                <label for="resetPassword">重置密码为默认密码</label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-outline" onclick="closeModal('userModal')">取消</button>
+                <button type="submit" class="btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 模板管理模态框 -->
+<div class="modal" id="templateModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-file-alt"></i> 编辑模板</h3>
+            <span class="close-modal" onclick="closeModal('templateModal')">&times;</span>
+        </div>
+        <form id="templateForm">
+            <div class="form-group">
+                <label>模板名称</label>
+                <input type="text" id="editTemplateName" required>
+            </div>
+            <div class="form-group">
+                <label>合同类型</label>
+                <select id="editContractType">
+                    <option value="transport">运输合同</option>
+                    <option value="warehouse">仓储合同</option>
+                    <option value="supply">供应链协议</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>模板内容</label>
+                <textarea id="editTemplateContent" rows="8" required></textarea>
+            </div>
+            <!-- 附件上传 -->
+            <div class="form-group">
+                <label>模板附件（支持 PDF / Word）</label>
+
+                <input
+                        type="file"
+                        id="templateFile"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                >
+
+                <div id="templateFileHint" style="margin-top:10px; font-size:13px; color:#6b7b8f;">
+                    仅支持：.pdf / .doc / .docx（建议 ≤ 20MB）
+                </div>
+
+                <div id="templateFilePreview" style="margin-top:10px; display:none; padding:12px; border:1px dashed #ffd700; border-radius:16px; background:#fffaf0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <div>
+                            <div style="font-weight:700; color:#0a1a2b;" id="templateFileName">-</div>
+                            <div style="font-size:12px; color:#6b7b8f;" id="templateFileMeta">-</div>
+                        </div>
+                        <button type="button" class="btn-outline" onclick="clearTemplateFile()" style="padding:8px 14px;">
+                            移除
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select id="editTemplateStatus">
+                    <option value="active">启用</option>
+                    <option value="disabled">禁用</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-outline" onclick="closeModal('templateModal')">取消</button>
+                <button type="submit" class="btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // ========== 管理员信息加载 ==========
+    function loadAdminInfo() {
+        try {
+            const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+            const isAdmin = localStorage.getItem('isAdmin') || sessionStorage.getItem('isAdmin');
+
+            if (userInfoStr) {
+                const userInfo = JSON.parse(userInfoStr);
+                document.getElementById('userName').textContent = userInfo.name || userInfo.username || '系统管理员';
+                document.getElementById('userRole').textContent = userInfo.role === 'super_admin' ? '超级管理员' : '系统管理员';
+
+                const avatar = document.getElementById('userAvatar');
+                avatar.textContent = (userInfo.username || '管').charAt(0).toUpperCase();
+            }
+
+            // 如果不是管理员，重定向到普通仪表盘
+            if (!isAdmin && !window.location.href.includes('admin')) {
+                window.location.href = '/dashboard.html';
+            }
+        } catch (e) {
+            console.error('加载管理员信息失败:', e);
+        }
+    }
+
+    // ========== 标签页切换 ==========
+    function setActiveNavByTab(tabName) {
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const target = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+    if (target) target.classList.add('active');
+}
+
+function switchTab(tabName, el) {
+    // 1) 更新导航激活状态（支持 this / 也支持程序调用）
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+    if (el && el.classList) {
+        el.classList.add('active');
+    } else {
+        setActiveNavByTab(tabName);
+    }
+
+    // 2) 切换内容
+    const contentArea = document.getElementById('content-area');
+    switch (tabName) {
+        case 'dashboard':
+            contentArea.innerHTML = renderDashboard();
+            setTimeout(initCharts, 50); // 切回来时重新画图
+            loadDashboardData();
+            break;
+        case 'users':
+            contentArea.innerHTML = renderUserManagement();
+            initUsersPage();
+            break;
+        case 'templates':
+            contentArea.innerHTML = renderTemplateManagement();
+            break;
+        case 'dictionary':
+            contentArea.innerHTML = renderDictionaryManagement();
+            break;
+        case 'logs':
+            contentArea.innerHTML = renderOperationLogs();
+            break;
+        case 'audit':
+            contentArea.innerHTML = renderAuditRecords();
+            break;
+        case 'parameters':
+            contentArea.innerHTML = renderSystemParameters();
+            break;
+        case 'backup':
+            contentArea.innerHTML = renderDataMaintenance();
+            break;
+    }
+}
+    // 退出
+    function logout() {
+    try {
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("isAdmin");
+      localStorage.removeItem("token");
+
+      sessionStorage.removeItem("userInfo");
+      sessionStorage.removeItem("isAdmin");
+      sessionStorage.removeItem("token");
+
+      window.location.href = "/auth/login.html";
+    } catch (e) {
+      console.error("logout error:", e);
+      window.location.href = "/login.html";
+    }
+  }
+
+    // ========== 仪表盘内容 ==========
+    function renderDashboard() {
+    return `
+        <div class="system-status">
+            <h2>
+                <i class="fas fa-server"></i>
+                系统运行状态
+            </h2>
+
+            <div class="status-grid">
+
+                <div class="status-item">
+                    <i class="fas fa-database"></i>
+                    <div class="status-value" id="dbStatus">--</div>
+                    <div class="status-label">数据库可用性</div>
+                    <div><span class="status-indicator indicator-green"></span> 实时状态</div>
+                </div>
+
+                <div class="status-item">
+                    <i class="fas fa-users"></i>
+                    <div class="status-value" id="userCount">--</div>
+                    <div class="status-label">注册用户</div>
+                    <div><span class="status-indicator indicator-green"></span> 今日新增</div>
+                </div>
+
+                <div class="status-item">
+                    <i class="fas fa-file-contract"></i>
+                    <div class="status-value" id="contractCount">--</div>
+                    <div class="status-label">合同总数</div>
+                    <div><span class="status-indicator indicator-green"></span> 系统统计</div>
+                </div>
+
+                <div class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <div class="status-value" id="apiLatency">--</div>
+                    <div class="status-label">API响应时间</div>
+                    <div><span class="status-indicator indicator-yellow"></span> 实时监控</div>
+                </div>
+
+            </div>
+        </div>
+    `;
+}
+
+  async function loadDashboardData() {
+    try {
+      const resp = await authFetch("/api/admin/dashboard");
+      if (!resp.ok) throw new Error("获取统计数据失败");
+
+      const data = await resp.json();
+
+      document.getElementById("dbStatus").textContent = data.dbAvailability + "%";
+      document.getElementById("userCount").textContent = data.userCount;
+      document.getElementById("contractCount").textContent = data.contractCount;
+      document.getElementById("apiLatency").textContent = data.apiLatency + " ms";
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    loadAdminInfo();
+
+    document.getElementById('content-area').innerHTML = renderDashboard();
+    setTimeout(initCharts, 100);
+
+    loadDashboardData(); // ⭐这里调用
+  });
+    // ========== 用户管理内容 ==========
+    function renderUserManagement() {
+  return `
+    <div class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-users-cog"></i> 用户管理</h2>
+        <div class="header-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input id="userSearchInput" type="text" placeholder="搜索用户名...">
+          </div>
+          <button class="btn-primary" onclick="showAddUserModal()">
+            <i class="fas fa-user-plus"></i> 新建用户
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-mini-grid">
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="userTotalCount">0</div>
+          <div>总用户数</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="userActiveCount">0</div>
+          <div>启用用户</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="userDisabledCount">0</div>
+          <div>禁用用户</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active">全部用户</div>
+        <div class="tab">普通用户</div>
+        <div class="tab">管理员</div>
+        <div class="tab">待审核</div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>用户名</th>
+              <th>姓名</th>
+              <th>角色</th>
+              <th>状态</th>
+              <th>注册时间</th>
+              <th>最后登录</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody">
+          </tbody>
+        </table>
+
+        <!-- ✅ 空状态提示 -->
+        <div id="userEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+          暂无用户数据，请点击右上角“新建用户”创建。
+        </div>
+
+        <!-- ✅ 分页区域：就放在这里 -->
+        <div id="userPagination"
+             style="margin-top: 20px; display:flex; justify-content: space-between; align-items:center; color:#6b7b8f;">
+          <div id="userPageInfo">—</div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-outline" id="userPrevBtn">上一页</button>
+            <button class="btn-outline" id="userNextBtn">下一页</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+    // ========== 模板管理内容 ==========
+    function renderTemplateManagement() {
+    return `
+        <div class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-file-alt"></i> 合同模板管理</h2>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="搜索模板...">
+                    </div>
+                    <button class="btn-primary" onclick="showAddTemplateModal()">
+                        <i class="fas fa-plus"></i> 新建模板
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-mini-grid">
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">0</div>
+                    <div>总模板数</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">0</div>
+                    <div>启用模板</div>
+                </div>
+                <div class="stat-mini-card">
+                    <div class="stat-mini-value">0</div>
+                    <div>禁用模板</div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>模板ID</th>
+                            <th>模板名称</th>
+                            <th>合同类型</th>
+                            <th>状态</th>
+                            <th>最后修改</th>
+                            <th>修改人</th>
+                            <th>使用次数</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+
+                <!-- ✅ 空状态提示（可选，但建议保留，页面不空白） -->
+                <div style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+                    暂无模板数据，请点击右上角“新建模板”创建。
+                </div>
+            </div>
+        </div>
+    `;
+    }
+
+    // ========== 字段字典管理 ==========
+    function renderDictionaryManagement() {
+        return `
+            <div class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-book"></i> 字段字典管理</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary">
+                            <i class="fas fa-plus"></i> 新增字段
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active">合同字段</div>
+                    <div class="tab">履约节点类型</div>
+                    <div class="tab">预警规则</div>
+                    <div class="tab">枚举值</div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>字段编码</th>
+                                <th>字段名称</th>
+                                <th>字段类型</th>
+                                <th>所属模块</th>
+                                <th>是否必填</th>
+                                <th>枚举值</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>party_a</td>
+                                <td>甲方名称</td>
+                                <td>字符串</td>
+                                <td>基本信息</td>
+                                <td>是</td>
+                                <td>-</td>
+                                <td>
+                                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>party_b</td>
+                                <td>乙方名称</td>
+                                <td>字符串</td>
+                                <td>基本信息</td>
+                                <td>是</td>
+                                <td>-</td>
+                                <td>
+                                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>amount</td>
+                                <td>合同金额</td>
+                                <td>数字</td>
+                                <td>财务信息</td>
+                                <td>是</td>
+                                <td>-</td>
+                                <td>
+                                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>contract_type</td>
+                                <td>合同类型</td>
+                                <td>枚举</td>
+                                <td>分类信息</td>
+                                <td>是</td>
+                                <td>运输/仓储/供应链</td>
+                                <td>
+                                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>delivery_date</td>
+                                <td>交付日期</td>
+                                <td>日期</td>
+                                <td>履约节点</td>
+                                <td>否</td>
+                                <td>-</td>
+                                <td>
+                                    <button class="action-btn"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // ========== 操作日志 ==========
+    function renderOperationLogs() {
+  return `
+    <div class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-history"></i> 操作日志</h2>
+        <div class="header-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="搜索日志...">
+          </div>
+          <select style="padding: 8px; border-radius: 30px; border: 1px solid #ffd700;">
+            <option value="">全部操作类型</option>
+            <option value="user">用户管理</option>
+            <option value="template">模板管理</option>
+            <option value="contract">合同操作</option>
+            <option value="system">系统配置</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>操作人</th>
+              <th>操作类型</th>
+              <th>操作内容</th>
+              <th>IP地址</th>
+              <th>结果</th>
+              <th>详情</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody">
+          </tbody>
+        </table>
+
+        <!--  空状态提示 -->
+        <div id="logEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+          暂无操作日志数据。
+        </div>
+      </div>
+
+      <!-- 分页区域 -->
+      <div id="logPagination"
+           style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; color:#6b7b8f;">
+        <div>—</div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-outline" disabled>上一页</button>
+          <button class="btn-outline" disabled>下一页</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+    // ========== 审计记录 ==========
+    function renderAuditRecords() {
+  return `
+    <div class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-shield-alt"></i> 审计记录</h2>
+        <div class="header-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="搜索审计记录...">
+          </div>
+          <button class="btn-primary">
+            <i class="fas fa-file-export"></i> 导出审计报告
+          </button>
+        </div>
+      </div>
+
+      <!-- ✅ 统计卡片 -->
+      <div class="stats-mini-grid">
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="auditTotalCount">0</div>
+          <div>总审计记录</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="auditTodayCount">0</div>
+          <div>今日新增</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="auditAbnormalCount">0</div>
+          <div>异常记录</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>审计ID</th>
+              <th>时间</th>
+              <th>操作用户</th>
+              <th>操作类型</th>
+              <th>资源类型</th>
+              <th>资源ID</th>
+              <th>操作结果</th>
+              <th>IP地址</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody">
+          </tbody>
+        </table>
+
+        <!-- 空状态提示 -->
+        <div id="auditEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+          暂无审计记录数据。
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+    // ========== 系统参数 ==========
+    function renderSystemParameters() {
+        return `
+            <div class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-sliders-h"></i> 系统参数配置</h2>
+                    <button class="btn-primary">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
+                </div>
+
+                <div style="display: grid; gap: 30px;">
+                    <div>
+                        <h3 style="margin-bottom: 20px; color: #ffd700;">提醒预警配置</h3>
+                        <div style="display: grid; gap: 20px;">
+                            <div class="form-group">
+                                <label>合同到期提醒提前天数</label>
+                                <input type="number" value="7" min="1" max="30">
+                            </div>
+                            <div class="form-group">
+                                <label>履约节点提醒提前天数</label>
+                                <input type="number" value="3" min="1" max="15">
+                            </div>
+                            <div class="form-group">
+                                <label>逾期预警时间（小时）</label>
+                                <input type="number" value="24" min="1" max="72">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="margin-bottom: 20px; color: #ffd700;">系统安全配置</h3>
+                        <div style="display: grid; gap: 20px;">
+                            <div class="form-group">
+                                <label>密码最小长度</label>
+                                <input type="number" value="8" min="6" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label>登录失败锁定次数</label>
+                                <input type="number" value="5" min="3" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label>会话超时时间（分钟）</label>
+                                <input type="number" value="30" min="10" max="120">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 style="margin-bottom: 20px; color: #ffd700;">解析与生成配置</h3>
+                        <div style="display: grid; gap: 20px;">
+                            <div class="form-group">
+                                <label>解析超时时间（秒）</label>
+                                <input type="number" value="30" min="10" max="120">
+                            </div>
+                            <div class="form-group">
+                                <label>生成超时时间（秒）</label>
+                                <input type="number" value="30" min="10" max="120">
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="autoParse" checked>
+                                <label for="autoParse">上传后自动解析</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ========== 数据维护 ==========
+    function renderDataMaintenance() {
+        return `
+            <div class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-database"></i> 数据维护</h2>
+                </div>
+
+                <div style="display: grid; gap: 20px;">
+                    <div style="background: #f8fafc; border-radius: 20px; padding: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #ffd700;">数据库备份</h3>
+                        <div style="display: grid; gap: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>上次备份时间：</strong> 2024-03-15 03:00:00
+                                </div>
+                                <div>
+                                    <span class="status-badge status-active">成功</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>备份文件大小：</strong> 1.2 GB
+                                </div>
+                                <div>
+                                    <button class="btn-primary">
+                                        <i class="fas fa-download"></i> 下载
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                                <button class="btn-primary">
+                                    <i class="fas fa-database"></i> 立即备份
+                                </button>
+                                <button class="btn-outline">
+                                    <i class="fas fa-cog"></i> 备份设置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; border-radius: 20px; padding: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #ffd700;">数据清理</h3>
+                        <div style="display: grid; gap: 15px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>操作日志保留天数：</span>
+                                <input type="number" value="90" style="width: 100px; padding: 5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>审计日志保留天数：</span>
+                                <input type="number" value="365" style="width: 100px; padding: 5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>临时文件保留天数：</span>
+                                <input type="number" value="7" style="width: 100px; padding: 5px;">
+                            </div>
+                            <button class="btn-outline" style="margin-top: 10px;">
+                                <i class="fas fa-trash"></i> 立即清理
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; border-radius: 20px; padding: 20px;">
+                        <h3 style="margin-bottom: 15px; color: #ffd700;">数据导入/导出</h3>
+                        <div style="display: flex; gap: 15px;">
+                            <button class="btn-outline">
+                                <i class="fas fa-file-import"></i> 导入数据
+                            </button>
+                            <button class="btn-outline">
+                                <i class="fas fa-file-export"></i> 导出数据
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    // ✅ 允许的文件类型
+  const ALLOWED_TEMPLATE_MIME = new Set([
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ]);
+  const ALLOWED_TEMPLATE_EXT = new Set(["pdf", "doc", "docx"]);
+  const MAX_TEMPLATE_FILE_SIZE_MB = 20;
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i];
+  }
+
+  function getExt(filename) {
+    const idx = filename.lastIndexOf(".");
+    return idx >= 0 ? filename.slice(idx + 1).toLowerCase() : "";
+  }
+
+  function clearTemplateFile() {
+    const input = document.getElementById("templateFile");
+    const preview = document.getElementById("templateFilePreview");
+    const nameEl = document.getElementById("templateFileName");
+    const metaEl = document.getElementById("templateFileMeta");
+    if (input) input.value = "";
+    if (nameEl) nameEl.textContent = "-";
+    if (metaEl) metaEl.textContent = "-";
+    if (preview) preview.style.display = "none";
+  }
+
+  function handleTemplateFileChange() {
+    const input = document.getElementById("templateFile");
+    const preview = document.getElementById("templateFilePreview");
+    const nameEl = document.getElementById("templateFileName");
+    const metaEl = document.getElementById("templateFileMeta");
+
+    if (!input || !input.files || input.files.length === 0) {
+      clearTemplateFile();
+      return;
+    }
+
+    const file = input.files[0];
+    const ext = getExt(file.name);
+    const sizeMB = file.size / (1024 * 1024);
+
+    const mimeOk = ALLOWED_TEMPLATE_MIME.has(file.type);
+    const extOk = ALLOWED_TEMPLATE_EXT.has(ext);
+
+    if (!mimeOk && !extOk) {
+      alert("只允许上传 PDF 或 Word（.pdf/.doc/.docx）");
+      clearTemplateFile();
+      return;
+    }
+
+    if (sizeMB > MAX_TEMPLATE_FILE_SIZE_MB) {
+      alert(`文件过大，建议不超过 ${MAX_TEMPLATE_FILE_SIZE_MB}MB`);
+      clearTemplateFile();
+      return;
+    }
+
+    nameEl.textContent = file.name;
+    metaEl.textContent = `${file.type || ext.toUpperCase()} · ${formatBytes(file.size)}`;
+    preview.style.display = "block";
+  }
+
+  // ========== 模态框控制 ==========
+  function showModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+  }
+  function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+  }
+
+  function showAddTemplateModal() {
+    document.getElementById('editTemplateName').value = '';
+    document.getElementById('editContractType').value = 'transport';
+    document.getElementById('editTemplateContent').value = '';
+    document.getElementById('editTemplateStatus').value = 'active';
+
+    document.querySelector('#templateModal .modal-header h3').innerHTML =
+      '<i class="fas fa-plus"></i> 新建模板';
+
+    clearTemplateFile();
+    showModal('templateModal');
+  }
+
+  function editTemplate(templateId) {
+    document.querySelector('#templateModal .modal-header h3').innerHTML =
+      '<i class="fas fa-edit"></i> 编辑模板';
+
+    // 这里以后接后端回填
+    document.getElementById('editTemplateName').value = '标准运输合同';
+    document.getElementById('editContractType').value = 'transport';
+    document.getElementById('editTemplateContent').value = '甲方：{{party_a}}\n乙方：{{party_b}}\n\n第一条 运输货物\n...';
+    document.getElementById('editTemplateStatus').value = 'active';
+
+    clearTemplateFile();
+    showModal('templateModal');
+  }
+
+  // ===================== 用户管理：状态 =====================
+const usersState = {
+  page: 1,
+  size: 10,
+  keyword: ""
+};
+
+// 如果你后端需要带 token，就用这个包装 fetch
+function authFetch(url, options = {}) {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const headers = new Headers(options.headers || {});
+  if (token) headers.set("Authorization", "Bearer " + token);
+  return fetch(url, { ...options, headers });
+}
+
+// ===================== 用户管理：入口 =====================
+function initUsersPage() {
+  // 1) 绑定搜索
+  const input = document.getElementById("userSearchInput");
+  if (input) {
+    // 防抖（避免每个字都请求）
+    let timer = null;
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        usersState.keyword = input.value.trim();
+        usersState.page = 1;
+        loadUsersTable();
+        loadUsersStats();
+      }, 350);
+    });
+  }
+
+  // 2) 绑定分页
+  const prevBtn = document.getElementById("userPrevBtn");
+  const nextBtn = document.getElementById("userNextBtn");
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      if (usersState.page > 1) {
+        usersState.page--;
+        loadUsersTable();
+      }
+    };
+  }
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      usersState.page++;
+      loadUsersTable();
+    };
+  }
+
+  // 3) 初次加载
+  loadUsersStats();
+  loadUsersTable();
+}
+
+// ===================== 用户管理：统计 =====================
+async function loadUsersStats() {
+  try {
+    const resp = await authFetch("/api/admin/users/stats");
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+    // 后端：{ total, enabled, disabled }
+    const totalEl = document.getElementById("userTotalCount");
+    const activeEl = document.getElementById("userActiveCount");
+    const disabledEl = document.getElementById("userDisabledCount");
+
+    if (totalEl) totalEl.textContent = data.total ?? 0;
+    if (activeEl) activeEl.textContent = data.enabled ?? 0;
+    if (disabledEl) disabledEl.textContent = data.disabled ?? 0;
+  } catch (e) {
+    console.error("loadUsersStats error:", e);
+  }
+}
+
+// ===================== 用户管理：列表 =====================
+async function loadUsersTable() {
+  const tbody = document.getElementById("userTableBody");
+  const emptyHint = document.getElementById("userEmptyHint");
+  const pageInfo = document.getElementById("userPageInfo");
+  const prevBtn = document.getElementById("userPrevBtn");
+  const nextBtn = document.getElementById("userNextBtn");
+
+  if (!tbody) return;
+
+  // loading 占位
+  tbody.innerHTML = `<tr><td colspan="8" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+  if (emptyHint) emptyHint.style.display = "none";
+
+  const qs = new URLSearchParams({
+    page: String(usersState.page),
+    size: String(usersState.size),
+    keyword: usersState.keyword || ""
+  });
+
+  try {
+    const resp = await authFetch(`/api/admin/users?${qs.toString()}`);
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+
+    // 适配 PageResult：{records,total,page,size,totalPages}
+    const records = data.records || [];
+    const total = data.total ?? 0;
+    const page = data.page ?? usersState.page;
+    const size = data.size ?? usersState.size;
+    const totalPages = data.totalPages ?? Math.ceil(total / size);
+
+    // 更新分页显示
+    if (pageInfo) pageInfo.textContent = `第 ${page} / ${totalPages || 1} 页 · 共 ${total} 条`;
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = totalPages ? page >= totalPages : records.length < size;
+
+    // 空数据
+    if (!records.length) {
+      tbody.innerHTML = "";
+      if (emptyHint) emptyHint.style.display = "block";
+      return;
+    }
+
+    if (emptyHint) emptyHint.style.display = "none";
+
+    // 渲染
+    tbody.innerHTML = records.map(u => {
+      const roleText = (u.roleCode === "ADMIN") ? `<span class="admin-badge-small">管理员</span>` : "普通用户";
+
+      const statusHtml = (u.status === "ENABLED")
+        ? `<span class="status-badge status-active">启用</span>`
+        : `<span class="status-badge status-disabled">禁用</span>`;
+
+      // 你实体里没有 fullName / lastLogin，就先显示 -
+      const fullName = u.fullName || "-";
+      const lastLogin = u.lastLoginAt || "-";
+
+      const createdAt = u.createdAt || "-";
+
+      return `
+        <tr>
+          <td>${u.userId ?? "-"}</td>
+          <td>${escapeHtml(u.username ?? "-")}</td>
+          <td>${escapeHtml(fullName)}</td>
+          <td>${roleText}</td>
+          <td>${statusHtml}</td>
+          <td>${createdAt}</td>
+          <td>${lastLogin}</td>
+          <td>
+            <button class="action-btn" title="编辑" onclick="openEditUser(${u.userId}, '${escapeAttr(u.username)}', '${u.roleCode}', '${u.status}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn danger" title="切换启用/禁用" onclick="toggleUserStatus(${u.userId}, '${u.status}')">
+              <i class="fas fa-ban"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (e) {
+    console.error("loadUsersTable error:", e);
+    tbody.innerHTML = `<tr><td colspan="8" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+  }
+}
+
+// ===================== 用户管理：编辑/更新（可选） =====================
+function openEditUser(userId, username, roleCode, status) {
+  // 你的 modal 里有 editUsername / editRole / editStatus
+  document.getElementById("editUsername").value = username;
+  // 你的下拉是 user/admin，小写；后端是 USER/ADMIN
+  document.getElementById("editRole").value = (roleCode === "ADMIN") ? "admin" : "user";
+  document.getElementById("editStatus").value = (status === "ENABLED") ? "active" : "disabled";
+  // 你目前没 fullName 字段，这里先清空
+  const fullNameEl = document.getElementById("editFullName");
+  if (fullNameEl) fullNameEl.value = "";
+
+  showModal("userModal");
+
+  // 绑定提交（每次打开先解绑再绑定，避免重复触发）
+  const form = document.getElementById("userForm");
+  if (!form) return;
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+
+    const role = document.getElementById("editRole").value;       // user/admin
+    const st = document.getElementById("editStatus").value;       // active/disabled
+
+    const payload = {
+      roleCode: role === "admin" ? "ADMIN" : "USER",
+      status: st === "active" ? "ENABLED" : "DISABLED"
+    };
+
+    try {
+      const resp = await authFetch(`/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+
+      closeModal("userModal");
+      await loadUsersTable();
+      await loadUsersStats();
+    } catch (err) {
+      console.error(err);
+      alert("保存失败：" + (err.message || err));
+    }
+  };
+}
+
+async function toggleUserStatus(userId, currentStatus) {
+  const next = (currentStatus === "ENABLED") ? "DISABLED" : "ENABLED";
+  if (!confirm(`确认将用户状态改为：${next === "ENABLED" ? "启用" : "禁用"}？`)) return;
+
+  try {
+    const resp = await authFetch(`/api/admin/users/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+
+    await loadUsersTable();
+    await loadUsersStats();
+  } catch (e) {
+    console.error(e);
+    alert("操作失败：" + (e.message || e));
+  }
+}
+
+// ===================== 小工具：防XSS =====================
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+function escapeAttr(str) {
+  // 用在 HTML 属性里的简单转义
+  return escapeHtml(str).replaceAll("\n", " ");
+}
+
+  // ========== 初始化页面 ==========
+  document.addEventListener('DOMContentLoaded', function () {
+    loadAdminInfo();
+
+    // 默认加载仪表盘
+    document.getElementById('content-area').innerHTML = renderDashboard();
+setTimeout(initCharts, 100);
+loadDashboardData();
+
+    //  绑定模板附件上传 change
+    const templateFileInput = document.getElementById("templateFile");
+    if (templateFileInput) {
+      templateFileInput.addEventListener("change", handleTemplateFileChange);
+    }
+
+    //  绑定模板表单 submit
+    const templateForm = document.getElementById("templateForm");
+    if (templateForm) {
+      templateForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const name = document.getElementById("editTemplateName").value.trim();
+        const type = document.getElementById("editContractType").value;
+        const content = document.getElementById("editTemplateContent").value;
+        const status = document.getElementById("editTemplateStatus").value;
+        const fileInput = document.getElementById("templateFile");
+        const file = fileInput?.files?.[0];
+
+        if (!name) {
+          alert("请填写模板名称");
+          return;
+        }
+
+        //  可选：提交前也做一次校验（防止用户绕过 change）
+        if (file) {
+          const ext = getExt(file.name);
+          const sizeMB = file.size / (1024 * 1024);
+          const mimeOk = ALLOWED_TEMPLATE_MIME.has(file.type);
+          const extOk = ALLOWED_TEMPLATE_EXT.has(ext);
+          if (!mimeOk && !extOk) {
+            alert("只允许上传 PDF 或 Word（.pdf/.doc/.docx）");
+            return;
+          }
+          if (sizeMB > MAX_TEMPLATE_FILE_SIZE_MB) {
+            alert(`文件过大，建议不超过 ${MAX_TEMPLATE_FILE_SIZE_MB}MB`);
+            return;
+          }
+        }
+
+        const fd = new FormData();
+        fd.append("name", name);
+        fd.append("contractType", type);
+        fd.append("content", content);
+        fd.append("status", status);
+        if (file) fd.append("file", file);
+
+        try {
+          const resp = await authFetch("/api/admin/templates", {
+            method: "POST",
+            body: fd
+          });
+
+          if (!resp.ok) {
+            const text = await resp.text();
+            throw new Error(text || "保存失败");
+          }
+
+          alert("模板已保存");
+          closeModal("templateModal");
+          clearTemplateFile();
+        } catch (err) {
+          console.error(err);
+          alert("保存失败：" + (err.message || err));
+        }
+      });
+    }
+
+    // 模态框点击外部关闭
+    window.onclick = function (event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('active');
+      }
+    };
+  });
+</script>
+</body>
+</html>

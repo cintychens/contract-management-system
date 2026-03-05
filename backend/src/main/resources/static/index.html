@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能物流合同管理系统</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0b1c2f, #1a3b5c);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .splash-screen {
+            text-align: center;
+            color: white;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo i {
+            font-size: 48px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .redirect-info {
+            margin-top: 24px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+    <!-- 引入 Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- 3秒后跳转，同时保留 meta 作为后备 -->
+    <meta http-equiv="refresh" content="3; url=/auth/login.html">
+</head>
+<body>
+<div class="splash-screen">
+    <div class="logo">
+        <i class="fas fa-truck-fast"></i>
+    </div>
+    <h1>智链·合同管理</h1>
+    <div class="subtitle">基于智能技术的物流行业合同管理系统</div>
+    <div class="loader"></div>
+    <div class="redirect-info">
+        <i class="fas fa-spinner fa-pulse"></i> 正在跳转至登录页面...
+    </div>
+</div>
+
+<!-- JavaScript 备用跳转，防止 meta 被禁用 -->
+<script>
+    // 2.5秒后强制跳转
+    setTimeout(function() {
+        window.location.href = '/auth/login.html';
+    }, 2500);
+</script>
+</body>
+</html>

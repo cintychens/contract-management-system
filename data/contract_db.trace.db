@@ -1,0 +1,6 @@
+2026-02-26 11:44:09.084560-03:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM [*]user"; expected "identifier"; SQL statement:
+SELECT * FROM user [42001-232]
+2026-02-27 20:01:29.271439-03:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SHOW [*]CREATE TABLE users"; SQL statement:
+SHOW CREATE TABLE users [42000-232]

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 · 智能物流合同管理系统</title>
+
+    <!-- 引入字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* ========== 全局重置 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            /* 浅蓝色渐变背景 - 符合要求 */
+            background: linear-gradient(145deg, #e6f0fa 0%, #d1e3f5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 极简背景装饰 - 更淡的网格 (可选，增加质感但不抢眼) */
+        .grid-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(100, 150, 220, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100, 150, 220, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 1;
+        }
+
+        /* 轻微光晕 */
+        .glow-orbit {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(120, 180, 255, 0.1) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .glow-orbit-2 {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(150, 200, 255, 0.08) 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        /* ========== 登录卡片 ========== */
+        .login-card {
+            width: 100%;
+            max-width: 1500px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 36px;
+            box-shadow: 0 20px 40px -15px rgba(60, 110, 150, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+            padding: 150px 150px;
+            position: relative;
+            z-index: 10;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .login-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 50px -15px rgba(50, 100, 150, 0.4);
+        }
+
+        /* ========== 品牌区域 ========== */
+        .brand {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-box {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-circle {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(145deg, #1a4b75, #2d6da0);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 25px -8px rgba(30, 90, 140, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-circle i {
+            font-size: 42px;
+            color: white;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            z-index: 2;
+        }
+
+        .logo-circle::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+            transform: rotate(25deg);
+            animation: shimmer 4s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(25deg); }
+            20% { transform: translateX(100%) rotate(25deg); }
+            100% { transform: translateX(100%) rotate(25deg); }
+        }
+
+        .brand h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #154979;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        .brand .sub {
+            font-size: 15px;
+            color: #4073a3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .brand .sub span {
+            background: #e5eff9;
+            padding: 5px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f5a87;
+        }
+
+        /* ========== 表单 ========== */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e4a72;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .input-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-field i {
+            position: absolute;
+            left: 18px;
+            color: #7c9ec0;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+
+        .input-field input {
+            width: 100%;
+            padding: 22px 22px 22px 64px;
+            border: 2px solid #d3e2f2;
+            border-radius: 20px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.25s ease;
+            color: #152b40;
+            font-weight: 500;
+        }
+
+        .input-field input:focus {
+            outline: none;
+            border-color: #2d6da0;
+            box-shadow: 0 0 0 4px rgba(45, 109, 160, 0.1);
+        }
+
+        .input-field input:focus + i {
+            color: #2d6da0;
+        }
+
+        .input-field input::placeholder {
+            color: #abc0d4;
+            font-weight: 400;
+        }
+
+        /* 密码切换图标 */
+        .toggle-pwd {
+            position: absolute;
+            right: 18px;
+            color: #7c9ec0;
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.2s;
+            z-index: 5;
+        }
+
+        .toggle-pwd:hover {
+            color: #2d6da0;
+        }
+
+        /* ========== 辅助选项 ========== */
+        .form-extra {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0 32px;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remember input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #2d6da0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .remember label {
+            font-size: 14px;
+            color: #2d5580;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            font-size: 14px;
+            color: #2d6da0;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #154979;
+            text-decoration: underline;
+        }
+
+        /* ========== 登录按钮 ========== */
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(105deg, #1a4b75, #2d6da0);
+            border: none;
+            border-radius: 28px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 20px -8px rgba(45, 109, 160, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn i {
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+
+        .login-btn:hover {
+            background: linear-gradient(105deg, #1f5885, #347bb3);
+            transform: scale(1.02);
+            box-shadow: 0 16px 25px -8px #1f5885;
+        }
+
+        .login-btn:hover i {
+            transform: translateX(5px);
+        }
+
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* 按钮加载状态 */
+        .login-btn.loading {
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        .login-btn.loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ========== 注册入口 ========== */
+        .register-section {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px dashed #b8d0e8;
+        }
+
+        .register-section p {
+            color: #3a6990;
+            font-size: 15px;
+        }
+
+        .register-section a {
+            color: #2d6da0;
+            font-weight: 700;
+            text-decoration: none;
+            margin-left: 8px;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .register-section a:hover {
+            border-bottom-color: #2d6da0;
+        }
+
+        /* ========== 错误提示 ========== */
+        .error-alert {
+            background: #ffefef;
+            border-left: 5px solid #d14545;
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #a82b2b;
+            font-weight: 500;
+            animation: shake 0.4s ease;
+            box-shadow: 0 6px 12px rgba(209, 69, 69, 0.1);
+        }
+
+        .error-alert i {
+            font-size: 22px;
+            color: #d14545;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-3px); }
+            80% { transform: translateX(3px); }
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 520px) {
+            .login-card {
+                margin: 20px;
+                padding: 32px 24px;
+            }
+
+            .brand h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 背景装饰（浅蓝色调） -->
+<div class="grid-bg"></div>
+<div class="glow-orbit"></div>
+<div class="glow-orbit-2"></div>
+
+<!-- 登录卡片 -->
+<div class="login-card">
+    <!-- 品牌标识 -->
+    <div class="brand">
+        <div class="logo-box">
+            <div class="logo-circle">
+                <i class="fas fa-file-signature"></i>
+            </div>
+        </div>
+        <h1>智链·合同</h1>
+        <div class="sub">
+            <i class="fas fa-robot" style="color: #2d6da0;"></i>
+            <span>AI 智能物流合同</span>
+            <i class="fas fa-shield-alt" style="color: #2d6da0;"></i>
+        </div>
+    </div>
+
+    <!-- 错误提示容器 (默认隐藏) -->
+    <div id="errorContainer" style="display: none;">
+        <div class="error-alert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage">账号或密码错误</span>
+        </div>
+    </div>
+
+    <!-- 登录表单 -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+        <!-- 账号 -->
+        <div class="form-group">
+            <label for="username">账号</label>
+            <div class="input-field">
+                <i class="fas fa-user"></i>
+                <input type="text" id="username" name="username" placeholder="请输入您的账号" autocomplete="off">
+            </div>
+        </div>
+
+        <!-- 密码 -->
+        <div class="form-group">
+            <label for="password">密码</label>
+            <div class="input-field">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" name="password" placeholder="请输入密码" >
+                <i class="fas fa-eye-slash toggle-pwd" id="togglePassword" onclick="togglePasswordVisibility()"></i>
+            </div>
+        </div>
+
+        <!-- 记住密码 & 忘记密码 -->
+        <div class="form-extra">
+            <label class="remember">
+                <input type="checkbox" id="rememberMe" checked>
+                <span>记住密码</span>
+            </label>
+            <a href="#" class="forgot-link">忘记密码？</a>
+        </div>
+
+        <!-- 登录按钮 -->
+        <button type="submit" class="login-btn" id="loginBtn">
+            <span>登录</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+
+        <!-- 注册引导 (符合 UC-001) -->
+        <div class="register-section">
+            <p>还没有账号？<a href="/auth/register.html">立即注册</a></p>
+        </div>
+
+        <!-- 底部四个小框框已完全移除 ✅ -->
+    </form>
+</div>
+
+<!-- JavaScript - 修复重复定义的问题 -->
+<script>
+    // ========== 工具函数 ==========
+
+    // 切换密码可见性
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('togglePassword');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        }
+    }
+
+    // 显示错误信息
+    function showError(message) {
+        const errorContainer = document.getElementById('errorContainer');
+        const errorSpan = document.getElementById('errorMessage');
+        errorSpan.innerText = message;
+        errorContainer.style.display = 'block';
+
+        // 5秒后自动隐藏
+        setTimeout(() => {
+            errorContainer.style.display = 'none';
+        }, 5000);
+    }
+
+    // 统一安全读取 response body（只读一次）
+    async function readBodyOnce(resp) {
+        const ct = resp.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+            return await resp.json();
+        }
+        return await resp.text();
+    }
+
+    // ========== 核心登录逻辑 ==========
+
+    // 处理登录
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const rememberMe = document.getElementById('rememberMe').checked;
+        const loginBtn = document.getElementById('loginBtn');
+
+        // 基础校验
+        if (!username) {
+            showError('请输入账号');
+            return;
+        }
+        if (!password) {
+            showError('请输入密码');
+            return;
+        }
+        if (password.length < 6) {
+            showError('密码长度不能小于6位');
+            return;
+        }
+
+        // 加载状态
+        loginBtn.classList.add('loading');
+        loginBtn.innerHTML = '<i class="fas fa-spinner"></i> 登录中...';
+
+        try {
+            const resp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const body = await readBodyOnce(resp);
+
+            if (!resp.ok) {
+                // body 可能是 string，也可能是 {message:...}
+                const msg = typeof body === 'string'
+                    ? (body || '登录失败')
+                    : (body.message || body.error || '账号或密码错误，请重新输入');
+                throw new Error(msg);
+            }
+
+            // 期望 LoginResponse: { token, username, role }
+            const data = typeof body === 'string' ? JSON.parse(body) : body;
+
+            const userInfo = {
+                username: data.username || username,
+                role: data.role || 'user',
+                loginTime: new Date().toISOString()
+            };
+
+            const token = data.token || '';
+
+            if (rememberMe) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            } else {
+                sessionStorage.setItem('token', token);
+                sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+            }
+            const role = (data.role || '').toUpperCase();
+
+if (role === 'ADMIN') {
+  window.location.href = '/admin/index.html';
+} else {
+  window.location.href = '/dashboard/index.html';
+}
+        } catch (err) {
+            showError(err.message || '登录失败，请稍后重试');
+        } finally {
+            // 恢复按钮状态
+            loginBtn.classList.remove('loading');
+            loginBtn.innerHTML = '<span>登录</span><i class="fas fa-arrow-right"></i>';
+        }
+    }
+
+    // ========== 事件监听 ==========
+
+    // 回车监听 - 放在函数外，只注册一次
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn && !loginBtn.classList.contains('loading')) {
+                const form = document.getElementById('loginForm');
+                if (form) {
+                    form.requestSubmit();
+                }
+            }
+        }
+    });
+
+    // 可选：页面加载完成后聚焦用户名输入框
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('username').focus();
+    });
+</script>
+</body>
+</html>
