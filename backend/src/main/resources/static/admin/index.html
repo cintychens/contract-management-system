@@ -987,24 +987,17 @@
     // ========== 管理员信息加载 ==========
     function loadAdminInfo() {
   try {
-    const userInfoStr =
-      localStorage.getItem("userInfo") || sessionStorage.getItem("userInfo");
+    const userInfoStr = sessionStorage.getItem("userInfo");
 
     if (!userInfoStr) {
-      // 没有用户信息，直接回登录
       window.location.href = "/auth/login.html";
       return;
     }
 
     const userInfo = JSON.parse(userInfoStr);
 
-    // ✅ 用角色判断是否管理员（关键修复）
-    const isAdmin =
-      userInfo.roleCode === "ADMIN" ||
-      userInfo.role === "ADMIN" ||
-      userInfo.role === "admin";
+    const isAdmin = userInfo.roleCode === "ADMIN";
 
-    // 顶部用户信息渲染
     document.getElementById("userName").textContent =
       userInfo.name || userInfo.fullName || userInfo.username || "系统管理员";
 
@@ -1014,7 +1007,6 @@
     const avatar = document.getElementById("userAvatar");
     avatar.textContent = (userInfo.username || "管").charAt(0).toUpperCase();
 
-    // ✅ 不是管理员才跳转
     if (!isAdmin) {
       window.location.href = "/dashboard/index.html";
     }
@@ -1075,21 +1067,17 @@ function switchTab(tabName, el) {
 }
     // 退出
     function logout() {
-    try {
-      localStorage.removeItem("userInfo");
-      localStorage.removeItem("isAdmin");
-      localStorage.removeItem("token");
+  try {
+    sessionStorage.removeItem("userInfo");
+    sessionStorage.removeItem("isAdmin");
+    sessionStorage.removeItem("token");
 
-      sessionStorage.removeItem("userInfo");
-      sessionStorage.removeItem("isAdmin");
-      sessionStorage.removeItem("token");
-
-      window.location.href = "/auth/login.html";
-    } catch (e) {
-      console.error("logout error:", e);
-      window.location.href = "/login.html";
-    }
+    window.location.href = "/auth/login.html";
+  } catch (e) {
+    console.error("logout error:", e);
+    window.location.href = "/auth/login.html";
   }
+}
 
     // ========== 仪表盘内容 ==========
     function renderDashboard() {
@@ -1765,7 +1753,7 @@ const usersState = {
 
 // 如果你后端需要带 token，就用这个包装 fetch
 function authFetch(url, options = {}) {
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const headers = new Headers(options.headers || {});
   if (token) headers.set("Authorization", "Bearer " + token);
   return fetch(url, { ...options, headers });

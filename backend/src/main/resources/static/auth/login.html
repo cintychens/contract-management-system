@@ -522,7 +522,6 @@
 
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
-        const rememberMe = document.getElementById('rememberMe').checked;
         const loginBtn = document.getElementById('loginBtn');
 
         // 基础校验
@@ -563,27 +562,37 @@
             // 期望 LoginResponse: { token, username, role }
             const data = typeof body === 'string' ? JSON.parse(body) : body;
 
-            const userInfo = {
-                username: data.username || username,
-                role: data.role || 'user',
-                loginTime: new Date().toISOString()
-            };
+            const roleCode = (data.roleCode || data.role || 'USER').toUpperCase();
+const token = data.token || '';
 
-            const token = data.token || '';
+const userInfo = {
+    userId: data.userId || null,
+    username: data.username || username,
+    fullName: data.fullName || '',
+    roleCode: roleCode,              // 关键：统一存 roleCode
+    status: data.status || 'ENABLED',
+    loginTime: new Date().toISOString()
+};
 
-            if (rememberMe) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('userInfo', JSON.stringify(userInfo));
-            } else {
-                sessionStorage.setItem('token', token);
-                sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
-            }
-            const role = (data.role || '').toUpperCase();
+// 先清掉旧登录态，避免管理员/普通用户互相覆盖
+localStorage.removeItem('token');
+localStorage.removeItem('userInfo');
+localStorage.removeItem('isAdmin');
 
-if (role === 'ADMIN') {
-  window.location.href = '/admin/index.html';
+sessionStorage.removeItem('token');
+sessionStorage.removeItem('userInfo');
+sessionStorage.removeItem('isAdmin');
+
+// 统一只用 sessionStorage
+sessionStorage.setItem('token', token);
+sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+sessionStorage.setItem('isAdmin', String(roleCode === 'ADMIN'));
+
+// 页面跳转
+if (roleCode === 'ADMIN') {
+    window.location.href = '/admin/index.html';
 } else {
-  window.location.href = '/dashboard/index.html';
+    window.location.href = '/dashboard/index.html';
 }
         } catch (err) {
             showError(err.message || '登录失败，请稍后重试');
