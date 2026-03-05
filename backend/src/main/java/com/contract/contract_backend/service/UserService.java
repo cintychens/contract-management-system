@@ -5,7 +5,7 @@ import com.contract.contract_backend.dto.PageResult;
 
 public interface UserService {
 
-    PageResult<AdminUserDto.UserRow> pageUsers(int page, int size, String keyword);
+    PageResult<AdminUserDto.UserRow> pageUsers(int page, int size, String keyword, String role);
 
     AdminUserDto.Stats stats();
 

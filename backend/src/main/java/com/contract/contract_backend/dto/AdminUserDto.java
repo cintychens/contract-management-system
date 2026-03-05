@@ -30,7 +30,7 @@ public class AdminUserDto {
     }
 
     /**
-     * 统计卡片 DTO（总数/启用/禁用）
+     * 统计卡片 DTO（总数/启用/禁用/角色数量）
      */
     @Data
     @NoArgsConstructor
@@ -40,11 +40,14 @@ public class AdminUserDto {
         private long total;
         private long enabled;
         private long disabled;
+
+        // ✅ 新增：角色数量
+        private long adminCount;
+        private long userCount;
     }
 
     /**
      * 编辑用户请求 DTO
-     * （你页面的“编辑用户”只需要改 roleCode + status 就够了）
      */
     @Data
     @NoArgsConstructor
@@ -57,7 +60,6 @@ public class AdminUserDto {
 
     /**
      * 重置密码请求 DTO（可选）
-     * 不传 newPassword 就由后端设置默认密码，比如 123456
      */
     @Data
     @NoArgsConstructor

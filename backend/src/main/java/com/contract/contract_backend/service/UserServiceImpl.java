@@ -18,8 +18,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
-    public PageResult<AdminUserDto.UserRow> pageUsers(int page, int size, String keyword) {
-        // 前端一般 page 从 1 开始，这里转换成 0 开始
+    public PageResult<AdminUserDto.UserRow> pageUsers(int page, int size, String keyword, String role) {
         int pageIndex = Math.max(page, 1) - 1;
         int pageSize = Math.max(size, 1);
 
@@ -29,11 +28,23 @@ public class UserServiceImpl implements UserService {
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
+        String kw = (keyword == null) ? "" : keyword.trim();
+        String r = (role == null) ? "" : role.trim().toUpperCase(); // USER / ADMIN / ALL / ""
+
+        boolean hasKw = !kw.isEmpty();
+        boolean hasRole = !r.isEmpty() && !"ALL".equals(r);
+
         Page<User> p;
-        if (keyword == null || keyword.trim().isEmpty()) {
-            p = userRepository.findAll(pageable);
+
+        if (hasKw && hasRole) {
+            // 同时按用户名 + 角色筛选
+            p = userRepository.findByUsernameContainingIgnoreCaseAndRoleCode(kw, r, pageable);
+        } else if (hasKw) {
+            p = userRepository.findByUsernameContainingIgnoreCase(kw, pageable);
+        } else if (hasRole) {
+            p = userRepository.findByRoleCode(r, pageable);
         } else {
-            p = userRepository.findByUsernameContainingIgnoreCase(keyword.trim(), pageable);
+            p = userRepository.findAll(pageable);
         }
 
         List<AdminUserDto.UserRow> rows = p.getContent().stream()
@@ -49,10 +60,15 @@ public class UserServiceImpl implements UserService {
         long enabled = userRepository.countByStatus("ENABLED");
         long disabled = userRepository.countByStatus("DISABLED");
 
+        long adminCount = userRepository.countByRoleCode("ADMIN");
+        long userCount = userRepository.countByRoleCode("USER");
+
         return AdminUserDto.Stats.builder()
                 .total(total)
                 .enabled(enabled)
                 .disabled(disabled)
+                .adminCount(adminCount)
+                .userCount(userCount)
                 .build();
     }
 

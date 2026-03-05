@@ -14,4 +14,5 @@ logs/
 Thumbs.db
 
 # env
-.env
+.envdata/*.db
+data/*.mv.db

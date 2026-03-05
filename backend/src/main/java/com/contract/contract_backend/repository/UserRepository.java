@@ -9,16 +9,22 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // ✅ 登录用
+    // 登录用
     Optional<User> findByUsername(String username);
 
-    // ✅ 初始化管理员用
+    // 初始化管理员用
     boolean existsByUsername(String username);
 
-    // ✅ 分页搜索
+    // 关键词搜索
     Page<User> findByUsernameContainingIgnoreCase(String keyword, Pageable pageable);
 
-    // ✅ 统计
-    long countByStatus(String status);     // ENABLED / DISABLED
-    long countByRoleCode(String roleCode); // USER / ADMIN
+    // ⭐ 按角色筛选
+    Page<User> findByRoleCode(String roleCode, Pageable pageable);
+
+    // ⭐ 关键词 + 角色
+    Page<User> findByUsernameContainingIgnoreCaseAndRoleCode(String keyword, String roleCode, Pageable pageable);
+
+    // 统计
+    long countByStatus(String status);
+    long countByRoleCode(String roleCode);
 }

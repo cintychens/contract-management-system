@@ -592,7 +592,7 @@
         /* ========== 统计卡片 ========== */
         .stats-mini-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -986,27 +986,43 @@
 <script>
     // ========== 管理员信息加载 ==========
     function loadAdminInfo() {
-        try {
-            const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
-            const isAdmin = localStorage.getItem('isAdmin') || sessionStorage.getItem('isAdmin');
+  try {
+    const userInfoStr =
+      localStorage.getItem("userInfo") || sessionStorage.getItem("userInfo");
 
-            if (userInfoStr) {
-                const userInfo = JSON.parse(userInfoStr);
-                document.getElementById('userName').textContent = userInfo.name || userInfo.username || '系统管理员';
-                document.getElementById('userRole').textContent = userInfo.role === 'super_admin' ? '超级管理员' : '系统管理员';
-
-                const avatar = document.getElementById('userAvatar');
-                avatar.textContent = (userInfo.username || '管').charAt(0).toUpperCase();
-            }
-
-            // 如果不是管理员，重定向到普通仪表盘
-            if (!isAdmin && !window.location.href.includes('admin')) {
-                window.location.href = '/dashboard.html';
-            }
-        } catch (e) {
-            console.error('加载管理员信息失败:', e);
-        }
+    if (!userInfoStr) {
+      // 没有用户信息，直接回登录
+      window.location.href = "/auth/login.html";
+      return;
     }
+
+    const userInfo = JSON.parse(userInfoStr);
+
+    // ✅ 用角色判断是否管理员（关键修复）
+    const isAdmin =
+      userInfo.roleCode === "ADMIN" ||
+      userInfo.role === "ADMIN" ||
+      userInfo.role === "admin";
+
+    // 顶部用户信息渲染
+    document.getElementById("userName").textContent =
+      userInfo.name || userInfo.fullName || userInfo.username || "系统管理员";
+
+    document.getElementById("userRole").textContent =
+      isAdmin ? "超级管理员" : "普通用户";
+
+    const avatar = document.getElementById("userAvatar");
+    avatar.textContent = (userInfo.username || "管").charAt(0).toUpperCase();
+
+    // ✅ 不是管理员才跳转
+    if (!isAdmin) {
+      window.location.href = "/dashboard/index.html";
+    }
+  } catch (e) {
+    console.error("加载管理员信息失败:", e);
+    window.location.href = "/auth/login.html";
+  }
+}
 
     // ========== 标签页切换 ==========
     function setActiveNavByTab(tabName) {
@@ -1135,14 +1151,6 @@ function switchTab(tabName, el) {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    loadAdminInfo();
-
-    document.getElementById('content-area').innerHTML = renderDashboard();
-    setTimeout(initCharts, 100);
-
-    loadDashboardData(); // ⭐这里调用
-  });
     // ========== 用户管理内容 ==========
     function renderUserManagement() {
   return `
@@ -1170,19 +1178,27 @@ function switchTab(tabName, el) {
           <div class="stat-mini-value" id="userDisabledCount">0</div>
           <div>禁用用户</div>
         </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="adminCount">0</div>
+          <div>管理员</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="normalUserCount">0</div>
+          <div>普通用户</div>
+        </div>
       </div>
 
-      <div class="tabs">
-        <div class="tab active">全部用户</div>
-        <div class="tab">普通用户</div>
-        <div class="tab">管理员</div>
-        <div class="tab">待审核</div>
-      </div>
+       <div class="tabs" id="userTabs">
+       <div class="tab active" onclick="filterUsers('ALL', this)">全部用户</div>
+       <div class="tab" onclick="filterUsers('USER', this)">普通用户</div>
+       <div class="tab" onclick="filterUsers('ADMIN', this)">管理员</div>
+    </div>
 
       <div class="table-responsive">
         <table>
           <thead>
             <tr>
+              <th style="width:70px;">序号</th>
               <th>ID</th>
               <th>用户名</th>
               <th>姓名</th>
@@ -1743,7 +1759,8 @@ function switchTab(tabName, el) {
 const usersState = {
   page: 1,
   size: 10,
-  keyword: ""
+  keyword: "",
+  role: "ALL"
 };
 
 // 如果你后端需要带 token，就用这个包装 fetch
@@ -1807,7 +1824,10 @@ async function loadUsersStats() {
     const totalEl = document.getElementById("userTotalCount");
     const activeEl = document.getElementById("userActiveCount");
     const disabledEl = document.getElementById("userDisabledCount");
-
+    const adminEl = document.getElementById("adminCount");
+    const userEl = document.getElementById("normalUserCount");
+    if (adminEl) adminEl.textContent = data.adminCount ?? 0;
+    if (userEl) userEl.textContent = data.userCount ?? 0;
     if (totalEl) totalEl.textContent = data.total ?? 0;
     if (activeEl) activeEl.textContent = data.enabled ?? 0;
     if (disabledEl) disabledEl.textContent = data.disabled ?? 0;
@@ -1827,15 +1847,18 @@ async function loadUsersTable() {
   if (!tbody) return;
 
   // loading 占位
-  tbody.innerHTML = `<tr><td colspan="8" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
   if (emptyHint) emptyHint.style.display = "none";
 
   const qs = new URLSearchParams({
-    page: String(usersState.page),
-    size: String(usersState.size),
-    keyword: usersState.keyword || ""
-  });
+  page: String(usersState.page),
+  size: String(usersState.size),
+  keyword: usersState.keyword || ""
+});
 
+if (usersState.role && usersState.role !== "ALL") {
+  qs.set("role", usersState.role || "ALL"); // role=USER / role=ADMIN
+}
   try {
     const resp = await authFetch(`/api/admin/users?${qs.toString()}`);
     if (!resp.ok) throw new Error(await resp.text());
@@ -1863,14 +1886,14 @@ async function loadUsersTable() {
     if (emptyHint) emptyHint.style.display = "none";
 
     // 渲染
-    tbody.innerHTML = records.map(u => {
+    tbody.innerHTML = records.map((u, idx) => {
+      const seq = (page - 1) * size + (idx + 1);
       const roleText = (u.roleCode === "ADMIN") ? `<span class="admin-badge-small">管理员</span>` : "普通用户";
 
       const statusHtml = (u.status === "ENABLED")
         ? `<span class="status-badge status-active">启用</span>`
         : `<span class="status-badge status-disabled">禁用</span>`;
 
-      // 你实体里没有 fullName / lastLogin，就先显示 -
       const fullName = u.fullName || "-";
       const lastLogin = u.lastLoginAt || "-";
 
@@ -1878,6 +1901,7 @@ async function loadUsersTable() {
 
       return `
         <tr>
+          <td>${seq}</td>
           <td>${u.userId ?? "-"}</td>
           <td>${escapeHtml(u.username ?? "-")}</td>
           <td>${escapeHtml(fullName)}</td>
@@ -1898,8 +1922,22 @@ async function loadUsersTable() {
     }).join("");
   } catch (e) {
     console.error("loadUsersTable error:", e);
-    tbody.innerHTML = `<tr><td colspan="8" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
   }
+}
+
+function filterUsers(role, el) {
+  // 1) tab 高亮切换
+  document.querySelectorAll("#userTabs .tab").forEach(t => t.classList.remove("active"));
+  if (el) el.classList.add("active");
+
+  // 2) 更新筛选条件
+  usersState.role = role;
+  usersState.page = 1;
+
+  // 3) 重新加载
+  loadUsersTable();
+  loadUsersStats();
 }
 
 // ===================== 用户管理：编辑/更新（可选） =====================
