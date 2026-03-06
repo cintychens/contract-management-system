@@ -1881,9 +1881,7 @@ async function loadUsersTable() {
     tbody.innerHTML = records.map((u, idx) => {
       const seq = (page - 1) * size + (idx + 1);
 
-      const roleText = (u.roleCode === "ADMIN")
-        ? `<span class="admin-badge-small">管理员</span>`
-        : "普通用户";
+      const roleText = (u.roleCode === "ADMIN") ? "管理员" : "普通用户";
 
       const statusHtml = (u.status === "ENABLED")
         ? `<span class="status-badge status-active">启用</span>`

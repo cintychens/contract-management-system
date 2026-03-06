@@ -55,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
 
         user.setLastLoginAt(java.time.LocalDateTime.now());
         userRepository.save(user);
-        
+
         String token = jwtUtil.generateToken(
                 user.getUserId(),
                 user.getUsername(),
