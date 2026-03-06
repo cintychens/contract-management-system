@@ -949,6 +949,10 @@
                 <label>模板内容</label>
                 <textarea id="editTemplateContent" rows="8" required></textarea>
             </div>
+            <div class="form-group">
+                <label>备注</label>
+                <textarea id="editTemplateRemark" rows="3" placeholder="请输入模板说明或备注"></textarea>
+            </div>
             <!-- 附件上传 -->
             <div class="form-group">
                 <label>模板附件（支持 PDF / Word）</label>
@@ -1045,7 +1049,6 @@ function switchTab(tabName, el) {
     switch (tabName) {
         case 'dashboard':
             contentArea.innerHTML = renderDashboard();
-            setTimeout(initCharts, 50); // 切回来时重新画图
             loadDashboardData();
             break;
         case 'users':
@@ -1054,6 +1057,7 @@ function switchTab(tabName, el) {
             break;
         case 'templates':
             contentArea.innerHTML = renderTemplateManagement();
+            initTemplatesPage();
             break;
         case 'dictionary':
             contentArea.innerHTML = renderDictionaryManagement();
@@ -1128,6 +1132,19 @@ function switchTab(tabName, el) {
             </div>
         </div>
     `;
+}
+
+  async function uploadTemplateFile(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+
+  const resp = await authFetch("/api/admin/templates/upload", {
+    method: "POST",
+    body: fd
+  });
+
+  if (!resp.ok) throw new Error(await resp.text());
+  return await resp.json();
 }
 
   async function loadDashboardData() {
@@ -1231,62 +1248,83 @@ function switchTab(tabName, el) {
 
     // ========== 模板管理内容 ==========
     function renderTemplateManagement() {
-    return `
-        <div class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-file-alt"></i> 合同模板管理</h2>
-                <div class="header-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" placeholder="搜索模板...">
-                    </div>
-                    <button class="btn-primary" onclick="showAddTemplateModal()">
-                        <i class="fas fa-plus"></i> 新建模板
-                    </button>
-                </div>
-            </div>
+  return `
+    <div class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-file-alt"></i> 合同模板管理</h2>
+        <div class="header-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input id="templateSearchInput" type="text" placeholder="搜索模板名称...">
+          </div>
 
-            <div class="stats-mini-grid">
-                <div class="stat-mini-card">
-                    <div class="stat-mini-value">0</div>
-                    <div>总模板数</div>
-                </div>
-                <div class="stat-mini-card">
-                    <div class="stat-mini-value">0</div>
-                    <div>启用模板</div>
-                </div>
-                <div class="stat-mini-card">
-                    <div class="stat-mini-value">0</div>
-                    <div>禁用模板</div>
-                </div>
-            </div>
+          <select id="templateTypeFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
+            <option value="ALL">全部类型</option>
+            <option value="transport">运输合同</option>
+            <option value="warehouse">仓储合同</option>
+            <option value="supply">供应链协议</option>
+          </select>
 
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>模板ID</th>
-                            <th>模板名称</th>
-                            <th>合同类型</th>
-                            <th>状态</th>
-                            <th>最后修改</th>
-                            <th>修改人</th>
-                            <th>使用次数</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+          <select id="templateStatusFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
+            <option value="ALL">全部状态</option>
+            <option value="ENABLED">启用</option>
+            <option value="DISABLED">禁用</option>
+          </select>
 
-                <!-- ✅ 空状态提示（可选，但建议保留，页面不空白） -->
-                <div style="padding: 40px 0; text-align: center; color: #6b7b8f;">
-                    暂无模板数据，请点击右上角“新建模板”创建。
-                </div>
-            </div>
+          <button class="btn-primary" onclick="showAddTemplateModal()">
+            <i class="fas fa-plus"></i> 新建模板
+          </button>
         </div>
-    `;
-    }
+      </div>
+
+      <div class="stats-mini-grid">
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="templateTotalCount">0</div>
+          <div>总模板数</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="templateEnabledCount">0</div>
+          <div>启用模板</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="templateDisabledCount">0</div>
+          <div>禁用模板</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>模板ID</th>
+              <th>模板名称</th>
+              <th>合同类型</th>
+              <th>状态</th>
+              <th>备注</th>
+              <th>最后修改</th>
+              <th>修改人</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="templateTableBody"></tbody>
+        </table>
+
+        <div id="templateEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+          暂无模板数据，请点击右上角“新建模板”创建。
+        </div>
+
+        <div id="templatePagination"
+             style="margin-top: 20px; display:flex; justify-content: space-between; align-items:center; color:#6b7b8f;">
+          <div id="templatePageInfo">—</div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-outline" id="templatePrevBtn">上一页</button>
+            <button class="btn-outline" id="templateNextBtn">下一页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
     // ========== 字段字典管理 ==========
     function renderDictionaryManagement() {
@@ -1725,31 +1763,99 @@ function switchTab(tabName, el) {
   }
 
   function showAddTemplateModal() {
-    document.getElementById('editTemplateName').value = '';
-    document.getElementById('editContractType').value = 'transport';
-    document.getElementById('editTemplateContent').value = '';
-    document.getElementById('editTemplateStatus').value = 'active';
+  templatesState.editingId = null;
 
-    document.querySelector('#templateModal .modal-header h3').innerHTML =
-      '<i class="fas fa-plus"></i> 新建模板';
+  document.getElementById('editTemplateName').value = '';
+  document.getElementById('editContractType').value = 'transport';
+  document.getElementById('editTemplateContent').value = '';
+  document.getElementById('editTemplateStatus').value = 'active';
 
-    clearTemplateFile();
-    showModal('templateModal');
-  }
+  // 新增一个备注输入框时会用到
+  const remarkEl = document.getElementById('editTemplateRemark');
+  if (remarkEl) remarkEl.value = '';
 
-  function editTemplate(templateId) {
+  document.querySelector('#templateModal .modal-header h3').innerHTML =
+    '<i class="fas fa-plus"></i> 新建模板';
+
+  clearTemplateFile();
+  showModal('templateModal');
+}
+
+  async function editTemplate(templateId) {
+  try {
+    const resp = await authFetch(`/api/admin/templates/${templateId}`);
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+
+    templatesState.editingId = templateId;
+
     document.querySelector('#templateModal .modal-header h3').innerHTML =
       '<i class="fas fa-edit"></i> 编辑模板';
 
-    // 这里以后接后端回填
-    document.getElementById('editTemplateName').value = '标准运输合同';
-    document.getElementById('editContractType').value = 'transport';
-    document.getElementById('editTemplateContent').value = '甲方：{{party_a}}\n乙方：{{party_b}}\n\n第一条 运输货物\n...';
-    document.getElementById('editTemplateStatus').value = 'active';
+    document.getElementById('editTemplateName').value = data.name || '';
+    document.getElementById('editContractType').value = data.contractType || 'transport';
+    document.getElementById('editTemplateContent').value = data.content || '';
+    document.getElementById('editTemplateStatus').value =
+      data.status === 'DISABLED' ? 'disabled' : 'active';
+
+    const remarkEl = document.getElementById('editTemplateRemark');
+    if (remarkEl) remarkEl.value = data.remark || '';
 
     clearTemplateFile();
     showModal('templateModal');
+  } catch (err) {
+    console.error(err);
+    alert("加载模板详情失败：" + (err.message || err));
   }
+}
+
+async function toggleTemplateStatus(templateId, currentStatus) {
+  const next = currentStatus === "ENABLED" ? "DISABLED" : "ENABLED";
+  const text = next === "ENABLED" ? "启用" : "禁用";
+
+  if (!confirm(`确认要${text}该模板吗？`)) return;
+
+  try {
+    const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}");
+
+    const resp = await authFetch(`/api/admin/templates/${templateId}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: next,
+        updatedBy: userInfo.username || "admin"
+      })
+    });
+
+    if (!resp.ok) throw new Error(await resp.text());
+
+    await loadTemplatesTable();
+    await loadTemplateStats();
+  } catch (e) {
+    console.error(e);
+    alert("状态切换失败：" + (e.message || e));
+  }
+}
+
+async function deleteTemplate(templateId) {
+  if (!confirm("确认删除该模板吗？删除后不可恢复。")) return;
+
+  try {
+    const resp = await authFetch(`/api/admin/templates/${templateId}`, {
+      method: "DELETE"
+    });
+
+    if (!resp.ok) throw new Error(await resp.text());
+
+    await loadTemplatesTable();
+    await loadTemplateStats();
+    alert("删除成功");
+  } catch (e) {
+    console.error(e);
+    alert("删除失败：" + (e.message || e));
+  }
+}
 
   // ===================== 用户管理：状态 =====================
 const usersState = {
@@ -1757,6 +1863,15 @@ const usersState = {
   size: 10,
   keyword: "",
   role: "ALL"
+};
+
+const templatesState = {
+  page: 1,
+  size: 10,
+  keyword: "",
+  contractType: "ALL",
+  status: "ALL",
+  editingId: null
 };
 
 // 如果你后端需要带 token，就用这个包装 fetch
@@ -1807,6 +1922,61 @@ function initUsersPage() {
   // 3) 初次加载
   loadUsersStats();
   loadUsersTable();
+}
+
+function initTemplatesPage() {
+  const searchInput = document.getElementById("templateSearchInput");
+  const typeFilter = document.getElementById("templateTypeFilter");
+  const statusFilter = document.getElementById("templateStatusFilter");
+  const prevBtn = document.getElementById("templatePrevBtn");
+  const nextBtn = document.getElementById("templateNextBtn");
+
+  if (searchInput) {
+    let timer = null;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        templatesState.keyword = searchInput.value.trim();
+        templatesState.page = 1;
+        loadTemplatesTable();
+      }, 350);
+    });
+  }
+
+  if (typeFilter) {
+    typeFilter.addEventListener("change", () => {
+      templatesState.contractType = typeFilter.value;
+      templatesState.page = 1;
+      loadTemplatesTable();
+    });
+  }
+
+  if (statusFilter) {
+    statusFilter.addEventListener("change", () => {
+      templatesState.status = statusFilter.value;
+      templatesState.page = 1;
+      loadTemplatesTable();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      if (templatesState.page > 1) {
+        templatesState.page--;
+        loadTemplatesTable();
+      }
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      templatesState.page++;
+      loadTemplatesTable();
+    };
+  }
+
+  loadTemplateStats();
+  loadTemplatesTable();
 }
 
 // ===================== 用户管理：统计 =====================
@@ -1929,6 +2099,108 @@ async function loadUsersTable() {
   }
 }
 
+async function loadTemplateStats() {
+  try {
+    const resp = await authFetch("/api/admin/templates/stats");
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+
+    const totalEl = document.getElementById("templateTotalCount");
+    const enabledEl = document.getElementById("templateEnabledCount");
+    const disabledEl = document.getElementById("templateDisabledCount");
+
+    if (totalEl) totalEl.textContent = data.total ?? 0;
+    if (enabledEl) enabledEl.textContent = data.enabled ?? 0;
+    if (disabledEl) disabledEl.textContent = data.disabled ?? 0;
+  } catch (e) {
+    console.error("loadTemplateStats error:", e);
+  }
+}
+
+async function loadTemplatesTable() {
+  const tbody = document.getElementById("templateTableBody");
+  const emptyHint = document.getElementById("templateEmptyHint");
+  const pageInfo = document.getElementById("templatePageInfo");
+  const prevBtn = document.getElementById("templatePrevBtn");
+  const nextBtn = document.getElementById("templateNextBtn");
+
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="8" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+  if (emptyHint) emptyHint.style.display = "none";
+
+  const qs = new URLSearchParams({
+    page: String(templatesState.page),
+    size: String(templatesState.size),
+    keyword: templatesState.keyword || ""
+  });
+
+  if (templatesState.contractType && templatesState.contractType !== "ALL") {
+    qs.set("contractType", templatesState.contractType);
+  }
+
+  if (templatesState.status && templatesState.status !== "ALL") {
+    qs.set("status", templatesState.status);
+  }
+
+  try {
+    const resp = await authFetch(`/api/admin/templates?${qs.toString()}`);
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+    const records = data.records || [];
+    const total = data.total ?? 0;
+    const page = data.page ?? templatesState.page;
+    const size = data.size ?? templatesState.size;
+    const totalPages = data.totalPages ?? Math.ceil(total / size);
+
+    if (pageInfo) pageInfo.textContent = `第 ${page} / ${totalPages || 1} 页 · 共 ${total} 条`;
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = totalPages ? page >= totalPages : records.length < size;
+
+    if (!records.length) {
+      tbody.innerHTML = "";
+      if (emptyHint) emptyHint.style.display = "block";
+      return;
+    }
+
+    if (emptyHint) emptyHint.style.display = "none";
+
+    tbody.innerHTML = records.map(t => {
+      const statusHtml = t.status === "ENABLED"
+        ? `<span class="status-badge status-active">启用</span>`
+        : `<span class="status-badge status-disabled">禁用</span>`;
+
+      return `
+        <tr>
+          <td>${t.templateId ?? "-"}</td>
+          <td>${escapeHtml(t.name ?? "-")}</td>
+          <td>${escapeHtml(t.contractType ?? "-")}</td>
+          <td>${statusHtml}</td>
+          <td class="user-remark-cell" title="${escapeHtml(t.remark || "-")}">${escapeHtml(t.remark || "-")}</td>
+          <td>${t.updatedAt || "-"}</td>
+          <td>${escapeHtml(t.updatedBy || "-")}</td>
+          <td>
+            <button class="action-btn" title="编辑" onclick="editTemplate(${t.templateId})">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn" title="切换状态" onclick="toggleTemplateStatus(${t.templateId}, '${t.status}')">
+              <i class="fas fa-toggle-on"></i>
+            </button>
+            <button class="action-btn danger" title="删除" onclick="deleteTemplate(${t.templateId})">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (e) {
+    console.error("loadTemplatesTable error:", e);
+    tbody.innerHTML = `<tr><td colspan="8" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+  }
+}
+
 function filterUsers(role, el) {
   // 1) tab 高亮切换
   document.querySelectorAll("#userTabs .tab").forEach(t => t.classList.remove("active"));
@@ -2033,8 +2305,7 @@ function escapeAttr(str) {
 
     // 默认加载仪表盘
     document.getElementById('content-area').innerHTML = renderDashboard();
-setTimeout(initCharts, 100);
-loadDashboardData();
+    loadDashboardData();
 
     //  绑定模板附件上传 change
     const templateFileInput = document.getElementById("templateFile");
@@ -2044,66 +2315,86 @@ loadDashboardData();
 
     //  绑定模板表单 submit
     const templateForm = document.getElementById("templateForm");
-    if (templateForm) {
-      templateForm.addEventListener("submit", async function (e) {
-        e.preventDefault();
+if (templateForm) {
+  templateForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-        const name = document.getElementById("editTemplateName").value.trim();
-        const type = document.getElementById("editContractType").value;
-        const content = document.getElementById("editTemplateContent").value;
-        const status = document.getElementById("editTemplateStatus").value;
-        const fileInput = document.getElementById("templateFile");
-        const file = fileInput?.files?.[0];
+    const name = document.getElementById("editTemplateName").value.trim();
+    const contractType = document.getElementById("editContractType").value;
+    const content = document.getElementById("editTemplateContent").value.trim();
+    const remark = document.getElementById("editTemplateRemark")?.value.trim() || "";
+    const status = document.getElementById("editTemplateStatus").value === "active"
+      ? "ENABLED"
+      : "DISABLED";
+    const file = document.getElementById("templateFile")?.files?.[0];
 
-        if (!name) {
-          alert("请填写模板名称");
-          return;
-        }
-
-        //  可选：提交前也做一次校验（防止用户绕过 change）
-        if (file) {
-          const ext = getExt(file.name);
-          const sizeMB = file.size / (1024 * 1024);
-          const mimeOk = ALLOWED_TEMPLATE_MIME.has(file.type);
-          const extOk = ALLOWED_TEMPLATE_EXT.has(ext);
-          if (!mimeOk && !extOk) {
-            alert("只允许上传 PDF 或 Word（.pdf/.doc/.docx）");
-            return;
-          }
-          if (sizeMB > MAX_TEMPLATE_FILE_SIZE_MB) {
-            alert(`文件过大，建议不超过 ${MAX_TEMPLATE_FILE_SIZE_MB}MB`);
-            return;
-          }
-        }
-
-        const fd = new FormData();
-        fd.append("name", name);
-        fd.append("contractType", type);
-        fd.append("content", content);
-        fd.append("status", status);
-        if (file) fd.append("file", file);
-
-        try {
-          const resp = await authFetch("/api/admin/templates", {
-            method: "POST",
-            body: fd
-          });
-
-          if (!resp.ok) {
-            const text = await resp.text();
-            throw new Error(text || "保存失败");
-          }
-
-          alert("模板已保存");
-          closeModal("templateModal");
-          clearTemplateFile();
-        } catch (err) {
-          console.error(err);
-          alert("保存失败：" + (err.message || err));
-        }
-      });
+    if (!name) {
+      alert("请填写模板名称");
+      return;
     }
 
+    if (!content) {
+      alert("请填写模板内容");
+      return;
+    }
+
+    let fileInfo = null;
+
+    if (file) {
+      try {
+        fileInfo = await uploadTemplateFile(file);
+      } catch (err) {
+        alert("附件上传失败：" + (err.message || err));
+        return;
+      }
+    }
+
+    const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}");
+
+    const payload = {
+      name,
+      contractType,
+      content,
+      remark,
+      status,
+      updatedBy: userInfo.username || "admin",
+      fileName: fileInfo?.fileName || null,
+      fileObjectKey: fileInfo?.fileObjectKey || null
+    };
+
+    try {
+      let resp;
+
+      if (templatesState.editingId) {
+        resp = await authFetch(`/api/admin/templates/${templatesState.editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        resp = await authFetch("/api/admin/templates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || "保存失败");
+      }
+
+      alert("模板已保存");
+      closeModal("templateModal");
+      clearTemplateFile();
+      await loadTemplatesTable();
+      await loadTemplateStats();
+    } catch (err) {
+      console.error(err);
+      alert("保存失败：" + (err.message || err));
+    }
+  });
+}
     // 模态框点击外部关闭
     window.onclick = function (event) {
       if (event.target.classList.contains('modal')) {
