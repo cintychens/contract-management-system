@@ -44,16 +44,15 @@ app:
     username: admin
     password: admin123456
 
-minio:
-  endpoint: http://127.0.0.1:9000
-  access-key: minioadmin
-  secret-key: minioadmin
-  bucket-name: contract-files
-
 contract:
   upload:
     allowed-extensions:
       - pdf
       - doc
       - docx
+      - txt
     max-size: 20971520
+
+file:
+  storage:
+    base-dir: D:/contract-management-system/uploads

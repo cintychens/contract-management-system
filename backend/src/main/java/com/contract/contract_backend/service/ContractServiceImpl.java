@@ -1,17 +1,21 @@
 package com.contract.contract_backend.service.impl;
 
-import com.contract.contract_backend.config.ContractUploadProperties;
-import com.contract.contract_backend.dto.ContractUploadResponse;
-import com.contract.contract_backend.entity.Contract;
-import com.contract.contract_backend.entity.ContractVersion;
-import com.contract.contract_backend.repository.ContractRepository;
-import com.contract.contract_backend.repository.ContractVersionRepository;
-import com.contract.contract_backend.service.ContractService;
-import com.contract.contract_backend.service.MinioService;
 import com.contract.contract_backend.common.utils.ContractNoGenerator;
 import com.contract.contract_backend.common.utils.FileTypeUtil;
 import com.contract.contract_backend.common.utils.HashUtil;
 import com.contract.contract_backend.common.utils.ObjectKeyUtil;
+import com.contract.contract_backend.config.ContractUploadProperties;
+import com.contract.contract_backend.dto.ContractFieldResponse;
+import com.contract.contract_backend.dto.ContractUploadResponse;
+import com.contract.contract_backend.entity.Contract;
+import com.contract.contract_backend.entity.ContractField;
+import com.contract.contract_backend.entity.ContractVersion;
+import com.contract.contract_backend.repository.ContractFieldRepository;
+import com.contract.contract_backend.repository.ContractRepository;
+import com.contract.contract_backend.repository.ContractVersionRepository;
+import com.contract.contract_backend.service.ContractParseService;
+import com.contract.contract_backend.service.ContractService;
+import com.contract.contract_backend.service.FileStorageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -28,8 +33,10 @@ public class ContractServiceImpl implements ContractService {
 
     private final ContractRepository contractRepository;
     private final ContractVersionRepository contractVersionRepository;
-    private final MinioService minioService;
+    private final ContractFieldRepository contractFieldRepository;
+    private final FileStorageService fileStorageService;
     private final ContractUploadProperties uploadProperties;
+    private final ContractParseService contractParseService;
 
     @Override
     @Transactional
@@ -49,7 +56,7 @@ public class ContractServiceImpl implements ContractService {
             throw new RuntimeException("读取上传文件失败", e);
         }
 
-        String savedObjectKey = minioService.uploadFile(file, objectKey);
+        String savedObjectKey = fileStorageService.uploadFile(file, objectKey);
 
         Contract contract = Contract.builder()
                 .contractNo(contractNo)
@@ -80,12 +87,31 @@ public class ContractServiceImpl implements ContractService {
         contract.setCurrentVersionId(version.getVersionId());
         contractRepository.save(contract);
 
+        // 保留你原有逻辑：上传后立即解析
+        contractParseService.parseContract(contract.getContractId());
+
         return ContractUploadResponse.builder()
                 .contractId(contract.getContractId())
                 .contractNo(contract.getContractNo())
                 .versionId(version.getVersionId())
-                .status(contract.getStatus())
+                .status("PARSED")
                 .build();
+    }
+
+    @Override
+    public List<ContractFieldResponse> getContractFields(Long contractId) {
+        List<ContractField> fields = contractFieldRepository.findByContractId(contractId);
+
+        return fields.stream().map(field -> ContractFieldResponse.builder()
+                .fieldId(field.getFieldId())
+                .contractId(field.getContractId())
+                .fieldKey(field.getFieldKey())
+                .fieldName(field.getFieldName())
+                .fieldValue(field.getFieldValue())
+                .sourceRef(field.getSourceRef())
+                .confidence(field.getConfidence())
+                .build()
+        ).toList();
     }
 
     private void validateUpload(MultipartFile file, String title, String contractType) {

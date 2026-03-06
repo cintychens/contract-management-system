@@ -10,7 +10,8 @@ public class FileTypeUtil {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "application/pdf",
             "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "text/plain"
     );
 
     private FileTypeUtil() {

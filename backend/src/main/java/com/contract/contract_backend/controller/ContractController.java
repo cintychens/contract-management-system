@@ -1,11 +1,14 @@
 package com.contract.contract_backend.controller;
 
 import com.contract.contract_backend.common.Result;
+import com.contract.contract_backend.dto.ContractFieldResponse;
 import com.contract.contract_backend.dto.ContractUploadResponse;
 import com.contract.contract_backend.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -22,5 +25,10 @@ public class ContractController {
     ) {
         ContractUploadResponse response = contractService.uploadContract(file, title, contractType);
         return Result.success(response);
+    }
+
+    @GetMapping("/{contractId}/fields")
+    public Result<List<ContractFieldResponse>> getContractFields(@PathVariable Long contractId) {
+        return Result.success(contractService.getContractFields(contractId));
     }
 }

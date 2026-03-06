@@ -1040,7 +1040,8 @@
 }
 
 function switchTab(tabName, el) {
-    // 1) 更新导航激活状态（支持 this / 也支持程序调用）
+    console.log("切换 tab:", tabName);
+
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
 
     if (el && el.classList) {
@@ -1049,39 +1050,54 @@ function switchTab(tabName, el) {
         setActiveNavByTab(tabName);
     }
 
-    // 2) 切换内容
     const contentArea = document.getElementById('content-area');
-    switch (tabName) {
-        case 'dashboard':
-            contentArea.innerHTML = renderDashboard();
-            loadDashboardData();
-            break;
-        case 'users':
-            contentArea.innerHTML = renderUserManagement();
-            initUsersPage();
-            break;
-        case 'templates':
-            contentArea.innerHTML = renderTemplateManagement();
-            initTemplatesPage();
-            break;
-        case 'dictionary':
-            contentArea.innerHTML = renderDictionaryManagement();
-            break;
-        case 'logs':
-            contentArea.innerHTML = renderOperationLogs();
-            break;
-        case 'audit':
-            contentArea.innerHTML = renderAuditRecords();
-            break;
-        case 'parameters':
-            contentArea.innerHTML = renderSystemParameters();
-            break;
-        case 'contract-upload':
-            contentArea.innerHTML = renderContractUploadPanel();
-            break;
-        case 'backup':
-            contentArea.innerHTML = renderDataMaintenance();
-            break;
+
+    try {
+        switch (tabName) {
+            case 'dashboard':
+                console.log("渲染 dashboard");
+                contentArea.innerHTML = renderDashboard();
+                loadDashboardData();
+                break;
+            case 'users':
+                console.log("渲染 users");
+                contentArea.innerHTML = renderUserManagement();
+                initUsersPage();
+                break;
+            case 'templates':
+                console.log("渲染 templates");
+                contentArea.innerHTML = renderTemplateManagement();
+                initTemplatesPage();
+                break;
+            case 'dictionary':
+                console.log("渲染 dictionary");
+                contentArea.innerHTML = renderDictionaryManagement();
+                break;
+            case 'logs':
+                console.log("渲染 logs");
+                contentArea.innerHTML = renderOperationLogs();
+                break;
+            case 'audit':
+                console.log("渲染 audit");
+                contentArea.innerHTML = renderAuditRecords();
+                break;
+            case 'parameters':
+                console.log("渲染 parameters");
+                contentArea.innerHTML = renderSystemParameters();
+                break;
+            case 'contract-upload':
+                console.log("渲染 contract-upload");
+                contentArea.innerHTML = renderContractUploadPanel();
+                break;
+            case 'backup':
+                console.log("渲染 backup");
+                contentArea.innerHTML = renderDataMaintenance();
+                break;
+            default:
+                console.warn("未知 tab:", tabName);
+        }
+    } catch (err) {
+        console.error("switchTab 执行失败:", err);
     }
 }
     // 退出
@@ -1149,7 +1165,7 @@ function renderContractUploadPanel() {
         <h2><i class="fas fa-file-upload"></i> 合同文件上传</h2>
       </div>
 
-      <div style="display:grid; gap:20px; max-width:700px;">
+      <div style="display:grid; gap:20px; max-width:900px;">
         <div class="form-group">
           <label for="contractUploadTitle">合同标题</label>
           <input type="text" id="contractUploadTitle" placeholder="请输入合同标题">
@@ -1166,14 +1182,14 @@ function renderContractUploadPanel() {
         </div>
 
         <div class="form-group">
-          <label for="contractUploadFile">上传合同文件（PDF / DOC / DOCX）</label>
+          <label for="contractUploadFile">上传合同文件（PDF / DOC / DOCX / TXT）</label>
           <input
             type="file"
             id="contractUploadFile"
-            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           >
           <div style="margin-top:10px; font-size:13px; color:#6b7b8f;">
-            仅支持：.pdf / .doc / .docx（建议 ≤ 20MB）
+            仅支持：.pdf / .doc / .docx / .txt（建议 ≤ 20MB）
           </div>
         </div>
 
@@ -1185,9 +1201,100 @@ function renderContractUploadPanel() {
 
         <div id="contractUploadResult" style="display:none; padding:14px; border-radius:16px; background:#f8fafc; border:1px solid #ffd700;">
         </div>
+
+        <div id="contractFieldSection" style="display:none;">
+          <div class="content-section" style="margin-bottom:0; padding:20px; background:#fffdf6;">
+            <div class="section-header" style="margin-bottom:16px;">
+              <h2><i class="fas fa-list-check"></i> 解析结果</h2>
+            </div>
+
+            <div id="contractFieldLoading" style="display:none; color:#6b7b8f; padding:12px 0;">
+              正在加载解析结果...
+            </div>
+
+            <div id="contractFieldEmpty" style="display:none; color:#6b7b8f; padding:12px 0;">
+              暂无解析字段结果。
+            </div>
+
+            <div class="table-responsive">
+              <table id="contractFieldTable" style="display:none;">
+                <thead>
+                  <tr>
+                    <th style="width: 180px;">字段编码</th>
+                    <th style="width: 180px;">字段名称</th>
+                    <th>字段值</th>
+                    <th style="width: 120px;">置信度</th>
+                  </tr>
+                </thead>
+                <tbody id="contractFieldTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `;
+}
+async function loadContractFields(contractId) {
+  const section = document.getElementById("contractFieldSection");
+  const loading = document.getElementById("contractFieldLoading");
+  const empty = document.getElementById("contractFieldEmpty");
+  const table = document.getElementById("contractFieldTable");
+  const tbody = document.getElementById("contractFieldTableBody");
+
+  if (!section || !loading || !empty || !table || !tbody) return;
+
+  section.style.display = "block";
+  loading.style.display = "block";
+  empty.style.display = "none";
+  table.style.display = "none";
+  tbody.innerHTML = "";
+
+  try {
+    const response = await authFetch(`/api/contracts/${contractId}/fields`, {
+      method: "GET"
+    });
+
+    const result = await response.json();
+
+    loading.style.display = "none";
+
+    if (!response.ok || result.code !== 200) {
+      empty.style.display = "block";
+      empty.textContent = "解析结果加载失败：" + (result.message || "未知错误");
+      return;
+    }
+
+    const fields = result.data || [];
+
+    if (!fields.length) {
+      empty.style.display = "block";
+      empty.textContent = "暂无解析字段结果。";
+      return;
+    }
+
+    tbody.innerHTML = fields.map(field => {
+      const confidence = field.confidence != null
+        ? (Number(field.confidence) * 100).toFixed(0) + "%"
+        : "-";
+
+      return `
+        <tr>
+          <td>${escapeHtml(field.fieldKey || "-")}</td>
+          <td>${escapeHtml(field.fieldName || "-")}</td>
+          <td>${escapeHtml(field.fieldValue || "-")}</td>
+          <td>${confidence}</td>
+        </tr>
+      `;
+    }).join("");
+
+    table.style.display = "table";
+  } catch (error) {
+    console.error("加载解析结果失败：", error);
+    loading.style.display = "none";
+    empty.style.display = "block";
+    empty.textContent = "解析结果加载失败：" + (error.message || error);
+  }
 }
 
 async function uploadContractFile() {
@@ -1226,7 +1333,9 @@ async function uploadContractFile() {
     const result = await response.json();
 
     if (result.code === 200) {
-      alert("上传成功，合同ID：" + result.data.contractId);
+      const contractId = result.data.contractId;
+
+      alert("上传成功，合同ID：" + contractId);
 
       if (resultBox) {
         resultBox.style.display = "block";
@@ -1238,6 +1347,8 @@ async function uploadContractFile() {
           <div>状态：${result.data.status}</div>
         `;
       }
+
+      await loadContractFields(contractId);
 
       document.getElementById("contractUploadTitle").value = "";
       document.getElementById("contractUploadType").value = "";
@@ -2437,9 +2548,8 @@ function escapeAttr(str) {
     loadAdminInfo();
 
     // 默认加载仪表盘
-   document.getElementById('content-area').innerHTML =
-     renderDashboard() + renderContractUploadPanel();
-       loadDashboardData();
+   document.getElementById('content-area').innerHTML = renderDashboard();
+     loadDashboardData();
 
     //  绑定模板附件上传 change
     const templateFileInput = document.getElementById("templateFile");
