@@ -30,6 +30,11 @@ spring:
       hibernate:
         format_sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
 app:
   jwt:
     secret: "change-me-to-a-long-random-string-change-me-1234567890"
@@ -38,3 +43,17 @@ app:
   admin:
     username: admin
     password: admin123456
+
+minio:
+  endpoint: http://127.0.0.1:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: contract-files
+
+contract:
+  upload:
+    allowed-extensions:
+      - pdf
+      - doc
+      - docx
+    max-size: 20971520

@@ -809,6 +809,11 @@
                 <span>合同模板维护</span>
             </div>
 
+            <div class="nav-item" data-tab="contract-upload" onclick="switchTab('contract-upload', this)">
+                <i class="fas fa-file-upload"></i>
+                <span>合同上传</span>
+            </div>
+
             <div class="nav-item" data-tab="dictionary" onclick="switchTab('dictionary', this)">
                 <i class="fas fa-book"></i>
                 <span>字段字典管理</span>
@@ -1071,6 +1076,9 @@ function switchTab(tabName, el) {
         case 'parameters':
             contentArea.innerHTML = renderSystemParameters();
             break;
+        case 'contract-upload':
+            contentArea.innerHTML = renderContractUploadPanel();
+            break;
         case 'backup':
             contentArea.innerHTML = renderDataMaintenance();
             break;
@@ -1132,6 +1140,131 @@ function switchTab(tabName, el) {
             </div>
         </div>
     `;
+}
+
+function renderContractUploadPanel() {
+  return `
+    <div class="content-section">
+      <div class="section-header">
+        <h2><i class="fas fa-file-upload"></i> 合同文件上传</h2>
+      </div>
+
+      <div style="display:grid; gap:20px; max-width:700px;">
+        <div class="form-group">
+          <label for="contractUploadTitle">合同标题</label>
+          <input type="text" id="contractUploadTitle" placeholder="请输入合同标题">
+        </div>
+
+        <div class="form-group">
+          <label for="contractUploadType">合同类型</label>
+          <select id="contractUploadType">
+            <option value="">请选择合同类型</option>
+            <option value="transport">运输合同</option>
+            <option value="warehouse">仓储合同</option>
+            <option value="supply">供应链协议</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="contractUploadFile">上传合同文件（PDF / DOC / DOCX）</label>
+          <input
+            type="file"
+            id="contractUploadFile"
+            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          >
+          <div style="margin-top:10px; font-size:13px; color:#6b7b8f;">
+            仅支持：.pdf / .doc / .docx（建议 ≤ 20MB）
+          </div>
+        </div>
+
+        <div>
+          <button type="button" class="btn-primary" onclick="uploadContractFile()">
+            <i class="fas fa-upload"></i> 上传合同
+          </button>
+        </div>
+
+        <div id="contractUploadResult" style="display:none; padding:14px; border-radius:16px; background:#f8fafc; border:1px solid #ffd700;">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function uploadContractFile() {
+  const fileInput = document.getElementById("contractUploadFile");
+  const title = document.getElementById("contractUploadTitle").value.trim();
+  const contractType = document.getElementById("contractUploadType").value;
+  const resultBox = document.getElementById("contractUploadResult");
+
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    alert("请选择合同文件");
+    return;
+  }
+
+  if (!title) {
+    alert("请输入合同标题");
+    return;
+  }
+
+  if (!contractType) {
+    alert("请选择合同类型");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("title", title);
+  formData.append("contractType", contractType);
+
+  try {
+    const response = await authFetch("/api/contracts/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (result.code === 200) {
+      alert("上传成功，合同ID：" + result.data.contractId);
+
+      if (resultBox) {
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+          <div style="color:#0a1a2b; font-weight:700; margin-bottom:8px;">上传成功</div>
+          <div>合同ID：${result.data.contractId}</div>
+          <div>合同编号：${result.data.contractNo}</div>
+          <div>版本ID：${result.data.versionId}</div>
+          <div>状态：${result.data.status}</div>
+        `;
+      }
+
+      document.getElementById("contractUploadTitle").value = "";
+      document.getElementById("contractUploadType").value = "";
+      document.getElementById("contractUploadFile").value = "";
+    } else {
+      alert("上传失败：" + result.message);
+
+      if (resultBox) {
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+          <div style="color:#dc3545; font-weight:700; margin-bottom:8px;">上传失败</div>
+          <div>${result.message || "未知错误"}</div>
+        `;
+      }
+    }
+  } catch (error) {
+    console.error("合同上传异常：", error);
+    alert("上传失败：网络异常或服务器错误");
+
+    if (resultBox) {
+      resultBox.style.display = "block";
+      resultBox.innerHTML = `
+        <div style="color:#dc3545; font-weight:700; margin-bottom:8px;">上传失败</div>
+        <div>${error.message || error}</div>
+      `;
+    }
+  }
 }
 
   async function uploadTemplateFile(file) {
@@ -2304,8 +2437,9 @@ function escapeAttr(str) {
     loadAdminInfo();
 
     // 默认加载仪表盘
-    document.getElementById('content-area').innerHTML = renderDashboard();
-    loadDashboardData();
+   document.getElementById('content-area').innerHTML =
+     renderDashboard() + renderContractUploadPanel();
+       loadDashboardData();
 
     //  绑定模板附件上传 change
     const templateFileInput = document.getElementById("templateFile");
