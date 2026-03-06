@@ -78,6 +78,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("用户不存在: " + userId));
 
+        if (req.getFullName() != null) {
+            user.setFullName(req.getFullName().trim());
+        }
+
+        if (req.getRemark() != null) {
+            user.setRemark(req.getRemark().trim());
+        }
+
         if (req.getRoleCode() != null && !req.getRoleCode().isBlank()) {
             user.setRoleCode(req.getRoleCode().trim().toUpperCase()); // USER / ADMIN
         }
@@ -95,10 +103,13 @@ public class UserServiceImpl implements UserService {
         return AdminUserDto.UserRow.builder()
                 .userId(u.getUserId())
                 .username(u.getUsername())
+                .fullName(u.getFullName())
+                .remark(u.getRemark())
                 .roleCode(u.getRoleCode())
                 .status(u.getStatus())
                 .createdAt(u.getCreatedAt())
                 .updatedAt(u.getUpdatedAt())
+                .lastLoginAt(u.getLastLoginAt())
                 .build();
     }
 }

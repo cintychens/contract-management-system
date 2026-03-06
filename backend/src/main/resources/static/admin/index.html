@@ -477,6 +477,13 @@
             color: #2d4059;
         }
 
+        .user-remark-cell {
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .status-badge {
             padding: 6px 14px;
             border-radius: 30px;
@@ -906,9 +913,9 @@
                     <option value="disabled">禁用</option>
                 </select>
             </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="resetPassword">
-                <label for="resetPassword">重置密码为默认密码</label>
+            <div class="form-group">
+                <label>备注</label>
+                <textarea id="editRemark" rows="4" placeholder="例如：部门、使用情况、注意事项等"></textarea>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-outline" onclick="closeModal('userModal')">取消</button>
@@ -1192,6 +1199,7 @@ function switchTab(tabName, el) {
               <th>姓名</th>
               <th>角色</th>
               <th>状态</th>
+              <th>备注</th>
               <th>注册时间</th>
               <th>最后登录</th>
               <th>操作</th>
@@ -1834,37 +1842,34 @@ async function loadUsersTable() {
 
   if (!tbody) return;
 
-  // loading 占位
-  tbody.innerHTML = `<tr><td colspan="9" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="10" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
   if (emptyHint) emptyHint.style.display = "none";
 
   const qs = new URLSearchParams({
-  page: String(usersState.page),
-  size: String(usersState.size),
-  keyword: usersState.keyword || ""
-});
+    page: String(usersState.page),
+    size: String(usersState.size),
+    keyword: usersState.keyword || ""
+  });
 
-if (usersState.role && usersState.role !== "ALL") {
-  qs.set("role", usersState.role || "ALL"); // role=USER / role=ADMIN
-}
+  if (usersState.role && usersState.role !== "ALL") {
+    qs.set("role", usersState.role);
+  }
+
   try {
     const resp = await authFetch(`/api/admin/users?${qs.toString()}`);
     if (!resp.ok) throw new Error(await resp.text());
-    const data = await resp.json();
 
-    // 适配 PageResult：{records,total,page,size,totalPages}
+    const data = await resp.json();
     const records = data.records || [];
     const total = data.total ?? 0;
     const page = data.page ?? usersState.page;
     const size = data.size ?? usersState.size;
     const totalPages = data.totalPages ?? Math.ceil(total / size);
 
-    // 更新分页显示
     if (pageInfo) pageInfo.textContent = `第 ${page} / ${totalPages || 1} 页 · 共 ${total} 条`;
     if (prevBtn) prevBtn.disabled = page <= 1;
     if (nextBtn) nextBtn.disabled = totalPages ? page >= totalPages : records.length < size;
 
-    // 空数据
     if (!records.length) {
       tbody.innerHTML = "";
       if (emptyHint) emptyHint.style.display = "block";
@@ -1873,18 +1878,20 @@ if (usersState.role && usersState.role !== "ALL") {
 
     if (emptyHint) emptyHint.style.display = "none";
 
-    // 渲染
     tbody.innerHTML = records.map((u, idx) => {
       const seq = (page - 1) * size + (idx + 1);
-      const roleText = (u.roleCode === "ADMIN") ? `<span class="admin-badge-small">管理员</span>` : "普通用户";
+
+      const roleText = (u.roleCode === "ADMIN")
+        ? `<span class="admin-badge-small">管理员</span>`
+        : "普通用户";
 
       const statusHtml = (u.status === "ENABLED")
         ? `<span class="status-badge status-active">启用</span>`
         : `<span class="status-badge status-disabled">禁用</span>`;
 
       const fullName = u.fullName || "-";
+      const remark = u.remark || "-";
       const lastLogin = u.lastLoginAt || "-";
-
       const createdAt = u.createdAt || "-";
 
       return `
@@ -1895,13 +1902,23 @@ if (usersState.role && usersState.role !== "ALL") {
           <td>${escapeHtml(fullName)}</td>
           <td>${roleText}</td>
           <td>${statusHtml}</td>
+          <td class="user-remark-cell" title="${escapeHtml(remark)}">${escapeHtml(remark)}</td>
           <td>${createdAt}</td>
           <td>${lastLogin}</td>
           <td>
-            <button class="action-btn" title="编辑" onclick="openEditUser(${u.userId}, '${escapeAttr(u.username)}', '${u.roleCode}', '${u.status}')">
+            <button class="action-btn" title="编辑"
+              onclick="openEditUser(
+                ${u.userId},
+                '${escapeAttr(u.username || "")}',
+                '${u.roleCode || ""}',
+                '${u.status || ""}',
+                '${escapeAttr(u.fullName || "")}',
+                '${escapeAttr(u.remark || "")}'
+              )">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="action-btn danger" title="切换启用/禁用" onclick="toggleUserStatus(${u.userId}, '${u.status}')">
+            <button class="action-btn danger" title="切换启用/禁用"
+              onclick="toggleUserStatus(${u.userId}, '${u.status}')">
               <i class="fas fa-ban"></i>
             </button>
           </td>
@@ -1910,7 +1927,7 @@ if (usersState.role && usersState.role !== "ALL") {
     }).join("");
   } catch (e) {
     console.error("loadUsersTable error:", e);
-    tbody.innerHTML = `<tr><td colspan="9" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
   }
 }
 
@@ -1929,31 +1946,35 @@ function filterUsers(role, el) {
 }
 
 // ===================== 用户管理：编辑/更新（可选） =====================
-function openEditUser(userId, username, roleCode, status) {
-  // 你的 modal 里有 editUsername / editRole / editStatus
+function openEditUser(userId, username, roleCode, status, fullName = "", remark = "") {
   document.getElementById("editUsername").value = username;
-  // 你的下拉是 user/admin，小写；后端是 USER/ADMIN
   document.getElementById("editRole").value = (roleCode === "ADMIN") ? "admin" : "user";
   document.getElementById("editStatus").value = (status === "ENABLED") ? "active" : "disabled";
-  // 你目前没 fullName 字段，这里先清空
+
   const fullNameEl = document.getElementById("editFullName");
-  if (fullNameEl) fullNameEl.value = "";
+  if (fullNameEl) fullNameEl.value = fullName || "";
+
+  const remarkEl = document.getElementById("editRemark");
+  if (remarkEl) remarkEl.value = remark || "";
 
   showModal("userModal");
 
-  // 绑定提交（每次打开先解绑再绑定，避免重复触发）
   const form = document.getElementById("userForm");
   if (!form) return;
 
   form.onsubmit = async (e) => {
     e.preventDefault();
 
-    const role = document.getElementById("editRole").value;       // user/admin
-    const st = document.getElementById("editStatus").value;       // active/disabled
+    const role = document.getElementById("editRole").value;
+    const st = document.getElementById("editStatus").value;
+    const fullName = document.getElementById("editFullName").value.trim();
+    const remark = document.getElementById("editRemark").value.trim();
 
     const payload = {
+      fullName,
       roleCode: role === "admin" ? "ADMIN" : "USER",
-      status: st === "active" ? "ENABLED" : "DISABLED"
+      status: st === "active" ? "ENABLED" : "DISABLED",
+      remark
     };
 
     try {

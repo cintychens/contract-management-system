@@ -50,6 +50,12 @@ public class User {
     @Column(name = "STATUS", nullable = false, length = 16)
     private String status;
 
+    @Column(name = "FULL_NAME", length = 100)
+    private String fullName;
+
+    @Column(name = "REMARK", length = 500)
+    private String remark;
+
     /**
      * 创建时间
      */
@@ -64,6 +70,9 @@ public class User {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 
+    @Column(name = "LAST_LOGIN_AT")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginAt;
     /**
      * 插入前自动赋值
      */

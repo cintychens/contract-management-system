@@ -53,6 +53,9 @@ public class AuthServiceImpl implements AuthService {
 
         if (!ok) throw new RuntimeException("密码错误");
 
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
+        
         String token = jwtUtil.generateToken(
                 user.getUserId(),
                 user.getUsername(),

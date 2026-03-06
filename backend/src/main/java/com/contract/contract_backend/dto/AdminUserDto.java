@@ -23,10 +23,13 @@ public class AdminUserDto {
     public static class UserRow {
         private Long userId;
         private String username;
+        private String fullName;
+        private String remark;
         private String roleCode;   // USER / ADMIN
         private String status;     // ENABLED / DISABLED
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        private LocalDateTime lastLoginAt;
     }
 
     /**
@@ -56,6 +59,8 @@ public class AdminUserDto {
     public static class UpdateReq {
         private String roleCode;  // USER / ADMIN
         private String status;    // ENABLED / DISABLED
+        private String fullName;
+        private String remark;
     }
 
     /**
