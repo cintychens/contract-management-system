@@ -7,6 +7,7 @@ import com.contract.contract_backend.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.contract.contract_backend.dto.ContractGenerateDto;
 
 import java.util.List;
 
@@ -25,6 +26,20 @@ public class ContractController {
     ) {
         ContractUploadResponse response = contractService.uploadContract(file, title, contractType);
         return Result.success(response);
+    }
+
+    @PostMapping("/generate-draft")
+    public Result<ContractGenerateDto.GenerateResp> generateDraft(
+            @RequestBody ContractGenerateDto.GenerateReq req
+    ) {
+        return Result.success(contractService.generateDraft(req));
+    }
+
+    @PostMapping("/confirm-generated")
+    public Result<ContractGenerateDto.ConfirmResp> confirmGenerated(
+            @RequestBody ContractGenerateDto.ConfirmReq req
+    ) {
+        return Result.success(contractService.confirmGeneratedContract(req));
     }
 
     @GetMapping("/{contractId}/fields")

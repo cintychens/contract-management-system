@@ -24,6 +24,10 @@ public class ContractVersion {
     @Column(name = "version_id")
     private Long versionId;
 
+    @Lob
+    @Column(name = "CONTENT_TEXT")
+    private String contentText;
+
     @Column(name = "contract_id", nullable = false)
     private Long contractId;
 
