@@ -42,6 +42,14 @@ public class TemplateController {
         return templateService.getTemplate(id);
     }
 
+    /**
+     * 新增：查询模板字段
+     */
+    @GetMapping("/{id}/fields")
+    public List<AdminTemplateDto.TemplateFieldRow> listTemplateFields(@PathVariable("id") Long id) {
+        return templateService.listTemplateFields(id);
+    }
+
     @PostMapping
     public AdminTemplateDto.TemplateRow createTemplate(@RequestBody AdminTemplateDto.SaveReq req) {
         return templateService.createTemplate(req);

@@ -3,6 +3,8 @@ package com.contract.contract_backend.service;
 import com.contract.contract_backend.dto.AdminTemplateDto;
 import com.contract.contract_backend.dto.PageResult;
 
+import java.util.List;
+
 public interface TemplateService {
 
     PageResult<AdminTemplateDto.TemplateRow> pageTemplates(
@@ -24,4 +26,6 @@ public interface TemplateService {
     void deleteTemplate(Long templateId);
 
     AdminTemplateDto.Stats stats();
+
+    List<AdminTemplateDto.TemplateFieldRow> listTemplateFields(Long templateId);
 }

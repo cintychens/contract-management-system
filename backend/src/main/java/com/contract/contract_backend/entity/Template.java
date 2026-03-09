@@ -48,6 +48,18 @@ public class Template {
     @Column(name = "UPDATED_BY", length = 64)
     private String updatedBy;
 
+    /**
+     * 模板附件原始文件名
+     */
+    @Column(name = "FILE_NAME", length = 255)
+    private String fileName;
+
+    /**
+     * 模板附件在本地存储中的路径标识
+     */
+    @Column(name = "FILE_OBJECT_KEY", length = 500)
+    private String fileObjectKey;
+
     @Column(name = "CREATED_AT")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;

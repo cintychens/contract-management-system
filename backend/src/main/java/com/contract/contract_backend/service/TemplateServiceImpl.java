@@ -3,6 +3,8 @@ package com.contract.contract_backend.service;
 import com.contract.contract_backend.dto.AdminTemplateDto;
 import com.contract.contract_backend.dto.PageResult;
 import com.contract.contract_backend.entity.Template;
+import com.contract.contract_backend.entity.TemplateField;
+import com.contract.contract_backend.repository.TemplateFieldRepository;
 import com.contract.contract_backend.repository.TemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -16,6 +18,7 @@ import java.util.List;
 public class TemplateServiceImpl implements TemplateService {
 
     private final TemplateRepository templateRepository;
+    private final TemplateFieldRepository templateFieldRepository;
 
     @Override
     public PageResult<AdminTemplateDto.TemplateRow> pageTemplates(
@@ -81,17 +84,22 @@ public class TemplateServiceImpl implements TemplateService {
     public AdminTemplateDto.TemplateRow createTemplate(AdminTemplateDto.SaveReq req) {
         validateSaveReq(req);
 
-        if (templateRepository.existsByName(req.getName().trim())) {
+        String name = req.getName().trim();
+        String contractType = normalizeContractType(req.getContractType());
+
+        if (templateRepository.existsByName(name)) {
             throw new IllegalArgumentException("模板名称已存在");
         }
 
         Template template = Template.builder()
-                .name(req.getName().trim())
-                .contractType(req.getContractType().trim())
+                .name(name)
+                .contractType(contractType)
                 .content(req.getContent().trim())
                 .remark(req.getRemark() == null ? null : req.getRemark().trim())
                 .status(normalizeStatus(req.getStatus()))
                 .updatedBy(req.getUpdatedBy() == null ? "admin" : req.getUpdatedBy().trim())
+                .fileName(req.getFileName())
+                .fileObjectKey(req.getFileObjectKey())
                 .build();
 
         Template saved = templateRepository.save(template);
@@ -106,16 +114,27 @@ public class TemplateServiceImpl implements TemplateService {
         Template template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
 
-        if (templateRepository.existsByNameAndTemplateIdNot(req.getName().trim(), templateId)) {
+        String name = req.getName().trim();
+        String contractType = normalizeContractType(req.getContractType());
+
+        if (templateRepository.existsByNameAndTemplateIdNot(name, templateId)) {
             throw new IllegalArgumentException("模板名称已存在");
         }
 
-        template.setName(req.getName().trim());
-        template.setContractType(req.getContractType().trim());
+        template.setName(name);
+        template.setContractType(contractType);
         template.setContent(req.getContent().trim());
         template.setRemark(req.getRemark() == null ? null : req.getRemark().trim());
         template.setStatus(normalizeStatus(req.getStatus()));
         template.setUpdatedBy(req.getUpdatedBy() == null ? "admin" : req.getUpdatedBy().trim());
+
+        // 只有前端传了附件信息才更新，避免编辑时把原附件覆盖成 null
+        if (req.getFileName() != null && !req.getFileName().isBlank()) {
+            template.setFileName(req.getFileName());
+        }
+        if (req.getFileObjectKey() != null && !req.getFileObjectKey().isBlank()) {
+            template.setFileObjectKey(req.getFileObjectKey());
+        }
 
         Template saved = templateRepository.save(template);
         return toRow(saved);
@@ -140,7 +159,6 @@ public class TemplateServiceImpl implements TemplateService {
         Template template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
 
-        // 后续如果你要限制“已使用模板不可删”，可以在这里补判断
         templateRepository.delete(template);
     }
 
@@ -155,6 +173,18 @@ public class TemplateServiceImpl implements TemplateService {
                 .enabled(enabled)
                 .disabled(disabled)
                 .build();
+    }
+
+    @Override
+    public List<AdminTemplateDto.TemplateFieldRow> listTemplateFields(Long templateId) {
+        if (!templateRepository.existsById(templateId)) {
+            throw new IllegalArgumentException("模板不存在: " + templateId);
+        }
+
+        return templateFieldRepository.findByTemplateIdOrderBySortOrderAsc(templateId)
+                .stream()
+                .map(this::toFieldRow)
+                .toList();
     }
 
     private void validateSaveReq(AdminTemplateDto.SaveReq req) {
@@ -180,6 +210,14 @@ public class TemplateServiceImpl implements TemplateService {
         return s;
     }
 
+    private String normalizeContractType(String contractType) {
+        String s = contractType == null ? "" : contractType.trim().toLowerCase();
+        if (!"transport".equals(s) && !"warehouse".equals(s) && !"supply".equals(s)) {
+            throw new IllegalArgumentException("合同类型不合法");
+        }
+        return s;
+    }
+
     private AdminTemplateDto.TemplateRow toRow(Template t) {
         return AdminTemplateDto.TemplateRow.builder()
                 .templateId(t.getTemplateId())
@@ -188,6 +226,8 @@ public class TemplateServiceImpl implements TemplateService {
                 .status(t.getStatus())
                 .remark(t.getRemark())
                 .updatedBy(t.getUpdatedBy())
+                .fileName(t.getFileName())
+                .fileObjectKey(t.getFileObjectKey())
                 .updatedAt(t.getUpdatedAt())
                 .build();
     }
@@ -201,8 +241,22 @@ public class TemplateServiceImpl implements TemplateService {
                 .remark(t.getRemark())
                 .status(t.getStatus())
                 .updatedBy(t.getUpdatedBy())
+                .fileName(t.getFileName())
+                .fileObjectKey(t.getFileObjectKey())
                 .createdAt(t.getCreatedAt())
                 .updatedAt(t.getUpdatedAt())
+                .build();
+    }
+
+    private AdminTemplateDto.TemplateFieldRow toFieldRow(TemplateField f) {
+        return AdminTemplateDto.TemplateFieldRow.builder()
+                .fieldId(f.getFieldId())
+                .templateId(f.getTemplateId())
+                .fieldKey(f.getFieldKey())
+                .fieldName(f.getFieldName())
+                .fieldType(f.getFieldType())
+                .requiredFlag(f.getRequiredFlag())
+                .sortOrder(f.getSortOrder())
                 .build();
     }
 }
