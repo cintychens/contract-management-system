@@ -27,20 +27,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
         String method = request.getMethod();
 
-        // 1) 预检请求直接跳过
         if ("OPTIONS".equalsIgnoreCase(method)) return true;
 
-        // 2) 只跳过登录/注册
         if ("/api/auth/login".equals(path)) return true;
         if ("/api/auth/register".equals(path)) return true;
 
-        // 3) 静态页面路由跳过
         if (path.startsWith("/auth/")) return true;
         if (path.startsWith("/dashboard/")) return true;
         if (path.startsWith("/admin/")) return true;
         if ("/".equals(path) || "/index.html".equals(path)) return true;
 
-        // 4) 静态资源跳过
         if (path.startsWith("/assets/")) return true;
         if (path.startsWith("/css/") || path.startsWith("/js/") || path.startsWith("/images/")) return true;
 
@@ -49,7 +45,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.endsWith(".svg") || path.endsWith(".ico") || path.endsWith(".woff")
                 || path.endsWith(".woff2") || path.endsWith(".ttf") || path.endsWith(".map")) return true;
 
-        // 5) H2 console 跳过
         if (path.startsWith("/h2-console")) return true;
 
         return false;
@@ -62,48 +57,53 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain chain
     ) throws ServletException, IOException {
 
+        String path = request.getServletPath();
         String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // 没有 token → 直接放行，交给 Security 判断是否需要登录
+        System.out.println("========== JWT FILTER ==========");
+        System.out.println("PATH = " + path);
+        System.out.println("AUTH HEADER = " + auth);
+
         if (auth == null || !auth.startsWith("Bearer ")) {
+            System.out.println("NO VALID BEARER HEADER");
             chain.doFilter(request, response);
             return;
         }
 
-        String token = auth.substring(7);
+        String token = auth.substring(7).trim();
+        System.out.println("TOKEN = " + token);
 
         try {
-            if (jwtUtil.isValid(token)) {
+            boolean valid = jwtUtil.isValid(token);
+            System.out.println("JWT VALID = " + valid);
+
+            if (valid) {
                 String username = jwtUtil.getUsername(token);
                 String role = jwtUtil.getRole(token);
 
-                // ✅ authority 统一：ADMIN / USER（不带 ROLE_）
+                System.out.println("USERNAME = " + username);
+                System.out.println("ROLE = " + role);
+
                 String authority = null;
                 if (role != null && !role.isBlank()) {
                     authority = role.trim().toUpperCase();
                 }
 
-                // ✅ Debug（临时用：确定后可删除）
-                System.out.println(">>> PATH=" + request.getServletPath());
-                System.out.println(">>> username=" + username);
-                System.out.println(">>> roleClaim=" + role);
-                System.out.println(">>> authority=" + authority);
-
                 var authorities = (authority == null)
                         ? List.<SimpleGrantedAuthority>of()
                         : List.of(new SimpleGrantedAuthority(authority));
 
-                var authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                var authentication = new UsernamePasswordAuthenticationToken(username, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println("AUTHENTICATION SET SUCCESS");
             } else {
-                // 可选 Debug：token 不合法
-                System.out.println(">>> JWT invalid, path=" + request.getServletPath());
+                System.out.println("JWT INVALID");
             }
         } catch (Exception ex) {
             SecurityContextHolder.clearContext();
-            System.out.println(">>> JWT parse error, path=" + request.getServletPath() + ", err=" + ex.getMessage());
+            System.out.println("JWT PARSE ERROR = " + ex.getMessage());
+            ex.printStackTrace();
         }
 
         chain.doFilter(request, response);

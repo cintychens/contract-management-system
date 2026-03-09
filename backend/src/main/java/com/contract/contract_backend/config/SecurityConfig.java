@@ -48,6 +48,10 @@ public class SecurityConfig {
                         // /me 必须登录
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
 
+                        // ✅ 临时放行：模板智能生成相关接口（方便你当前开发测试）
+                        .requestMatchers(HttpMethod.GET, "/api/templates/*/variables").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/templates/generate").permitAll()
+
                         // H2
                         .requestMatchers("/h2-console/**").permitAll()
 
