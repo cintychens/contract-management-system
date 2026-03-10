@@ -25,7 +25,7 @@ public class ContractVersion {
     private Long versionId;
 
     @Lob
-    @Column(name = "CONTENT_TEXT")
+    @Column(name = "content_text")
     private String contentText;
 
     @Column(name = "contract_id", nullable = false)
@@ -34,19 +34,20 @@ public class ContractVersion {
     @Column(name = "version_no", nullable = false)
     private Integer versionNo;
 
-    @Column(name = "file_name", nullable = false, length = 255)
+    // 智能生成合同时可能没有真实文件，因此这些字段允许为空
+    @Column(name = "file_name", length = 255)
     private String fileName;
 
-    @Column(name = "file_type", nullable = false, length = 64)
+    @Column(name = "file_type", length = 64)
     private String fileType;
 
-    @Column(name = "file_size", nullable = false)
+    @Column(name = "file_size")
     private Long fileSize;
 
-    @Column(name = "file_object_key", nullable = false, length = 500)
+    @Column(name = "file_object_key", length = 500)
     private String fileObjectKey;
 
-    @Column(name = "file_hash", nullable = false, length = 128)
+    @Column(name = "file_hash", length = 128)
     private String fileHash;
 
     @Column(name = "change_note", length = 255)
