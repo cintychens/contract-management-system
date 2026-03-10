@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合同详情 · 智能物流合同管理系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f9ff;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #0b2b4a 0%, #123b5e 100%);
+            color: white;
+            padding: 30px 0;
+            box-shadow: 4px 0 20px rgba(0, 30, 60, 0.15);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 24px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #7ab7ff;
+            backdrop-filter: blur(4px);
+        }
+
+        .logo-text h2 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .logo-text p {
+            font-size: 12px;
+            opacity: 0.7;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-menu {
+            padding: 0 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-radius: 16px;
+            color: rgba(255, 255, 255, 0.75);
+            transition: all 0.25s;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 22px;
+            font-size: 18px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(95deg, #2d6da0, #1a4b75);
+            color: white;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item.active i {
+            color: #ffd966;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 35px;
+            background: #f5f9ff;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0, 30, 60, 0.05);
+            border: 1px solid rgba(45, 109, 160, 0.1);
+        }
+
+        .page-title h1 {
+            font-size: 24px;
+            color: #1a4b75;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title h1 i {
+            color: #2d6da0;
+            font-size: 28px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px 6px 6px;
+            border-radius: 40px;
+            background: #f0f7ff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-info:hover {
+            background: #e3f0ff;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(145deg, #2d6da0, #1a4b75);
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .user-details {
+            line-height: 1.4;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: #1a4b75;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #5f7d9c;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 8px 20px rgba(45, 109, 160, 0.05);
+            border: 1px solid rgba(45, 109, 160, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #1a4b75;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+        }
+
+        .info-item {
+            background: #f8fbff;
+            border: 1px solid #e3ecf5;
+            border-radius: 18px;
+            padding: 16px;
+        }
+
+        .info-item .label {
+            font-size: 13px;
+            color: #6b7b8f;
+            margin-bottom: 8px;
+        }
+
+        .info-item .value {
+            color: #1a4b75;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .content-box {
+            background: #f8fbff;
+            border: 1px solid #e3ecf5;
+            border-radius: 18px;
+            padding: 18px;
+            min-height: 240px;
+            white-space: pre-wrap;
+            line-height: 1.8;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 14px 12px;
+            border-bottom: 2px solid #e3ecf5;
+            color: #4f6f8f;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-active {
+            background: #e3f7ec;
+            color: #10b981;
+        }
+
+        .status-pending {
+            background: #fff4e0;
+            color: #f59e0b;
+        }
+
+        .status-expired {
+            background: #fee9e9;
+            color: #dc3545;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 90px;
+            }
+
+            .sidebar .logo-text,
+            .sidebar .nav-item span {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 90px;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 14px 0;
+            }
+
+            .nav-item i {
+                width: auto;
+                font-size: 22px;
+            }
+
+            .logo-area {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="logo-text">
+                    <h2>智链·合同</h2>
+                    <p>物流合同管理</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <div class="nav-item" onclick="window.location.href='/dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i>
+                <span>数据仪表盘</span>
+            </div>
+
+            <div class="nav-item active" onclick="window.location.href='/contract/index.html'">
+                <i class="fas fa-file-contract"></i>
+                <span>合同管理</span>
+            </div>
+
+            <div class="nav-item">
+                <i class="fas fa-truck"></i>
+                <span>物流跟踪</span>
+            </div>
+
+            <div class="nav-item">
+                <i class="fas fa-users"></i>
+                <span>客户管理</span>
+            </div>
+
+            <div class="nav-item">
+                <i class="fas fa-file-invoice"></i>
+                <span>财务对账</span>
+            </div>
+
+            <div class="nav-divider"></div>
+
+            <div class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>系统设置</span>
+            </div>
+
+            <div class="nav-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>退出登录</span>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1><i class="fas fa-file-lines"></i> 合同详情</h1>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">加载中...</div>
+                        <div class="user-role" id="userRole">用户</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: #2d6da0; font-size: 14px;"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="section-title">基本信息</div>
+            <div class="info-grid" id="contractInfoGrid"></div>
+        </div>
+
+        <div class="content-card">
+            <div class="section-title">合同正文</div>
+            <div class="content-box" id="contractContent">加载中...</div>
+        </div>
+
+        <div class="content-card">
+            <div class="section-title">解析字段</div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>字段编码</th>
+                        <th>字段名称</th>
+                        <th>字段值</th>
+                        <th>置信度</th>
+                    </tr>
+                    </thead>
+                    <tbody id="fieldTableBody"></tbody>
+                </table>
+                <div id="fieldEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无解析字段</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    function authFetch(url, options = {}) {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = new Headers(options.headers || {});
+        if (token) headers.set('Authorization', 'Bearer ' + token);
+        return fetch(url, { ...options, headers });
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function formatDateTime(value) {
+        if (!value) return '-';
+        try {
+            return value.replace('T', ' ').slice(0, 19);
+        } catch {
+            return value;
+        }
+    }
+
+    function getStatusText(status) {
+        const map = {
+            DRAFT: '草稿',
+            ACTIVE: '进行中',
+            COMPLETED: '已完成',
+            EXPIRED: '已到期',
+            TERMINATED: '已终止',
+            UPLOADED: '已上传'
+        };
+        return map[status] || status || '-';
+    }
+
+    function getStatusClass(status) {
+        switch (status) {
+            case 'ACTIVE':
+            case 'COMPLETED':
+                return 'status-active';
+            case 'DRAFT':
+            case 'UPLOADED':
+                return 'status-pending';
+            case 'EXPIRED':
+            case 'TERMINATED':
+                return 'status-expired';
+            default:
+                return 'status-pending';
+        }
+    }
+
+    function loadUserInfo() {
+        try {
+            const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+            if (!userInfoStr) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+            const userInfo = JSON.parse(userInfoStr);
+            document.getElementById('userName').textContent = userInfo.username || '用户';
+            document.getElementById('userAvatar').textContent = (userInfo.username || 'U').charAt(0).toUpperCase();
+
+            const roleMap = {
+                admin: '超级管理员',
+                ADMIN: '系统管理员',
+                user: '普通用户',
+                USER: '普通用户',
+                manager: '合同经理',
+                MANAGER: '合同经理'
+            };
+            const rawRole = (userInfo.role || userInfo.roleCode || '').toString();
+            document.getElementById('userRole').textContent =
+                roleMap[rawRole] || roleMap[rawRole.toUpperCase()] || rawRole || '普通用户';
+        } catch (e) {
+            console.error(e);
+            window.location.href = '/auth/login.html';
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userInfo');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('userInfo');
+        window.location.href = '/auth/login.html';
+    }
+
+    function getContractId() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('id');
+    }
+
+    async function loadContractDetail() {
+        const contractId = getContractId();
+        if (!contractId) {
+            document.getElementById('contractContent').textContent = '缺少合同ID';
+            return;
+        }
+
+        try {
+            const resp = await authFetch(`/api/contracts/${contractId}`);
+            if (!resp.ok) throw new Error('获取合同详情失败');
+
+            const result = await resp.json();
+            if (result.code !== 200) throw new Error(result.message || '获取合同详情失败');
+
+            const contract = result.data || {};
+            const grid = document.getElementById('contractInfoGrid');
+
+            grid.innerHTML = `
+                <div class="info-item">
+                    <div class="label">合同ID</div>
+                    <div class="value">${contract.contractId ?? '-'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">合同编号</div>
+                    <div class="value">${escapeHtml(contract.contractNo || '-')}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">合同标题</div>
+                    <div class="value">${escapeHtml(contract.title || '-')}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">合同类型</div>
+                    <div class="value">${escapeHtml(contract.contractType || '-')}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">状态</div>
+                    <div class="value">
+                        <span class="status-badge ${getStatusClass(contract.status)}">${escapeHtml(getStatusText(contract.status))}</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="label">创建时间</div>
+                    <div class="value">${formatDateTime(contract.createdAt)}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">当前版本ID</div>
+                    <div class="value">${contract.currentVersionId ?? '-'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">模板ID</div>
+                    <div class="value">${contract.templateId ?? '-'}</div>
+                </div>
+            `;
+
+            document.getElementById('contractContent').textContent = contract.content || '暂无合同正文内容';
+        } catch (e) {
+            console.error(e);
+            document.getElementById('contractContent').textContent = '加载失败：' + (e.message || e);
+        }
+    }
+
+    async function loadContractFields() {
+        const contractId = getContractId();
+        if (!contractId) return;
+
+        const tbody = document.getElementById('fieldTableBody');
+        const emptyHint = document.getElementById('fieldEmptyHint');
+
+        try {
+            const resp = await authFetch(`/api/contracts/${contractId}/fields`);
+            if (!resp.ok) throw new Error('获取字段失败');
+
+            const result = await resp.json();
+            if (result.code !== 200) throw new Error(result.message || '获取字段失败');
+
+            const fields = result.data || [];
+
+            if (!fields.length) {
+                tbody.innerHTML = '';
+                emptyHint.style.display = 'block';
+                return;
+            }
+
+            tbody.innerHTML = fields.map(field => `
+                <tr>
+                    <td>${escapeHtml(field.fieldKey || '-')}</td>
+                    <td>${escapeHtml(field.fieldName || '-')}</td>
+                    <td>${escapeHtml(field.fieldValue || '-')}</td>
+                    <td>${field.confidence != null ? (Number(field.confidence) * 100).toFixed(0) + '%' : '-'}</td>
+                </tr>
+            `).join('');
+
+            emptyHint.style.display = 'none';
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="4" style="color:#dc3545;">加载失败：${escapeHtml(e.message || e)}</td></tr>`;
+            emptyHint.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadUserInfo();
+        loadContractDetail();
+        loadContractFields();
+    });
+</script>
+</body>
+</html>
