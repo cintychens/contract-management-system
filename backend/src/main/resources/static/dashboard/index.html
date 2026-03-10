@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仪表盘 · 智能物流合同管理系统</title>
 
-    <!-- 字体图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- 引入 Chart.js 用于图表展示 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <style>
@@ -24,13 +22,11 @@
             color: #1e293b;
         }
 
-        /* ========== 布局 ========== */
         .dashboard-container {
             display: flex;
             min-height: 100vh;
         }
 
-        /* ========== 侧边栏 ========== */
         .sidebar {
             width: 280px;
             background: linear-gradient(180deg, #0b2b4a 0%, #123b5e 100%);
@@ -126,7 +122,6 @@
             margin: 20px 0;
         }
 
-        /* ========== 主内容区 ========== */
         .main-content {
             flex: 1;
             margin-left: 280px;
@@ -134,7 +129,6 @@
             background: #f5f9ff;
         }
 
-        /* ========== 顶部导航 ========== */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -232,7 +226,6 @@
             color: #5f7d9c;
         }
 
-        /* ========== 统计卡片 ========== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -294,7 +287,6 @@
             margin-right: 4px;
         }
 
-        /* ========== 图表和表格区域 ========== */
         .charts-row {
             display: grid;
             grid-template-columns: 1.2fr 0.8fr;
@@ -339,7 +331,6 @@
             position: relative;
         }
 
-        /* ========== 待办事项 ========== */
         .tasks-card {
             background: white;
             border-radius: 28px;
@@ -450,7 +441,6 @@
             color: #10b981;
         }
 
-        /* ========== 最近合同表格 ========== */
         .recent-contracts {
             background: white;
             border-radius: 28px;
@@ -521,7 +511,6 @@
             background: #e8f0fe;
         }
 
-        /* ========== 响应式 ========== */
         @media (max-width: 1400px) {
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -579,7 +568,6 @@
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- 侧边栏导航 -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <div class="logo-area">
@@ -598,7 +586,7 @@
                 <i class="fas fa-chart-pie"></i>
                 <span>数据仪表盘</span>
             </div>
-            <div class="nav-item">
+            <div class="nav-item" onclick="window.location.href='/contract/index.html'">
                 <i class="fas fa-file-contract"></i>
                 <span>合同管理</span>
             </div>
@@ -628,9 +616,7 @@
         </nav>
     </aside>
 
-    <!-- 主内容区 -->
     <main class="main-content">
-        <!-- 顶部导航栏 -->
         <div class="top-bar">
             <div class="page-title">
                 <h1>
@@ -656,7 +642,6 @@
             </div>
         </div>
 
-        <!-- 统计卡片 -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-file-contract"></i></div>
@@ -695,9 +680,7 @@
             </div>
         </div>
 
-        <!-- 图表区域 -->
         <div class="charts-row">
-            <!-- 合同趋势图 -->
             <div class="chart-card">
                 <div class="chart-header">
                     <h3><i class="fas fa-chart-line" style="margin-right: 8px; color: #2d6da0;"></i>合同签署趋势</h3>
@@ -712,7 +695,6 @@
                 </div>
             </div>
 
-            <!-- 合同状态分布 -->
             <div class="chart-card">
                 <div class="chart-header">
                     <h3><i class="fas fa-chart-pie" style="margin-right: 8px; color: #2d6da0;"></i>合同状态分布</h3>
@@ -723,39 +705,37 @@
             </div>
         </div>
 
-        <!-- 待办事项和最近合同两列布局 -->
         <div class="charts-row">
-            <!-- 待办事项 -->
             <div class="tasks-card">
                 <div class="tasks-header">
                     <h3><i class="fas fa-tasks" style="margin-right: 8px; color: #2d6da0;"></i>待办事项</h3>
                     <a href="#" class="view-all" id="taskViewAll" style="display:none;">查看全部 <i class="fas fa-arrow-right"></i></a>
                 </div>
 
-                <!-- ✅ 后续用真实数据渲染到这里 -->
                 <div id="taskList"></div>
 
-                <!-- ✅ 空状态 -->
                 <div id="taskEmptyHint" style="padding: 20px 0; text-align: center; color:#6b7b8f;">
                     暂无待办事项
                 </div>
             </div>
 
-            <!-- 快速操作卡片 -->
             <div class="chart-card" style="display: flex; flex-direction: column;">
                 <div class="chart-header">
                     <h3><i class="fas fa-bolt" style="margin-right: 8px; color: #2d6da0;"></i>快速操作</h3>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;">
+                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="window.location.href='/contract/upload.html'">
                         <i class="fas fa-file-upload" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
                         <div style="font-weight: 600; color: #1a4b75;">上传合同</div>
                     </div>
-                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;">
+                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="window.location.href='/contract/index.html'">
                         <i class="fas fa-file-signature" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
-                        <div style="font-weight: 600; color: #1a4b75;">新建合同</div>
+                        <div style="font-weight: 600; color: #1a4b75;">合同列表</div>
                     </div>
-                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;">
+                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="window.location.href='/contract/index.html'">
                         <i class="fas fa-search" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
                         <div style="font-weight: 600; color: #1a4b75;">合同查询</div>
                     </div>
@@ -767,13 +747,12 @@
             </div>
         </div>
 
-        <!-- 最近合同列表 -->
         <div class="recent-contracts">
             <div class="tasks-header" style="margin-bottom: 20px;">
                 <h3><i class="fas fa-history" style="margin-right: 8px; color: #2d6da0;"></i>最近合同</h3>
-                <a href="#" class="view-all" id="recentViewAll" style="display:none;">
+                <a href="/contract/index.html" class="view-all" id="recentViewAll" style="display:none;">
                     查看全部 <i class="fas fa-arrow-right"></i>
-                </a>="view-all">查看全部 <i class="fas fa-arrow-right"></i></a>
+                </a>
             </div>
 
             <div class="table-responsive">
@@ -790,14 +769,9 @@
                         <th>操作</th>
                     </tr>
                     </thead>
-                    <tbody id="recentContractTbody">
-
-                    <!--  后续用真实数据渲染 -->
-
-                    </tbody>
+                    <tbody id="recentContractTbody"></tbody>
                 </table>
-                <div id="recentContractEmptyHint"
-                     style="padding: 20px 0; text-align: center; color: #6b7b8f;">
+                <div id="recentContractEmptyHint" style="padding: 20px 0; text-align: center; color: #6b7b8f;">
                     暂无最近合同数据
                 </div>
             </div>
@@ -806,124 +780,403 @@
 </div>
 
 <script>
-    // ========== 初始化用户信息 ==========
-    function loadUserInfo() {
-  try {
-    const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
-    if (!userInfoStr) {
-      // 未登录：回登录页
-      window.location.href = '/auth/login.html';
-      return;
-    }
+    let trendChartInstance = null;
+    let statusChartInstance = null;
+    let dashboardContracts = [];
 
-    const userInfo = JSON.parse(userInfoStr);
-    document.getElementById('userName').textContent = userInfo.username || '用户';
-
-    const roleMap = { admin:'超级管理员', ADMIN:'系统管理员', user:'普通用户', manager:'合同经理' };
-    const rawRole = (userInfo.role || '').toString();
-    document.getElementById('userRole').textContent =
-      roleMap[rawRole] || roleMap[rawRole.toUpperCase()] || rawRole || '普通用户';
-
-    document.getElementById('userAvatar').textContent =
-      (userInfo.username || '用户').charAt(0).toUpperCase();
-  } catch (e) {
-    console.error('加载用户信息失败:', e);
-    window.location.href = '/auth/login.html';
-  }
-}
-
-    // ========== 初始化图表 ==========
-    function initCharts() {
-  // 趋势图（空数据）
-  const ctx1 = document.getElementById('trendChart').getContext('2d');
-  trendChartInstance = new Chart(ctx1, {
-    type: 'line',
-    data: {
-      labels: [],          // ✅ 空
-      datasets: [{
-        label: '合同签署量',
-        data: [],          // ✅ 空
-        borderColor: '#2d6da0',
-        backgroundColor: 'rgba(45, 109, 160, 0.1)',
-        borderWidth: 3,
-        pointBackgroundColor: '#1a4b75',
-        pointBorderColor: 'white',
-        pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
-        x: { grid: { display: false } }
-      }
-    }
-  });
-
-  // 状态分布饼图（空数据）
-  const ctx2 = document.getElementById('statusChart').getContext('2d');
-  statusChartInstance = new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: [],      // ✅ 空
-      datasets: [{
-        data: [],      // ✅ 空
-        backgroundColor: ['#2d6da0', '#10b981', '#f59e0b', '#ef4444'],
-        borderColor: 'white',
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' }
+    function authFetch(url, options = {}) {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = new Headers(options.headers || {});
+        if (token) {
+            headers.set('Authorization', 'Bearer ' + token);
         }
-      },
-      cutout: '65%'
-    }
-  });
+        return fetch(url, { ...options, headers });
     }
 
-    // ========== 待办事项交互 ==========
+    function loadUserInfo() {
+        try {
+            const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+            if (!userInfoStr) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            const userInfo = JSON.parse(userInfoStr);
+            document.getElementById('userName').textContent = userInfo.username || '用户';
+
+            const roleMap = {
+                admin: '超级管理员',
+                ADMIN: '系统管理员',
+                user: '普通用户',
+                USER: '普通用户',
+                manager: '合同经理',
+                MANAGER: '合同经理'
+            };
+
+            const rawRole = (userInfo.role || userInfo.roleCode || '').toString();
+            document.getElementById('userRole').textContent =
+                roleMap[rawRole] || roleMap[rawRole.toUpperCase()] || rawRole || '普通用户';
+
+            document.getElementById('userAvatar').textContent =
+                (userInfo.username || '用户').charAt(0).toUpperCase();
+        } catch (e) {
+            console.error('加载用户信息失败:', e);
+            window.location.href = '/auth/login.html';
+        }
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function formatDateTime(value) {
+        if (!value) return '-';
+        try {
+            return value.replace('T', ' ').slice(0, 19);
+        } catch {
+            return value;
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        try {
+            return value.slice(0, 10);
+        } catch {
+            return value;
+        }
+    }
+
+    function getStatusText(status) {
+        const map = {
+            DRAFT: '草稿',
+            ACTIVE: '进行中',
+            COMPLETED: '已完成',
+            EXPIRED: '已到期',
+            TERMINATED: '已终止',
+            UPLOADED: '已上传'
+        };
+        return map[status] || status || '-';
+    }
+
+    function getStatusClass(status) {
+        switch (status) {
+            case 'ACTIVE':
+            case 'COMPLETED':
+                return 'status-active';
+            case 'DRAFT':
+            case 'UPLOADED':
+                return 'status-pending';
+            case 'EXPIRED':
+            case 'TERMINATED':
+                return 'status-expired';
+            default:
+                return 'status-pending';
+        }
+    }
+
+    function isExpiringSoon(contract) {
+        if (!contract || !contract.expireDate) return false;
+        try {
+            const now = new Date();
+            const expire = new Date(contract.expireDate);
+            const diff = expire.getTime() - now.getTime();
+            const days = diff / (1000 * 60 * 60 * 24);
+            return days >= 0 && days <= 30;
+        } catch {
+            return false;
+        }
+    }
+
+    function getPartnerName(contract) {
+        return contract.partyBName || contract.partyB || contract.partnerName || '-';
+    }
+
+    function getAmount(contract) {
+        if (contract.amount == null || contract.amount === '') return '-';
+        return contract.amount;
+    }
+
+    function initCharts() {
+        const ctx1 = document.getElementById('trendChart').getContext('2d');
+        trendChartInstance = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '合同创建量',
+                    data: [],
+                    borderColor: '#2d6da0',
+                    backgroundColor: 'rgba(45, 109, 160, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#1a4b75',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        const ctx2 = document.getElementById('statusChart').getContext('2d');
+        statusChartInstance = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: ['#2d6da0', '#10b981', '#f59e0b', '#ef4444', '#94a3b8'],
+                    borderColor: 'white',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    async function loadDashboardContracts() {
+        try {
+            const resp = await authFetch('/api/contracts?page=1&size=20');
+            if (!resp.ok) throw new Error('获取合同列表失败');
+
+            const result = await resp.json();
+            if (result.code !== 200) {
+                throw new Error(result.message || '获取合同列表失败');
+            }
+
+            const data = result.data || {};
+            dashboardContracts = data.records || [];
+
+            renderStats(dashboardContracts);
+            renderRecentContracts(dashboardContracts);
+            renderStatusChart(dashboardContracts);
+            renderTrendChart(dashboardContracts);
+            renderTasks(dashboardContracts);
+        } catch (e) {
+            console.error('加载仪表盘合同数据失败:', e);
+            renderStats([]);
+            renderRecentContracts([]);
+            renderStatusChart([]);
+            renderTrendChart([]);
+            renderTasks([]);
+        }
+    }
+
+    function renderStats(contracts) {
+        const total = contracts.length;
+        const active = contracts.filter(c => c.status === 'ACTIVE').length;
+        const completed = contracts.filter(c => c.status === 'COMPLETED').length;
+        const expiring = contracts.filter(c => isExpiringSoon(c)).length;
+
+        document.getElementById('statTotalContracts').textContent = total;
+        document.getElementById('statActiveContracts').textContent = active;
+        document.getElementById('statCompletedContracts').textContent = completed;
+        document.getElementById('statExpiringContracts').textContent = expiring;
+    }
+
+    function renderRecentContracts(contracts) {
+        const tbody = document.getElementById('recentContractTbody');
+        const emptyHint = document.getElementById('recentContractEmptyHint');
+        const viewAll = document.getElementById('recentViewAll');
+
+        if (!tbody) return;
+
+        if (!contracts || contracts.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyHint) emptyHint.style.display = 'block';
+            if (viewAll) viewAll.style.display = 'none';
+            return;
+        }
+
+        const sorted = [...contracts].sort((a, b) => {
+            const t1 = new Date(b.createdAt || 0).getTime();
+            const t2 = new Date(a.createdAt || 0).getTime();
+            return t1 - t2;
+        });
+
+        const recent = sorted.slice(0, 5);
+
+        tbody.innerHTML = recent.map(contract => `
+            <tr>
+                <td>${escapeHtml(contract.contractNo || '-')}</td>
+                <td>${escapeHtml(contract.title || '-')}</td>
+                <td>${escapeHtml(getPartnerName(contract))}</td>
+                <td>${formatDate(contract.signDate || contract.createdAt)}</td>
+                <td>${formatDate(contract.expireDate)}</td>
+                <td>${escapeHtml(getAmount(contract))}</td>
+                <td>
+                    <span class="status-badge ${getStatusClass(contract.status)}">
+                        ${escapeHtml(getStatusText(contract.status))}
+                    </span>
+                </td>
+                <td>
+                    <button class="action-btn" title="查看合同" onclick="viewContract(${contract.contractId})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        if (emptyHint) emptyHint.style.display = 'none';
+        if (viewAll) viewAll.style.display = 'inline-block';
+    }
+
+    function renderStatusChart(contracts) {
+        if (!statusChartInstance) return;
+
+        const statusMap = {};
+        contracts.forEach(c => {
+            const key = getStatusText(c.status);
+            statusMap[key] = (statusMap[key] || 0) + 1;
+        });
+
+        statusChartInstance.data.labels = Object.keys(statusMap);
+        statusChartInstance.data.datasets[0].data = Object.values(statusMap);
+        statusChartInstance.update();
+    }
+
+    function renderTrendChart(contracts) {
+        if (!trendChartInstance) return;
+
+        const period = Number(document.getElementById('trendPeriod')?.value || 30);
+        const today = new Date();
+        const labels = [];
+        const values = [];
+
+        for (let i = period - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            labels.push(key.slice(5));
+            values.push(
+                contracts.filter(c => (c.createdAt || '').slice(0, 10) === key).length
+            );
+        }
+
+        trendChartInstance.data.labels = labels;
+        trendChartInstance.data.datasets[0].data = values;
+        trendChartInstance.update();
+    }
+
+    function renderTasks(contracts) {
+        const taskList = document.getElementById('taskList');
+        const emptyHint = document.getElementById('taskEmptyHint');
+        const badge = document.getElementById('notifyBadge');
+
+        if (!taskList) return;
+
+        const tasks = [];
+
+        contracts.forEach(c => {
+            if (isExpiringSoon(c)) {
+                tasks.push({
+                    title: `合同《${c.title || '-'}》即将到期`,
+                    meta: `到期日期：${formatDate(c.expireDate)}`,
+                    priority: 'high'
+                });
+            }
+
+            if (c.status === 'DRAFT') {
+                tasks.push({
+                    title: `合同《${c.title || '-'}》仍为草稿状态`,
+                    meta: `创建时间：${formatDateTime(c.createdAt)}`,
+                    priority: 'medium'
+                });
+            }
+        });
+
+        const recentTasks = tasks.slice(0, 5);
+
+        if (recentTasks.length === 0) {
+            taskList.innerHTML = '';
+            if (emptyHint) emptyHint.style.display = 'block';
+            if (badge) {
+                badge.style.display = 'none';
+                badge.textContent = '0';
+            }
+            return;
+        }
+
+        taskList.innerHTML = recentTasks.map(task => `
+            <div class="task-item">
+                <div class="task-check"></div>
+                <div class="task-content">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    <div class="task-meta">
+                        <span><i class="fas fa-clock"></i>${escapeHtml(task.meta)}</span>
+                    </div>
+                </div>
+                <div class="task-priority priority-${task.priority === 'high' ? 'high' : task.priority === 'medium' ? 'medium' : 'low'}">
+                    ${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
+                </div>
+            </div>
+        `).join('');
+
+        if (emptyHint) emptyHint.style.display = 'none';
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.textContent = String(recentTasks.length);
+        }
+
+        initTasks();
+    }
+
     function initTasks() {
-  document.querySelectorAll('.task-check').forEach(checkbox => {
-    checkbox.addEventListener('click', function() {
-      this.classList.toggle('checked');
-      const taskItem = this.closest('.task-item');
-      const taskTitle = taskItem?.querySelector('.task-title')?.textContent || '';
-      console.log('任务状态更新:', taskTitle, this.classList.contains('checked') ? '已完成' : '未完成');
-    });
-  });
-}
-    // ========== 退出登录 ==========
+        document.querySelectorAll('.task-check').forEach(checkbox => {
+            checkbox.addEventListener('click', function() {
+                this.classList.toggle('checked');
+                const taskItem = this.closest('.task-item');
+                const taskTitle = taskItem?.querySelector('.task-title')?.textContent || '';
+                console.log('任务状态更新:', taskTitle, this.classList.contains('checked') ? '已完成' : '未完成');
+            });
+        });
+    }
+
+    function viewContract(contractId) {
+        window.location.href = `/contract/detail.html?id=${contractId}`;
+    }
+
     function logout() {
-        // 清除存储的用户信息
         localStorage.removeItem('token');
         localStorage.removeItem('userInfo');
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('userInfo');
-
-        // 跳转到登录页
         window.location.href = '/auth/login.html';
     }
 
-    // ========== 初始化页面 ==========
     document.addEventListener('DOMContentLoaded', function() {
         loadUserInfo();
         initCharts();
+        loadDashboardContracts();
 
-        // 监听时间段变化
-        document.getElementById('trendPeriod').addEventListener('change', function(e) {
-          console.log('切换时间段:', e.target.value);
+        document.getElementById('trendPeriod').addEventListener('change', function() {
+            renderTrendChart(dashboardContracts);
         });
     });
 </script>
