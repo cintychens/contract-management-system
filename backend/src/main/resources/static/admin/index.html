@@ -994,6 +994,38 @@
     </div>
 </div>
 
+<!-- 智能生成模态框 -->
+<div class="modal" id="generateModal">
+    <div class="modal-content" style="width: 700px; max-width: 95%;">
+        <div class="modal-header">
+            <h3><i class="fas fa-magic"></i> 智能生成合同</h3>
+            <span class="close-modal" onclick="closeModal('generateModal')">&times;</span>
+        </div>
+
+        <form id="generateForm">
+            <div class="form-group">
+                <label>选择模板</label>
+                <select id="generateTemplateSelect">
+                    <option value="">请选择模板</option>
+                </select>
+            </div>
+
+            <div id="generateFieldsContainer" style="display:grid; gap:16px; margin-bottom:20px;"></div>
+
+            <div class="form-group">
+                <label>生成结果预览</label>
+                <textarea id="generatePreview" rows="10" placeholder="生成后的合同正文会显示在这里"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-outline" onclick="handleGenerate()">生成</button>
+                <button type="submit" class="btn-primary">保存为合同</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
 <script>
     // ========== 管理员信息加载 ==========
     function loadAdminInfo() {
@@ -1083,6 +1115,7 @@ function switchTab(tabName, el) {
             case 'contract-upload':
                 console.log("渲染 contract-upload");
                 contentArea.innerHTML = renderContractUploadPanel();
+                loadRecentContracts();
                 break;
             case 'backup':
                 console.log("渲染 backup");
@@ -1228,8 +1261,48 @@ function renderContractUploadPanel() {
         </div>
       </div>
     </div>
+
+    <div class="content-section" style="margin-top:24px;">
+      <div class="section-header">
+        <h2><i class="fas fa-file-contract"></i> 最近合同</h2>
+        <div class="header-actions">
+          <button class="btn-outline" onclick="loadRecentContracts()">
+            <i class="fas fa-rotate"></i> 刷新
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>合同ID</th>
+              <th>合同编号</th>
+              <th>标题</th>
+              <th>类型</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="recentContractTableBody"></tbody>
+        </table>
+
+        <div id="recentContractEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
+          暂无合同数据。
+        </div>
+      </div>
+    </div>
+
+    <div class="content-section" id="contractDetailSection" style="display:none;">
+      <div class="section-header">
+        <h2><i class="fas fa-file-lines"></i> 合同详情</h2>
+      </div>
+      <div id="contractDetailContent" style="display:grid; gap:20px;"></div>
+    </div>
   `;
 }
+
 async function loadContractFields(contractId) {
   const section = document.getElementById("contractFieldSection");
   const loading = document.getElementById("contractFieldLoading");
@@ -1292,6 +1365,100 @@ async function loadContractFields(contractId) {
   }
 }
 
+async function loadRecentContracts() {
+  const tbody = document.getElementById("recentContractTableBody");
+  const emptyHint = document.getElementById("recentContractEmptyHint");
+
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="7" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+  if (emptyHint) emptyHint.style.display = "none";
+
+  try {
+    const resp = await authFetch("/api/admin/contracts?page=1&size=10");
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+    const records = data.records || [];
+
+    if (!records.length) {
+      tbody.innerHTML = "";
+      if (emptyHint) emptyHint.style.display = "block";
+      return;
+    }
+
+    tbody.innerHTML = records.map(c => `
+      <tr>
+        <td>${c.contractId ?? "-"}</td>
+        <td>${escapeHtml(c.contractNo ?? "-")}</td>
+        <td>${escapeHtml(c.title ?? "-")}</td>
+        <td>${escapeHtml(c.contractType ?? "-")}</td>
+        <td>${escapeHtml(c.status ?? "-")}</td>
+        <td>${escapeHtml(c.createdAt ?? "-")}</td>
+        <td>
+          <button class="action-btn" title="查看详情" onclick="viewContractDetail(${c.contractId})">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="action-btn" title="查看字段" onclick="loadContractFields(${c.contractId})">
+            <i class="fas fa-list"></i>
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="7" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+  }
+}
+
+async function viewContractDetail(contractId) {
+  const section = document.getElementById("contractDetailSection");
+  const content = document.getElementById("contractDetailContent");
+
+  if (!section || !content) return;
+
+  section.style.display = "block";
+  content.innerHTML = `<div style="color:#6b7b8f;">加载详情中...</div>`;
+
+  try {
+    const resp = await authFetch(`/api/contracts/${contractId}`);
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const result = await resp.json();
+    const contract = result.data || result;
+
+    content.innerHTML = `
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px;">
+        <div class="stat-mini-card" style="text-align:left;">
+          <div><strong>合同ID：</strong>${contract.contractId ?? "-"}</div>
+          <div><strong>合同编号：</strong>${escapeHtml(contract.contractNo ?? "-")}</div>
+          <div><strong>标题：</strong>${escapeHtml(contract.title ?? "-")}</div>
+          <div><strong>类型：</strong>${escapeHtml(contract.contractType ?? "-")}</div>
+        </div>
+
+        <div class="stat-mini-card" style="text-align:left;">
+          <div><strong>状态：</strong>${escapeHtml(contract.status ?? "-")}</div>
+          <div><strong>当前版本：</strong>${contract.currentVersionId ?? "-"}</div>
+          <div><strong>创建时间：</strong>${escapeHtml(contract.createdAt ?? "-")}</div>
+          <div><strong>模板ID：</strong>${contract.templateId ?? "-"}</div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="margin-bottom:10px; color:#0a1a2b;">合同正文</h3>
+        <div style="background:#f8fafc; border:1px solid #eef2f6; border-radius:16px; padding:18px; min-height:220px; white-space:pre-wrap; line-height:1.8;">
+          ${escapeHtml(contract.content || "暂无正文内容")}
+        </div>
+      </div>
+    `;
+
+    section.scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    console.error(e);
+    content.innerHTML = `<div style="color:#dc3545;">详情加载失败：${escapeHtml(String(e.message || e))}</div>`;
+  }
+}
+
 async function uploadContractFile() {
   const fileInput = document.getElementById("contractUploadFile");
   const title = document.getElementById("contractUploadTitle").value.trim();
@@ -1344,6 +1511,7 @@ async function uploadContractFile() {
       }
 
       await loadContractFields(contractId);
+      await loadRecentContracts();
 
       document.getElementById("contractUploadTitle").value = "";
       document.getElementById("contractUploadType").value = "";
@@ -1510,8 +1678,12 @@ async function uploadContractFile() {
             <option value="DISABLED">禁用</option>
           </select>
 
+          <button class="btn-outline" onclick="showGenerateModal()">
+            <i class="fas fa-magic"></i> 智能生成
+          </button>
+
           <button class="btn-primary" onclick="showAddTemplateModal()">
-            <i class="fas fa-plus"></i> 新建模板
+             <i class="fas fa-plus"></i> 新建模板
           </button>
         </div>
       </div>
@@ -2046,6 +2218,129 @@ async function uploadContractFile() {
   } catch (err) {
     console.error(err);
     alert("加载模板详情失败：" + (err.message || err));
+  }
+}
+
+async function showGenerateModal() {
+  showModal("generateModal");
+  await loadGenerateTemplateOptions();
+}
+
+async function loadGenerateTemplateOptions() {
+  const select = document.getElementById("generateTemplateSelect");
+  const fieldsBox = document.getElementById("generateFieldsContainer");
+  const preview = document.getElementById("generatePreview");
+
+  if (!select) return;
+
+  try {
+    const resp = await authFetch("/api/admin/templates?page=1&size=100&status=ENABLED");
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const data = await resp.json();
+    const records = data.records || [];
+
+    select.innerHTML = `
+      <option value="">请选择模板</option>
+      ${records.map(t => `<option value="${t.templateId}">${escapeHtml(t.name)}</option>`).join("")}
+    `;
+
+    if (fieldsBox) fieldsBox.innerHTML = "";
+    if (preview) preview.value = "";
+
+    select.onchange = async function () {
+      const templateId = this.value;
+      if (!templateId) {
+        if (fieldsBox) fieldsBox.innerHTML = "";
+        return;
+      }
+      await loadGenerateVariables(templateId);
+    };
+  } catch (e) {
+    console.error(e);
+    alert("加载模板失败：" + (e.message || e));
+  }
+}
+
+async function loadGenerateVariables(templateId) {
+  const fieldsBox = document.getElementById("generateFieldsContainer");
+  if (!fieldsBox) return;
+
+  fieldsBox.innerHTML = `<div style="color:#6b7b8f;">加载字段中...</div>`;
+
+  try {
+    const resp = await authFetch(`/api/templates/${templateId}/variables`);
+    if (!resp.ok) throw new Error(await resp.text());
+
+    const result = await resp.json();
+
+    // ✅ 正确拿变量
+    const variables = result.variables || [];
+
+    if (!variables.length) {
+      fieldsBox.innerHTML = `<div style="color:#6b7b8f;">该模板暂无变量字段</div>`;
+      return;
+    }
+
+    // ✅ 渲染输入框
+    fieldsBox.innerHTML = variables.map(v => `
+      <div class="form-group">
+        <label>${v}</label>
+        <input
+          type="text"
+          class="generate-field"
+          data-key="${v}"
+          placeholder="请输入 ${v}"
+        >
+      </div>
+    `).join("");
+
+  } catch (e) {
+    console.error(e);
+    fieldsBox.innerHTML = `<div style="color:#dc3545;">字段加载失败</div>`;
+  }
+}
+
+async function handleGenerate() {
+  try {
+    const templateId = document.getElementById("generateTemplateSelect")?.value;
+    if (!templateId) {
+      alert("请选择模板");
+      return;
+    }
+
+    const variables = {};
+    document.querySelectorAll(".generate-field").forEach(input => {
+      const key = input.dataset.key;
+      const val = input.value.trim();
+      if (key && val) {
+        variables[key] = val;
+      }
+    });
+
+    console.log("提交变量:", variables);
+
+    const resp = await authFetch("/api/templates/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        templateId: Number(templateId),
+        variables
+      })
+    });
+
+    const result = await resp.json().catch(() => ({}));
+    console.log("生成返回:", result);
+
+    if (!resp.ok) {
+      throw new Error(result.message || JSON.stringify(result) || "生成失败");
+    }
+
+    document.getElementById("generatePreview").value =
+      result.content || result.data?.content || result.generatedContent || "";
+  } catch (e) {
+    console.error(e);
+    alert("生成失败：" + (e.message || e));
   }
 }
 
@@ -2631,6 +2926,49 @@ if (templateForm) {
     } catch (err) {
       console.error(err);
       alert("保存失败：" + (err.message || err));
+    }
+  });
+}
+
+// ======== 智能生成提交绑定（单独放）========
+const generateForm = document.getElementById("generateForm");
+if (generateForm) {
+  generateForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const templateId = document.getElementById("generateTemplateSelect")?.value;
+    const content = document.getElementById("generatePreview")?.value.trim();
+
+    if (!templateId) {
+      alert("请先选择模板");
+      return;
+    }
+
+    if (!content) {
+      alert("请先生成合同内容");
+      return;
+    }
+
+    try {
+      const resp = await authFetch("/api/contracts/confirm-generated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: Number(templateId),
+          content
+        })
+      });
+
+      const result = await resp.json().catch(() => ({}));
+      console.log("保存返回:", result);
+
+      if (!resp.ok) throw new Error(result.message || "保存失败");
+
+      alert("保存成功");
+      closeModal("generateModal");
+    } catch (e) {
+      console.error(e);
+      alert("保存失败：" + (e.message || e));
     }
   });
 }
