@@ -26,7 +26,6 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(Customizer.withDefaults())
 
-                // ✅ 未登录 / 无权限时返回 JSON（不返回 Whitelabel）
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -48,9 +47,12 @@ public class SecurityConfig {
                         // /me 必须登录
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
 
-                        // ✅ 临时放行：模板智能生成相关接口（方便你当前开发测试）
+                        // ✅ 临时放行：模板智能生成相关接口
                         .requestMatchers(HttpMethod.GET, "/api/templates/*/variables").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/templates/generate").permitAll()
+
+                        // ✅ 临时放行：合同列表 / 合同详情 / 合同字段
+                        .requestMatchers(HttpMethod.GET, "/api/contracts/**").permitAll()
 
                         // H2
                         .requestMatchers("/h2-console/**").permitAll()
@@ -63,7 +65,7 @@ public class SecurityConfig {
                                 "/**/*.jpeg", "/**/*.svg", "/**/*.ico", "/**/*.woff", "/**/*.woff2", "/**/*.ttf"
                         ).permitAll()
 
-                        // ✅ 管理员接口：精确匹配 authority=ADMIN
+                        // 管理员接口
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
                         // 其他 API

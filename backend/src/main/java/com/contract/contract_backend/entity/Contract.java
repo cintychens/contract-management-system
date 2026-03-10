@@ -39,4 +39,11 @@ public class Contract {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "template_id")
+    private Long templateId;
+
+    @Lob
+    @Column(name = "content", columnDefinition = "TEXT")
+    private String content;
 }

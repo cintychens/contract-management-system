@@ -21,6 +21,9 @@ import com.contract.contract_backend.service.ContractService;
 import com.contract.contract_backend.service.FileStorageService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,8 +35,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -214,6 +219,8 @@ public class ContractServiceImpl implements ContractService {
         version = contractVersionRepository.save(version);
 
         contract.setCurrentVersionId(version.getVersionId());
+        // 如果你的 Contract 实体里已经有 content 字段，这里顺手保存正文，方便详情直接显示
+        contract.setContent(content);
         contractRepository.save(contract);
 
         // 保存结构化字段，便于后续展示/查询
@@ -239,7 +246,57 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 5. 你原有逻辑：上传校验
+     * 5. 新增逻辑：合同列表
+     * =========================
+     */
+    @Override
+    public Map<String, Object> getContracts(int page, int size, String keyword, String status) {
+        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
+
+        Page<Contract> contractPage;
+
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+        boolean hasStatus = status != null && !status.trim().isEmpty();
+
+        if (hasKeyword && hasStatus) {
+            contractPage = contractRepository.findByTitleContainingIgnoreCaseAndStatus(
+                    keyword.trim(), status.trim(), pageable
+            );
+        } else if (hasKeyword) {
+            contractPage = contractRepository.findByTitleContainingIgnoreCase(
+                    keyword.trim(), pageable
+            );
+        } else if (hasStatus) {
+            contractPage = contractRepository.findByStatus(
+                    status.trim(), pageable
+            );
+        } else {
+            contractPage = contractRepository.findAll(pageable);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", contractPage.getTotalElements());
+        result.put("page", page);
+        result.put("size", size);
+        result.put("records", contractPage.getContent());
+
+        return result;
+    }
+
+    /**
+     * =========================
+     * 6. 新增逻辑：合同详情
+     * =========================
+     */
+    @Override
+    public Contract getContractDetail(Long contractId) {
+        return contractRepository.findById(contractId)
+                .orElseThrow(() -> new RuntimeException("合同不存在，contractId=" + contractId));
+    }
+
+    /**
+     * =========================
+     * 7. 你原有逻辑：上传校验
      * =========================
      */
     private void validateUpload(MultipartFile file, String title, String contractType) {
@@ -270,7 +327,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 6. 新增逻辑：生成草案请求校验
+     * 8. 新增逻辑：生成草案请求校验
      * =========================
      */
     private void validateGenerateReq(ContractGenerateDto.GenerateReq req) {
@@ -293,7 +350,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 7. 新增逻辑：优先调用 LLM，失败则本地兜底
+     * 9. 新增逻辑：优先调用 LLM，失败则本地兜底
      * =========================
      */
     private String generateByLlmOrFallback(Template template, ContractGenerateDto.GenerateReq req) {
@@ -349,7 +406,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 8. 新增逻辑：构造 Prompt
+     * 10. 新增逻辑：构造 Prompt
      * =========================
      */
     private String buildPrompt(Template template, ContractGenerateDto.GenerateReq req) {
@@ -403,7 +460,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 9. 新增逻辑：本地兜底生成
+     * 11. 新增逻辑：本地兜底生成
      * =========================
      */
     private String buildDraftFallback(Template template, ContractGenerateDto.GenerateReq req) {
@@ -455,7 +512,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 10. 新增逻辑：保存人工确认字段
+     * 12. 新增逻辑：保存人工确认字段
      * =========================
      */
     private void saveManualField(Long contractId, String fieldKey, String fieldName, String fieldValue) {
@@ -479,7 +536,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 11. 你原有逻辑：生成唯一合同号
+     * 13. 你原有逻辑：生成唯一合同号
      * =========================
      */
     private String generateUniqueContractNo() {
@@ -492,7 +549,7 @@ public class ContractServiceImpl implements ContractService {
 
     /**
      * =========================
-     * 12. 新增工具方法
+     * 14. 新增工具方法
      * =========================
      */
     private String replaceVar(String text, String key, String value) {

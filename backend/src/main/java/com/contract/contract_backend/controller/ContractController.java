@@ -8,8 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.contract.contract_backend.dto.ContractGenerateDto;
+import com.contract.contract_backend.entity.Contract;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -45,5 +47,20 @@ public class ContractController {
     @GetMapping("/{contractId}/fields")
     public Result<List<ContractFieldResponse>> getContractFields(@PathVariable Long contractId) {
         return Result.success(contractService.getContractFields(contractId));
+    }
+
+    @GetMapping
+    public Result<Map<String, Object>> getContracts(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status
+    ) {
+        return Result.success(contractService.getContracts(page, size, keyword, status));
+    }
+
+    @GetMapping("/{contractId}")
+    public Result<Contract> getContractDetail(@PathVariable Long contractId) {
+        return Result.success(contractService.getContractDetail(contractId));
     }
 }
