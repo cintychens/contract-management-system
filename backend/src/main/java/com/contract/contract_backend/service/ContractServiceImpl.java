@@ -61,6 +61,7 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public ContractUploadResponse uploadContract(MultipartFile file, String title, String contractType) {
+
         validateUpload(file, title, contractType);
 
         String originalFileName = FileTypeUtil.sanitizeFileName(file.getOriginalFilename());
@@ -77,6 +78,7 @@ public class ContractServiceImpl implements ContractService {
         }
 
         String savedObjectKey = fileStorageService.uploadFile(file, objectKey);
+        String extractedContent = extractContentForPreview(file, title, contractType);
 
         Contract contract = Contract.builder()
                 .contractNo(contractNo)
@@ -85,6 +87,7 @@ public class ContractServiceImpl implements ContractService {
                 .status("UPLOADED")
                 .createdBy(1L)
                 .createdAt(LocalDateTime.now())
+                .content(extractedContent)
                 .build();
 
         contract = contractRepository.save(contract);
@@ -107,7 +110,6 @@ public class ContractServiceImpl implements ContractService {
         contract.setCurrentVersionId(version.getVersionId());
         contractRepository.save(contract);
 
-        // 保留你原有逻辑：上传后立即解析
         contractParseService.parseContract(contract.getContractId());
 
         return ContractUploadResponse.builder()
@@ -209,7 +211,6 @@ public class ContractServiceImpl implements ContractService {
                 .fileSize((long) content.getBytes(StandardCharsets.UTF_8).length)
                 .fileObjectKey(null)
                 .fileHash(sha256(content))
-                // 这里要求你的 ContractVersion 已经新增了 contentText 字段
                 .contentText(content)
                 .changeNote("AI生成草案并人工确认保存")
                 .createdBy(1L)
@@ -219,11 +220,9 @@ public class ContractServiceImpl implements ContractService {
         version = contractVersionRepository.save(version);
 
         contract.setCurrentVersionId(version.getVersionId());
-        // 如果你的 Contract 实体里已经有 content 字段，这里顺手保存正文，方便详情直接显示
         contract.setContent(content);
         contractRepository.save(contract);
 
-        // 保存结构化字段，便于后续展示/查询
         contractFieldRepository.deleteByContractId(contract.getContractId());
 
         saveManualField(contract.getContractId(), "party_a", "甲方名称", req.getPartyA());
@@ -589,6 +588,39 @@ public class ContractServiceImpl implements ContractService {
                 .replace("\n", "\\n")
                 .replace("\r", "")
                 .replace("\t", "\\t") + "\"";
+    }
+
+    /**
+     * 上传后用于详情页展示的正文预览（临时占位）
+     */
+    private String extractContentForPreview(MultipartFile file, String title, String contractType) {
+        try {
+            String originalFileName = file.getOriginalFilename();
+            String extension = FileTypeUtil.getExtension(originalFileName).toLowerCase();
+
+            // 如果以后允许 txt，这里可以直接读取正文
+            if ("txt".equals(extension)) {
+                return new String(file.getBytes(), StandardCharsets.UTF_8);
+            }
+
+            // 当前阶段先给一个可展示的占位正文
+            return """
+                合同标题：%s
+                合同类型：%s
+
+                该合同文件已上传成功。
+                当前系统已完成合同主记录与版本记录保存。
+
+                文件名称：%s
+                说明：当前正文尚未从原始文件中完整提取，后续可由解析服务补充真实正文内容。
+                """.formatted(
+                    title == null ? "" : title,
+                    contractType == null ? "" : contractType,
+                    originalFileName == null ? "" : originalFileName
+            );
+        } catch (Exception e) {
+            return "合同已上传成功，但正文提取失败：" + e.getMessage();
+        }
     }
 
     /**
