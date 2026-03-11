@@ -195,6 +195,7 @@ public class ContractServiceImpl implements ContractService {
                 .title(req.getTitle().trim())
                 .contractType(req.getContractType().trim())
                 .status("DRAFT")
+                .templateId(req.getTemplateId())
                 .createdBy(1L)
                 .createdAt(LocalDateTime.now())
                 .build();
