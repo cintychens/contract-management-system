@@ -34,7 +34,6 @@ function renderDashboard() {
             </h2>
 
             <div class="status-grid">
-
                 <div class="status-item">
                     <i class="fas fa-database"></i>
                     <div class="status-value" id="dbStatus">--</div>
@@ -62,7 +61,6 @@ function renderDashboard() {
                     <div class="status-label">API响应时间</div>
                     <div><span class="status-indicator indicator-yellow"></span> 实时监控</div>
                 </div>
-
             </div>
         </div>
     `;
@@ -75,10 +73,15 @@ async function loadDashboardData() {
 
         const data = await resp.json();
 
-        document.getElementById("dbStatus").textContent = data.dbAvailability + "%";
-        document.getElementById("userCount").textContent = data.userCount;
-        document.getElementById("contractCount").textContent = data.contractCount;
-        document.getElementById("apiLatency").textContent = data.apiLatency + " ms";
+        const dbStatus = document.getElementById("dbStatus");
+        const userCount = document.getElementById("userCount");
+        const contractCount = document.getElementById("contractCount");
+        const apiLatency = document.getElementById("apiLatency");
+
+        if (dbStatus) dbStatus.textContent = (data.dbAvailability ?? "--") + "%";
+        if (userCount) userCount.textContent = data.userCount ?? "--";
+        if (contractCount) contractCount.textContent = data.contractCount ?? "--";
+        if (apiLatency) apiLatency.textContent = (data.apiLatency ?? "--") + " ms";
     } catch (err) {
         console.error(err);
     }
@@ -271,8 +274,8 @@ async function loadUsersTable() {
 
         tbody.innerHTML = records.map((u, idx) => {
             const seq = (page - 1) * size + (idx + 1);
-            const roleText = (u.roleCode === "ADMIN") ? "管理员" : "普通用户";
-            const statusHtml = (u.status === "ENABLED")
+            const roleText = u.roleCode === "ADMIN" ? "管理员" : "普通用户";
+            const statusHtml = u.status === "ENABLED"
                 ? `<span class="status-badge status-active">启用</span>`
                 : `<span class="status-badge status-disabled">禁用</span>`;
 
@@ -331,8 +334,8 @@ function filterUsers(role, el) {
 
 function openEditUser(userId, username, roleCode, status, fullName = "", remark = "") {
     document.getElementById("editUsername").value = username;
-    document.getElementById("editRole").value = (roleCode === "ADMIN") ? "admin" : "user";
-    document.getElementById("editStatus").value = (status === "ENABLED") ? "active" : "disabled";
+    document.getElementById("editRole").value = roleCode === "ADMIN" ? "admin" : "user";
+    document.getElementById("editStatus").value = status === "ENABLED" ? "active" : "disabled";
 
     const fullNameEl = document.getElementById("editFullName");
     if (fullNameEl) fullNameEl.value = fullName || "";
@@ -350,14 +353,14 @@ function openEditUser(userId, username, roleCode, status, fullName = "", remark 
 
         const role = document.getElementById("editRole").value;
         const st = document.getElementById("editStatus").value;
-        const fullName = document.getElementById("editFullName").value.trim();
-        const remark = document.getElementById("editRemark").value.trim();
+        const newFullName = document.getElementById("editFullName").value.trim();
+        const newRemark = document.getElementById("editRemark").value.trim();
 
         const payload = {
-            fullName,
+            fullName: newFullName,
             roleCode: role === "admin" ? "ADMIN" : "USER",
             status: st === "active" ? "ENABLED" : "DISABLED",
-            remark
+            remark: newRemark
         };
 
         try {
@@ -379,7 +382,7 @@ function openEditUser(userId, username, roleCode, status, fullName = "", remark 
 }
 
 async function toggleUserStatus(userId, currentStatus) {
-    const next = (currentStatus === "ENABLED") ? "DISABLED" : "ENABLED";
+    const next = currentStatus === "ENABLED" ? "DISABLED" : "ENABLED";
     if (!confirm(`确认将用户状态改为：${next === "ENABLED" ? "启用" : "禁用"}？`)) return;
 
     try {
@@ -422,10 +425,6 @@ function renderTemplateManagement() {
             <option value="ENABLED">启用</option>
             <option value="DISABLED">禁用</option>
           </select>
-
-          <button class="btn-outline" onclick="showGenerateModal()">
-            <i class="fas fa-magic"></i> 智能生成
-          </button>
 
           <button class="btn-primary" onclick="showAddTemplateModal()">
              <i class="fas fa-plus"></i> 新建模板
@@ -693,27 +692,29 @@ function handleTemplateFileChange() {
         return;
     }
 
-    nameEl.textContent = file.name;
-    metaEl.textContent = `${file.type || ext.toUpperCase()} · ${formatBytes(file.size)}`;
-    preview.style.display = "block";
+    if (nameEl) nameEl.textContent = file.name;
+    if (metaEl) metaEl.textContent = `${file.type || ext.toUpperCase()} · ${formatBytes(file.size)}`;
+    if (preview) preview.style.display = "block";
 }
 
 function showAddTemplateModal() {
     templatesState.editingId = null;
 
-    document.getElementById('editTemplateName').value = '';
-    document.getElementById('editContractType').value = 'transport';
-    document.getElementById('editTemplateContent').value = '';
-    document.getElementById('editTemplateStatus').value = 'active';
+    document.getElementById("editTemplateName").value = "";
+    document.getElementById("editContractType").value = "transport";
+    document.getElementById("editTemplateContent").value = "";
+    document.getElementById("editTemplateStatus").value = "active";
 
-    const remarkEl = document.getElementById('editTemplateRemark');
-    if (remarkEl) remarkEl.value = '';
+    const remarkEl = document.getElementById("editTemplateRemark");
+    if (remarkEl) remarkEl.value = "";
 
-    document.querySelector('#templateModal .modal-header h3').innerHTML =
-        '<i class="fas fa-plus"></i> 新建模板';
+    const titleEl = document.querySelector("#templateModal .modal-header h3");
+    if (titleEl) {
+        titleEl.innerHTML = '<i class="fas fa-plus"></i> 新建模板';
+    }
 
     clearTemplateFile();
-    showModal('templateModal');
+    showModal("templateModal");
 }
 
 async function editTemplate(templateId) {
@@ -722,184 +723,27 @@ async function editTemplate(templateId) {
         if (!resp.ok) throw new Error(await resp.text());
 
         const data = await resp.json();
-
         templatesState.editingId = templateId;
 
-        document.querySelector('#templateModal .modal-header h3').innerHTML =
-            '<i class="fas fa-edit"></i> 编辑模板';
+        const titleEl = document.querySelector("#templateModal .modal-header h3");
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="fas fa-edit"></i> 编辑模板';
+        }
 
-        document.getElementById('editTemplateName').value = data.name || '';
-        document.getElementById('editContractType').value = data.contractType || 'transport';
-        document.getElementById('editTemplateContent').value = data.content || '';
-        document.getElementById('editTemplateStatus').value =
-            data.status === 'DISABLED' ? 'disabled' : 'active';
+        document.getElementById("editTemplateName").value = data.name || "";
+        document.getElementById("editContractType").value = data.contractType || "transport";
+        document.getElementById("editTemplateContent").value = data.content || "";
+        document.getElementById("editTemplateStatus").value =
+            data.status === "DISABLED" ? "disabled" : "active";
 
-        const remarkEl = document.getElementById('editTemplateRemark');
-        if (remarkEl) remarkEl.value = data.remark || '';
+        const remarkEl = document.getElementById("editTemplateRemark");
+        if (remarkEl) remarkEl.value = data.remark || "";
 
         clearTemplateFile();
-        showModal('templateModal');
+        showModal("templateModal");
     } catch (err) {
         console.error(err);
         alert("加载模板详情失败：" + (err.message || err));
-    }
-}
-
-async function showGenerateModal() {
-    showModal("generateModal");
-    await loadGenerateTemplateOptions();
-}
-
-async function loadGenerateTemplateOptions() {
-    const select = document.getElementById("generateTemplateSelect");
-    const fieldsBox = document.getElementById("generateFieldsContainer");
-    const preview = document.getElementById("generatePreview");
-
-    if (!select) return;
-
-    try {
-        const resp = await authFetch("/api/admin/templates?page=1&size=100&status=ENABLED");
-        if (!resp.ok) throw new Error(await resp.text());
-
-        const data = await resp.json();
-        const records = data.records || [];
-
-        select.innerHTML = `
-          <option value="">请选择模板</option>
-          ${records.map(t => `
-            <option
-              value="${t.templateId}"
-              data-contract-type="${escapeHtml(t.contractType || "")}"
-            >
-              ${escapeHtml(t.name)}
-            </option>
-          `).join("")}
-        `;
-
-        if (fieldsBox) fieldsBox.innerHTML = "";
-        if (preview) preview.value = "";
-
-        select.onchange = async function () {
-            const templateId = this.value;
-            if (!templateId) {
-                if (fieldsBox) fieldsBox.innerHTML = "";
-                return;
-            }
-            await loadGenerateVariables(templateId);
-        };
-    } catch (e) {
-        console.error(e);
-        alert("加载模板失败：" + (e.message || e));
-    }
-}
-
-async function loadGenerateVariables(templateId) {
-    const fieldsBox = document.getElementById("generateFieldsContainer");
-    if (!fieldsBox) return;
-
-    fieldsBox.innerHTML = `<div style="color:#6b7b8f;">加载字段中...</div>`;
-
-    try {
-        const resp = await authFetch(`/api/templates/${templateId}/variables`);
-        if (!resp.ok) throw new Error(await resp.text());
-
-        const result = await resp.json();
-        const variables = result.variables || [];
-
-        if (!variables.length) {
-            fieldsBox.innerHTML = `<div style="color:#6b7b8f;">该模板暂无变量字段</div>`;
-            return;
-        }
-
-        fieldsBox.innerHTML = variables.map(v => `
-          <div class="form-group">
-            <label>${v}</label>
-            <input
-              type="text"
-              class="generate-field"
-              data-key="${v}"
-              placeholder="请输入 ${v}"
-            >
-          </div>
-        `).join("");
-
-    } catch (e) {
-        console.error(e);
-        fieldsBox.innerHTML = `<div style="color:#dc3545;">字段加载失败</div>`;
-    }
-}
-
-async function handleGenerate() {
-    try {
-        const templateId = document.getElementById("generateTemplateSelect")?.value;
-        const titleInput = document.getElementById("generateContractTitle");
-        const title = titleInput ? titleInput.value.trim() : "";
-
-        if (!templateId) {
-            alert("请选择模板");
-            return;
-        }
-
-        if (!title) {
-            alert("请填写合同标题");
-            return;
-        }
-
-        const payload = {
-            templateId: Number(templateId),
-            title: title
-        };
-
-        // 前端字段名 -> 后端DTO字段名 映射
-        const fieldMap = {
-            partyA: "partyA",
-            partyB: "partyB",
-            amount: "amount",
-            signDate: "signDate",
-            effectiveDate: "effectiveDate",
-            expireDate: "expireDate",
-            serviceContent: "serviceContent",
-            paymentTerms: "paymentTerms",
-            breachLiability: "breachLiability",
-
-            // 兼容你当前页面里可能出现的别名
-            paymentTerm: "paymentTerms",
-            paymentMethod: "paymentTerms",
-            reconciliationCycle: "paymentTerms",
-            disputeCourt: "breachLiability",
-            requireDate: "expireDate"
-        };
-
-        document.querySelectorAll(".generate-field").forEach(input => {
-            const rawKey = input.dataset.key;
-            const val = input.value.trim();
-
-            if (!rawKey) return;
-
-            const mappedKey = fieldMap[rawKey] || rawKey;
-            payload[mappedKey] = val;
-        });
-
-        console.log("生成草稿参数:", payload);
-
-        const resp = await authFetch("/api/contracts/generate-draft", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await resp.json().catch(() => ({}));
-        console.log("生成返回:", result);
-
-        if (!resp.ok || result.code !== 200) {
-            throw new Error(result.message || "生成失败");
-        }
-
-        document.getElementById("generatePreview").value =
-            result.data?.draftContent || result.draftContent || "";
-    } catch (e) {
-        console.error(e);
-        alert("生成失败：" + (e.message || e));
     }
 }
 
@@ -1337,8 +1181,7 @@ function renderContractUploadPanel() {
           </button>
         </div>
 
-        <div id="contractUploadResult" style="display:none; padding:14px; border-radius:16px; background:#f8fafc; border:1px solid #ffd700;">
-        </div>
+        <div id="contractUploadResult" style="display:none; padding:14px; border-radius:16px; background:#f8fafc; border:1px solid #ffd700;"></div>
 
         <div id="contractFieldSection" style="display:none;">
           <div class="content-section" style="margin-bottom:0; padding:20px; background:#fffdf6;">
@@ -1571,8 +1414,8 @@ async function viewContractDetail(contractId) {
 
 async function uploadContractFile() {
     const fileInput = document.getElementById("contractUploadFile");
-    const title = document.getElementById("contractUploadTitle").value.trim();
-    const contractType = document.getElementById("contractUploadType").value;
+    const title = document.getElementById("contractUploadTitle")?.value.trim() || "";
+    const contractType = document.getElementById("contractUploadType")?.value || "";
     const resultBox = document.getElementById("contractUploadResult");
 
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {

@@ -2,10 +2,15 @@
 function authFetch(url, options = {}) {
     const token = sessionStorage.getItem("token");
     const headers = new Headers(options.headers || {});
+
     if (token) {
         headers.set("Authorization", "Bearer " + token);
     }
-    return fetch(url, { ...options, headers });
+
+    return fetch(url, {
+        ...options,
+        headers
+    });
 }
 
 async function uploadTemplateFile(file) {
@@ -17,6 +22,9 @@ async function uploadTemplateFile(file) {
         body: fd
     });
 
-    if (!resp.ok) throw new Error(await resp.text());
+    if (!resp.ok) {
+        throw new Error(await resp.text());
+    }
+
     return await resp.json();
 }

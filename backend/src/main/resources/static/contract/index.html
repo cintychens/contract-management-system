@@ -351,6 +351,70 @@
             color: #6b7b8f;
         }
 
+        .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 720px;
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    font-size: 22px;
+    color: #1a4b75;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.close-modal {
+    font-size: 28px;
+    cursor: pointer;
+    color: #6b7b8f;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #1a4b75;
+    font-weight: 600;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
         @media (max-width: 1024px) {
             .sidebar {
                 width: 90px;
@@ -498,6 +562,10 @@
                         <i class="fas fa-rotate"></i> 刷新
                     </button>
 
+                    <button class="btn-outline" onclick="openGenerateContractModal()">
+                        <i class="fas fa-magic"></i> 智能生成
+                    </button>
+
                     <button class="btn-primary" onclick="window.location.href='/contract/upload.html'">
                         <i class="fas fa-plus"></i> 上传合同
                     </button>
@@ -534,6 +602,40 @@
     </main>
 </div>
 
+<div class="modal" id="generateContractModal">
+    <div class="modal-content" style="max-width:900px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-magic"></i> 智能生成合同</h3>
+            <span class="close-modal" onclick="closeModal('generateContractModal')">&times;</span>
+        </div>
+
+        <div class="form-group">
+            <label>选择模板</label>
+            <select id="generateTemplateSelect">
+                <option value="">请选择模板</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>合同标题</label>
+            <input type="text" id="generateContractTitle" placeholder="请输入合同标题">
+        </div>
+
+        <div id="generateFieldsContainer" style="display:grid;gap:16px;margin-top:10px;"></div>
+
+        <div class="form-group">
+            <label>生成预览</label>
+            <textarea id="generatePreview" rows="14"></textarea>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="closeModal('generateContractModal')">取消</button>
+            <button class="btn-outline" onclick="handleGenerateContract()">生成草稿</button>
+            <button class="btn-primary" onclick="saveGeneratedContract()">保存合同</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const state = {
         page: 1,
@@ -547,6 +649,16 @@
         const headers = new Headers(options.headers || {});
         if (token) headers.set('Authorization', 'Bearer ' + token);
         return fetch(url, { ...options, headers });
+    }
+
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('active');
     }
 
     function escapeHtml(str) {
@@ -701,6 +813,141 @@
         window.location.href = '/auth/login.html';
     }
 
+    /* ===== 智能生成合同 ===== */
+
+    async function openGenerateContractModal() {
+        showModal('generateContractModal');
+        await loadGenerateTemplateOptions();
+    }
+
+    async function loadGenerateTemplateOptions() {
+        const select = document.getElementById('generateTemplateSelect');
+        const fieldsBox = document.getElementById('generateFieldsContainer');
+        const preview = document.getElementById('generatePreview');
+
+        try {
+            const resp = await authFetch('/api/admin/templates?page=1&size=100&status=ENABLED');
+            if (!resp.ok) throw new Error(await resp.text());
+
+            const data = await resp.json();
+            const list = data.records || [];
+
+            select.innerHTML = `
+    <option value="">请选择模板</option>
+    ${list.map(t => `<option value="${t.templateId}">${escapeHtml(t.name)}</option>`).join('')}
+    `;
+
+            if (fieldsBox) fieldsBox.innerHTML = '';
+            if (preview) preview.value = '';
+
+            select.onchange = async function () {
+                await loadGenerateVariables(this.value);
+            };
+        } catch (e) {
+            console.error(e);
+            alert('加载模板失败：' + (e.message || e));
+        }
+    }
+
+    async function loadGenerateVariables(templateId) {
+        const box = document.getElementById('generateFieldsContainer');
+
+        if (!templateId) {
+            box.innerHTML = '';
+            return;
+        }
+
+        try {
+            const resp = await authFetch(`/api/templates/${templateId}/variables`);
+            if (!resp.ok) throw new Error(await resp.text());
+
+            const result = await resp.json();
+            const vars = result.variables || [];
+
+            if (!vars.length) {
+                box.innerHTML = '<div style="color:#6b7b8f;">该模板暂无变量字段</div>';
+                return;
+            }
+
+            box.innerHTML = vars.map(v => `
+    <div class="form-group">
+    <label>${escapeHtml(v)}</label>
+    <input class="generate-field" data-key="${escapeHtml(v)}" type="text">
+    </div>
+    `).join('');
+        } catch (e) {
+            console.error(e);
+            box.innerHTML = `<div style="color:#dc3545;">字段加载失败：${escapeHtml(e.message || e)}</div>`;
+        }
+    }
+
+    async function handleGenerateContract() {
+        try {
+            const templateId = document.getElementById('generateTemplateSelect').value;
+            const title = document.getElementById('generateContractTitle').value.trim();
+
+            if (!templateId) return alert('请选择模板');
+            if (!title) return alert('请输入合同标题');
+
+            const payload = { templateId: Number(templateId), title };
+
+            document.querySelectorAll('.generate-field').forEach(input => {
+                payload[input.dataset.key] = input.value.trim();
+            });
+
+            const resp = await authFetch('/api/contracts/generate-draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await resp.json();
+
+            if (!resp.ok || result.code !== 200) {
+                throw new Error(result.message || '生成失败');
+            }
+
+            document.getElementById('generatePreview').value =
+                result.data?.draftContent || result.draftContent || '';
+
+            alert('生成成功');
+        } catch (e) {
+            alert('生成失败：' + e.message);
+        }
+    }
+
+    async function saveGeneratedContract() {
+        try {
+            const templateId = document.getElementById('generateTemplateSelect').value;
+            const title = document.getElementById('generateContractTitle').value.trim();
+            const content = document.getElementById('generatePreview').value.trim();
+
+            if (!templateId) return alert('请选择模板');
+            if (!title) return alert('请输入标题');
+            if (!content) return alert('请先生成草稿');
+
+            const resp = await authFetch('/api/contracts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ templateId: Number(templateId), title, content })
+            });
+
+            const result = await resp.json();
+
+            if (!resp.ok || (result.code && result.code !== 200)) {
+                throw new Error(result.message || '保存失败');
+            }
+
+            alert('保存成功');
+            closeModal('generateContractModal');
+            loadContracts();
+        } catch (e) {
+            alert('保存失败：' + e.message);
+        }
+    }
+
+    /* ===== 页面初始化 ===== */
+
     document.addEventListener('DOMContentLoaded', function () {
         loadUserInfo();
         loadContracts();
@@ -737,7 +984,14 @@
             state.page++;
             loadContracts();
         };
+
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        };
     });
 </script>
+
 </body>
 </html>

@@ -55,13 +55,29 @@ public class ContractParseServiceImpl implements ContractParseService {
 
         String text = extractText(fullPath, version.getFileName());
 
-        // 重新解析前，先清理旧字段
+        if (text == null || text.isBlank()
+                || "【暂未接入 PDF 解析器】".equals(text)
+                || "【暂未接入 Word 解析器】".equals(text)) {
+            text = contract.getContent();
+        }
+
         contractFieldRepository.deleteByContractId(contractId);
 
-        saveField(contractId, "party_a", "甲方名称", extractByRegex(text, "甲方[：: ]*([\\u4e00-\\u9fa5A-Za-z0-9（）()·\\-—_]+)"), 0.85);
-        saveField(contractId, "party_b", "乙方名称", extractByRegex(text, "乙方[：: ]*([\\u4e00-\\u9fa5A-Za-z0-9（）()·\\-—_]+)"), 0.85);
-        saveField(contractId, "amount", "合同金额", extractByRegex(text, "合同金额[：: ]*([0-9,.]+\\s*元?)"), 0.80);
-        saveField(contractId, "sign_date", "签署日期", extractByRegex(text, "(\\d{4}[-年/.]\\d{1,2}[-月/.]\\d{1,2}日?)"), 0.75);
+        String partyA = extractByRegex(text, "甲方[：: ]*([\\u4e00-\\u9fa5A-Za-z0-9（）()·\\-—_]+)");
+        String partyB = extractByRegex(text, "乙方[：: ]*([\\u4e00-\\u9fa5A-Za-z0-9（）()·\\-—_]+)");
+        String amount = extractByRegex(text, "(?:合同金额|仓储费用)[：: ]*([0-9,.]+\\s*元?)");
+        String signDate = extractByRegex(text, "(?:签署日期|签订日期)[：: ]*(\\d{4}[-年/.]\\d{1,2}[-月/.]\\d{1,2}日?)");
+
+        System.out.println("contractId = " + contractId);
+        System.out.println("partyA = " + partyA);
+        System.out.println("partyB = " + partyB);
+        System.out.println("amount = " + amount);
+        System.out.println("signDate = " + signDate);
+
+        saveField(contractId, "party_a", "甲方名称", partyA, 0.85);
+        saveField(contractId, "party_b", "乙方名称", partyB, 0.85);
+        saveField(contractId, "amount", "合同金额/仓储费用", amount, 0.80);
+        saveField(contractId, "sign_date", "签署日期", signDate, 0.75);
 
         contract.setStatus("PARSED");
         contractRepository.save(contract);

@@ -11,14 +11,22 @@ function loadAdminInfo() {
         const userInfo = JSON.parse(userInfoStr);
         const isAdmin = userInfo.roleCode === "ADMIN";
 
-        document.getElementById("userName").textContent =
-            userInfo.name || userInfo.fullName || userInfo.username || "系统管理员";
+        const userNameEl = document.getElementById("userName");
+        const userRoleEl = document.getElementById("userRole");
+        const userAvatarEl = document.getElementById("userAvatar");
 
-        document.getElementById("userRole").textContent =
-            isAdmin ? "超级管理员" : "普通用户";
+        if (userNameEl) {
+            userNameEl.textContent =
+                userInfo.name || userInfo.fullName || userInfo.username || "系统管理员";
+        }
 
-        const avatar = document.getElementById("userAvatar");
-        avatar.textContent = (userInfo.username || "管").charAt(0).toUpperCase();
+        if (userRoleEl) {
+            userRoleEl.textContent = isAdmin ? "超级管理员" : "普通用户";
+        }
+
+        if (userAvatarEl) {
+            userAvatarEl.textContent = (userInfo.username || "管").charAt(0).toUpperCase();
+        }
 
         if (!isAdmin) {
             window.location.href = "/dashboard/index.html";
@@ -31,62 +39,72 @@ function loadAdminInfo() {
 
 // ========== 标签页切换 ==========
 function setActiveNavByTab(tabName) {
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
     const target = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
-    if (target) target.classList.add('active');
+    if (target) target.classList.add("active");
 }
 
 function switchTab(tabName, el) {
     console.log("切换 tab:", tabName);
 
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
 
     if (el && el.classList) {
-        el.classList.add('active');
+        el.classList.add("active");
     } else {
         setActiveNavByTab(tabName);
     }
 
-    const contentArea = document.getElementById('content-area');
+    const contentArea = document.getElementById("content-area");
+    if (!contentArea) {
+        console.error("未找到 #content-area");
+        return;
+    }
 
     try {
         switch (tabName) {
-            case 'dashboard':
+            case "dashboard":
                 contentArea.innerHTML = renderDashboard();
                 loadDashboardData();
                 break;
-            case 'users':
+            case "users":
                 contentArea.innerHTML = renderUserManagement();
                 initUsersPage();
                 break;
-            case 'templates':
+            case "templates":
                 contentArea.innerHTML = renderTemplateManagement();
                 initTemplatesPage();
                 break;
-            case 'dictionary':
+            case "dictionary":
                 contentArea.innerHTML = renderDictionaryManagement();
                 break;
-            case 'logs':
+            case "logs":
                 contentArea.innerHTML = renderOperationLogs();
                 break;
-            case 'audit':
+            case "audit":
                 contentArea.innerHTML = renderAuditRecords();
                 break;
-            case 'parameters':
+            case "parameters":
                 contentArea.innerHTML = renderSystemParameters();
                 break;
-            case 'contract-upload':
+            case "contract-upload":
                 contentArea.innerHTML = renderContractUploadPanel();
                 loadRecentContracts();
                 break;
-            case 'backup':
+            case "backup":
                 contentArea.innerHTML = renderDataMaintenance();
                 break;
             default:
                 console.warn("未知 tab:", tabName);
+                contentArea.innerHTML = `<div style="padding: 24px;">暂无页面内容</div>`;
         }
     } catch (err) {
         console.error("switchTab 执行失败:", err);
+        contentArea.innerHTML = `
+            <div style="padding:24px; color:#dc3545;">
+                页面加载失败：${escapeHtml(String(err.message || err))}
+            </div>
+        `;
     }
 }
 
@@ -105,11 +123,17 @@ function logout() {
 
 // ========== 模态框控制 ==========
 function showModal(modalId) {
-    document.getElementById(modalId).classList.add('active');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add("active");
+    }
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove("active");
+    }
 }
 
 // ========== 小工具：防XSS ==========
@@ -127,210 +151,112 @@ function escapeAttr(str) {
 }
 
 // ========== 初始化页面 ==========
-document.addEventListener('DOMContentLoaded', function () {
-    loadAdminInfo();
+document.addEventListener("DOMContentLoaded", function () {
+    try {
+        loadAdminInfo();
 
-    // 默认加载仪表盘
-    document.getElementById('content-area').innerHTML = renderDashboard();
-    loadDashboardData();
+        const contentArea = document.getElementById("content-area");
+        if (!contentArea) {
+            console.error("未找到 #content-area");
+            return;
+        }
 
-    // 绑定模板附件上传 change
-    const templateFileInput = document.getElementById("templateFile");
-    if (templateFileInput) {
-        templateFileInput.addEventListener("change", handleTemplateFileChange);
-    }
+        contentArea.innerHTML = renderDashboard();
+        loadDashboardData();
 
-    // 绑定模板表单 submit
-    const templateForm = document.getElementById("templateForm");
-    if (templateForm) {
-        templateForm.addEventListener("submit", async function (e) {
-            e.preventDefault();
+        const templateFileInput = document.getElementById("templateFile");
+        if (templateFileInput) {
+            templateFileInput.addEventListener("change", handleTemplateFileChange);
+        }
 
-            const name = document.getElementById("editTemplateName").value.trim();
-            const contractType = document.getElementById("editContractType").value;
-            const content = document.getElementById("editTemplateContent").value.trim();
-            const remark = document.getElementById("editTemplateRemark")?.value.trim() || "";
-            const status = document.getElementById("editTemplateStatus").value === "active"
-                ? "ENABLED"
-                : "DISABLED";
-            const file = document.getElementById("templateFile")?.files?.[0];
+        const templateForm = document.getElementById("templateForm");
+        if (templateForm) {
+            templateForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
 
-            if (!name) {
-                alert("请填写模板名称");
-                return;
-            }
+                const name = document.getElementById("editTemplateName")?.value.trim() || "";
+                const contractType = document.getElementById("editContractType")?.value || "transport";
+                const content = document.getElementById("editTemplateContent")?.value.trim() || "";
+                const remark = document.getElementById("editTemplateRemark")?.value.trim() || "";
+                const status = document.getElementById("editTemplateStatus")?.value === "active"
+                    ? "ENABLED"
+                    : "DISABLED";
+                const file = document.getElementById("templateFile")?.files?.[0];
 
-            if (!content) {
-                alert("请填写模板内容");
-                return;
-            }
-
-            let fileInfo = null;
-
-            if (file) {
-                try {
-                    fileInfo = await uploadTemplateFile(file);
-                } catch (err) {
-                    alert("附件上传失败：" + (err.message || err));
+                if (!name) {
+                    alert("请填写模板名称");
                     return;
                 }
-            }
 
-            const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}");
-
-            const payload = {
-                name,
-                contractType,
-                content,
-                remark,
-                status,
-                updatedBy: userInfo.username || "admin",
-                fileName: fileInfo?.fileName || null,
-                fileObjectKey: fileInfo?.fileObjectKey || null
-            };
-
-            try {
-                let resp;
-
-                if (templatesState.editingId) {
-                    resp = await authFetch(`/api/admin/templates/${templatesState.editingId}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    resp = await authFetch("/api/admin/templates", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
+                if (!content) {
+                    alert("请填写模板内容");
+                    return;
                 }
 
-                if (!resp.ok) {
-                    const text = await resp.text();
-                    throw new Error(text || "保存失败");
+                let fileInfo = null;
+
+                if (file) {
+                    try {
+                        fileInfo = await uploadTemplateFile(file);
+                    } catch (err) {
+                        alert("附件上传失败：" + (err.message || err));
+                        return;
+                    }
                 }
 
-                alert("模板已保存");
-                closeModal("templateModal");
-                clearTemplateFile();
-                await loadTemplatesTable();
-                await loadTemplateStats();
-            } catch (err) {
-                console.error(err);
-                alert("保存失败：" + (err.message || err));
-            }
-        });
-    }
+                const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}");
 
-    // 智能生成提交绑定
-    const generateForm = document.getElementById("generateForm");
-    if (generateForm) {
-        generateForm.addEventListener("submit", async function (e) {
-            e.preventDefault();
+                const payload = {
+                    name,
+                    contractType,
+                    content,
+                    remark,
+                    status,
+                    updatedBy: userInfo.username || "admin",
+                    fileName: fileInfo?.fileName || null,
+                    fileObjectKey: fileInfo?.fileObjectKey || null
+                };
 
-            const templateSelect = document.getElementById("generateTemplateSelect");
-            const templateId = templateSelect?.value;
-            const selectedOption = templateSelect?.selectedOptions?.[0];
-            const contractType = selectedOption?.dataset?.contractType || "";
+                try {
+                    let resp;
 
-            const titleInput = document.getElementById("generateContractTitle");
-            const previewInput = document.getElementById("generatePreview");
+                    if (templatesState.editingId) {
+                        resp = await authFetch(`/api/admin/templates/${templatesState.editingId}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                    } else {
+                        resp = await authFetch("/api/admin/templates", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                    }
 
-            const title = titleInput ? titleInput.value.trim() : "";
-            const draftContent = previewInput ? previewInput.value.trim() : "";
-            if (!templateId) {
-                alert("请先选择模板");
-                return;
-            }
+                    if (!resp.ok) {
+                        const text = await resp.text();
+                        throw new Error(text || "保存失败");
+                    }
 
-            if (!title) {
-                alert("请填写合同标题");
-                return;
-            }
-
-            if (!draftContent) {
-                alert("请先生成合同内容");
-                return;
-            }
-
-            if (!contractType) {
-                alert("未获取到合同类型，请重新选择模板");
-                return;
-            }
-
-            const payload = {
-                templateId: Number(templateId),
-                title: title,
-                contractType: contractType,
-                draftContent: draftContent
-            };
-
-            // 同样把动态字段一起补上，避免后端保存时还需要这些值
-            const fieldMap = {
-                partyA: "partyA",
-                partyB: "partyB",
-                amount: "amount",
-                signDate: "signDate",
-                effectiveDate: "effectiveDate",
-                expireDate: "expireDate",
-                serviceContent: "serviceContent",
-                paymentTerms: "paymentTerms",
-                breachLiability: "breachLiability",
-
-                paymentTerm: "paymentTerms",
-                paymentMethod: "paymentTerms",
-                reconciliationCycle: "paymentTerms",
-                disputeCourt: "breachLiability",
-                requireDate: "expireDate"
-            };
-
-            document.querySelectorAll(".generate-field").forEach(input => {
-                const rawKey = input.dataset.key;
-                const val = input.value.trim();
-
-                if (!rawKey) return;
-
-                const mappedKey = fieldMap[rawKey] || rawKey;
-                payload[mappedKey] = val;
+                    alert("模板已保存");
+                    closeModal("templateModal");
+                    clearTemplateFile();
+                    await loadTemplatesTable();
+                    await loadTemplateStats();
+                } catch (err) {
+                    console.error(err);
+                    alert("保存失败：" + (err.message || err));
+                }
             });
-
-            console.log("保存为合同参数：", payload);
-
-            try {
-                const resp = await authFetch("/api/contracts/confirm-generated", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await resp.json().catch(() => ({}));
-                console.log("保存返回:", result);
-
-                if (!resp.ok || result.code !== 200) {
-                    throw new Error(result.message || "保存失败");
-                }
-
-                alert("保存成功");
-                closeModal("generateModal");
-
-                if (titleInput) titleInput.value = "";
-                if (previewInput) previewInput.value = "";
-
-                const fieldsBox = document.getElementById("generateFieldsContainer");
-                if (fieldsBox) fieldsBox.innerHTML = "";
-
-            } catch (e) {
-                console.error(e);
-                alert("保存失败：" + (e.message || e));
-            }
-        });
-    }
-
-    // 模态框点击外部关闭
-    window.onclick = function (event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.classList.remove('active');
         }
-    };
+
+        window.onclick = function (event) {
+            if (event.target.classList.contains("modal")) {
+                event.target.classList.remove("active");
+            }
+        };
+    } catch (err) {
+        console.error("页面初始化失败:", err);
+    }
 });
