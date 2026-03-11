@@ -2,7 +2,9 @@ package com.contract.contract_backend.service;
 
 import com.contract.contract_backend.dto.GenerateContractRequest;
 import com.contract.contract_backend.entity.Contract;
+import com.contract.contract_backend.entity.ContractField;
 import com.contract.contract_backend.entity.Template;
+import com.contract.contract_backend.repository.ContractFieldRepository;
 import com.contract.contract_backend.repository.ContractRepository;
 import com.contract.contract_backend.repository.TemplateRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class TemplateGenerateService {
 
     private final TemplateRepository templateRepository;
     private final ContractRepository contractRepository;
+    private final ContractFieldRepository contractFieldRepository;
 
     /**
      * 同时支持 ${variable} 和 {{variable}}
@@ -49,7 +52,7 @@ public class TemplateGenerateService {
     }
 
     /**
-     * 根据模板和变量生成合同内容，并自动保存合同
+     * 根据模板和变量生成合同内容，并自动保存合同 + 字段
      */
     public Map<String, Object> generateContract(GenerateContractRequest request) {
         if (request == null || request.getTemplateId() == null) {
@@ -71,13 +74,13 @@ public class TemplateGenerateService {
 
         String generatedContent = replaceVariables(content, inputVariables);
 
-        // ✅ 自动生成合同编号
+        // 自动生成合同编号
         String contractNo = generateContractNo();
 
-        // ✅ 自动生成合同标题
+        // 自动生成合同标题
         String title = generateContractTitle(template, inputVariables, contractNo);
 
-        // ✅ 保存合同
+        // 保存合同
         Contract contract = Contract.builder()
                 .contractNo(contractNo)
                 .title(title)
@@ -92,6 +95,9 @@ public class TemplateGenerateService {
 
         Contract savedContract = contractRepository.save(contract);
 
+        // ✅ 关键新增：保存结构化字段
+        saveGeneratedFields(savedContract.getContractId(), inputVariables);
+
         Map<String, Object> result = new HashMap<>();
         result.put("templateId", template.getTemplateId());
         result.put("templateName", template.getName());
@@ -100,7 +106,7 @@ public class TemplateGenerateService {
         result.put("usedVariables", inputVariables);
         result.put("generatedContent", generatedContent);
 
-        // ✅ 新增返回：保存后的合同信息
+        // 保存后的合同信息
         result.put("contractId", savedContract.getContractId());
         result.put("contractNo", savedContract.getContractNo());
         result.put("title", savedContract.getTitle());
@@ -168,5 +174,62 @@ public class TemplateGenerateService {
         }
 
         return template.getName() + " - " + contractNo;
+    }
+
+    /**
+     * 保存模板生成时的字段
+     */
+    private void saveGeneratedFields(Long contractId, Map<String, String> variables) {
+        if (contractId == null || variables == null || variables.isEmpty()) {
+            return;
+        }
+
+        contractFieldRepository.deleteByContractId(contractId);
+
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            String fieldKey = entry.getKey();
+            String fieldValue = entry.getValue();
+
+            if (fieldValue == null || fieldValue.isBlank()) {
+                continue;
+            }
+
+            ContractField field = ContractField.builder()
+                    .contractId(contractId)
+                    .fieldKey(fieldKey)
+                    .fieldName(toFieldName(fieldKey))
+                    .fieldValue(fieldValue.trim())
+                    .sourceRef("template_generate")
+                    .confidence(1.0)
+                    .updatedBy(1L)
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            contractFieldRepository.save(field);
+        }
+    }
+
+    /**
+     * 字段名转换
+     */
+    private String toFieldName(String fieldKey) {
+        return switch (fieldKey) {
+            case "partyA" -> "甲方名称";
+            case "partyB" -> "乙方名称";
+            case "cargoName" -> "货物名称";
+            case "cargoCategory" -> "货物类别";
+            case "cargoQuantity" -> "预计数量";
+            case "specialRequirement" -> "特殊要求";
+            case "warehouseAddress" -> "仓储地点";
+            case "inboundDate" -> "入库日期";
+            case "outboundDate" -> "出库日期";
+            case "storagePeriod" -> "仓储期限";
+            case "amount" -> "合同金额";
+            case "paymentMethod" -> "结算方式";
+            case "paymentTerm" -> "结算周期";
+            case "disputeCourt" -> "争议法院";
+            case "signDate" -> "签署日期";
+            default -> fieldKey;
+        };
     }
 }
