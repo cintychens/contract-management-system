@@ -14,6 +14,8 @@ public class ContractGenerateDto {
     public static class GenerateReq {
         private Long templateId;
         private String title;
+
+        // 通用字段
         private String partyA;
         private String partyB;
         private String amount;
@@ -24,6 +26,19 @@ public class ContractGenerateDto {
         private String paymentTerms;
         private String breachLiability;
         private String extraRequirements;
+
+        // 仓储类模板字段
+        private String cargoName;
+        private String cargoCategory;
+        private String cargoQuantity;
+        private String specialRequirement;
+        private String warehouseAddress;
+        private String inboundDate;
+        private String outboundDate;
+        private String storagePeriod;
+        private String paymentMethod;
+        private String paymentTerm;
+        private String disputeCourt;
     }
 
     @Data
@@ -47,6 +62,7 @@ public class ContractGenerateDto {
         private String contractType;
         private String draftContent;
 
+        // 通用字段
         private String partyA;
         private String partyB;
         private String amount;
@@ -56,6 +72,20 @@ public class ContractGenerateDto {
         private String serviceContent;
         private String paymentTerms;
         private String breachLiability;
+        private String extraRequirements;
+
+        // 仓储类模板字段
+        private String cargoName;
+        private String cargoCategory;
+        private String cargoQuantity;
+        private String specialRequirement;
+        private String warehouseAddress;
+        private String inboundDate;
+        private String outboundDate;
+        private String storagePeriod;
+        private String paymentMethod;
+        private String paymentTerm;
+        private String disputeCourt;
     }
 
     @Data

@@ -47,12 +47,11 @@ public class SecurityConfig {
                         // /me 必须登录
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
 
-                        // ✅ 临时放行：模板智能生成相关接口
-                        .requestMatchers(HttpMethod.GET, "/api/templates/*/variables").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/templates/generate").permitAll()
-
-                        // ✅ 临时放行：合同列表 / 合同详情 / 合同字段
-                        .requestMatchers(HttpMethod.GET, "/api/contracts/**").permitAll()
+                        // 普通登录用户可访问
+                        .requestMatchers(HttpMethod.GET, "/api/templates/enabled").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/templates/*/variables").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/templates/generate").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/contracts/**").authenticated()
 
                         // H2
                         .requestMatchers("/h2-console/**").permitAll()

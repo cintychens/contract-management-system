@@ -234,6 +234,17 @@ public class ContractServiceImpl implements ContractService {
         saveManualField(contract.getContractId(), "service_content", "服务内容", req.getServiceContent());
         saveManualField(contract.getContractId(), "payment_terms", "付款方式", req.getPaymentTerms());
         saveManualField(contract.getContractId(), "breach_liability", "违约责任", req.getBreachLiability());
+        saveManualField(contract.getContractId(), "cargo_name", "货物名称", req.getCargoName());
+        saveManualField(contract.getContractId(), "cargo_category", "货物类别", req.getCargoCategory());
+        saveManualField(contract.getContractId(), "cargo_quantity", "货物数量", req.getCargoQuantity());
+        saveManualField(contract.getContractId(), "special_requirement", "特殊要求", req.getSpecialRequirement());
+        saveManualField(contract.getContractId(), "warehouse_address", "仓储地址", req.getWarehouseAddress());
+        saveManualField(contract.getContractId(), "inbound_date", "入库日期", req.getInboundDate());
+        saveManualField(contract.getContractId(), "outbound_date", "出库日期", req.getOutboundDate());
+        saveManualField(contract.getContractId(), "storage_period", "仓储期限", req.getStoragePeriod());
+        saveManualField(contract.getContractId(), "payment_method", "付款方式", req.getPaymentMethod());
+        saveManualField(contract.getContractId(), "payment_term", "付款期限", req.getPaymentTerm());
+        saveManualField(contract.getContractId(), "dispute_court", "争议法院", req.getDisputeCourt());
 
         return ContractGenerateDto.ConfirmResp.builder()
                 .contractId(contract.getContractId())
@@ -410,48 +421,68 @@ public class ContractServiceImpl implements ContractService {
      */
     private String buildPrompt(Template template, ContractGenerateDto.GenerateReq req) {
         return """
-                请根据以下合同模板和输入信息，生成一份正式的物流合同草案。
+            请根据以下合同模板和输入信息，生成一份正式的物流合同草案。
 
-                【模板名称】
-                %s
+            【模板名称】
+            %s
 
-                【合同类型】
-                %s
+            【合同类型】
+            %s
 
-                【模板内容】
-                %s
+            【模板内容】
+            %s
 
-                【用户输入关键要素】
-                合同标题：%s
-                甲方：%s
-                乙方：%s
-                合同金额：%s
-                签署日期：%s
-                生效日期：%s
-                到期日期：%s
-                服务内容：%s
-                付款方式：%s
-                违约责任：%s
-                补充要求：%s
+            【用户输入关键要素】
+            合同标题：%s
+            甲方：%s
+            乙方：%s
+            货物名称：%s
+            货物类别：%s
+            货物数量：%s
+            特殊要求：%s
+            仓储地址：%s
+            入库日期：%s
+            出库日期：%s
+            仓储期限：%s
+            合同金额：%s
+            付款方式：%s
+            付款期限：%s
+            争议法院：%s
+            签署日期：%s
+            生效日期：%s
+            到期日期：%s
+            服务内容：%s
+            违约责任：%s
+            补充要求：%s
 
-                要求：
-                1. 输出完整中文合同草案；
-                2. 保留正式合同语气；
-                3. 若信息不足，不要虚构，使用【待确认】；
-                4. 条款应尽量结构化，如：合同主体、服务内容、金额与支付、履约要求、违约责任、争议解决等。
-                """.formatted(
+            要求：
+            1. 输出完整中文合同草案；
+            2. 保留正式合同语气；
+            3. 若信息不足，不要虚构，使用【待确认】；
+            4. 条款应尽量结构化，如：合同主体、货物信息、仓储地点与期限、费用结算、双方责任、违约责任、争议解决等。
+            """.formatted(
                 nullToEmpty(template.getName()),
                 nullToEmpty(template.getContractType()),
                 nullToEmpty(template.getContent()),
                 nullToEmpty(req.getTitle()),
                 nullToEmpty(req.getPartyA()),
                 nullToEmpty(req.getPartyB()),
+                nullToEmpty(req.getCargoName()),
+                nullToEmpty(req.getCargoCategory()),
+                nullToEmpty(req.getCargoQuantity()),
+                nullToEmpty(req.getSpecialRequirement()),
+                nullToEmpty(req.getWarehouseAddress()),
+                nullToEmpty(req.getInboundDate()),
+                nullToEmpty(req.getOutboundDate()),
+                nullToEmpty(req.getStoragePeriod()),
                 nullToEmpty(req.getAmount()),
+                nullToEmpty(req.getPaymentMethod()),
+                nullToEmpty(req.getPaymentTerm()),
+                nullToEmpty(req.getDisputeCourt()),
                 nullToEmpty(req.getSignDate()),
                 nullToEmpty(req.getEffectiveDate()),
                 nullToEmpty(req.getExpireDate()),
                 nullToEmpty(req.getServiceContent()),
-                nullToEmpty(req.getPaymentTerms()),
                 nullToEmpty(req.getBreachLiability()),
                 nullToEmpty(req.getExtraRequirements())
         );
@@ -465,6 +496,7 @@ public class ContractServiceImpl implements ContractService {
     private String buildDraftFallback(Template template, ContractGenerateDto.GenerateReq req) {
         String content = template.getContent() == null ? "" : template.getContent();
 
+        // 通用字段
         content = replaceVar(content, "title", req.getTitle());
         content = replaceVar(content, "partyA", req.getPartyA());
         content = replaceVar(content, "partyB", req.getPartyB());
@@ -475,40 +507,33 @@ public class ContractServiceImpl implements ContractService {
         content = replaceVar(content, "serviceContent", req.getServiceContent());
         content = replaceVar(content, "paymentTerms", req.getPaymentTerms());
         content = replaceVar(content, "breachLiability", req.getBreachLiability());
+        content = replaceVar(content, "extraRequirements", req.getExtraRequirements());
+
+        // 仓储类模板字段
+        content = replaceVar(content, "cargoName", req.getCargoName());
+        content = replaceVar(content, "cargoCategory", req.getCargoCategory());
+        content = replaceVar(content, "cargoQuantity", req.getCargoQuantity());
+        content = replaceVar(content, "specialRequirement", req.getSpecialRequirement());
+        content = replaceVar(content, "warehouseAddress", req.getWarehouseAddress());
+        content = replaceVar(content, "inboundDate", req.getInboundDate());
+        content = replaceVar(content, "outboundDate", req.getOutboundDate());
+        content = replaceVar(content, "storagePeriod", req.getStoragePeriod());
+        content = replaceVar(content, "paymentMethod", req.getPaymentMethod());
+        content = replaceVar(content, "paymentTerm", req.getPaymentTerm());
+        content = replaceVar(content, "disputeCourt", req.getDisputeCourt());
 
         StringBuilder sb = new StringBuilder();
-        sb.append(req.getTitle()).append("\n\n");
+
+        if (req.getTitle() != null && !req.getTitle().isBlank()) {
+            sb.append(req.getTitle().trim()).append("\n\n");
+        }
 
         if (!content.isBlank()) {
-            sb.append(content).append("\n\n");
+            sb.append(content.trim());
         }
-
-        sb.append("甲方：").append(nullOrPending(req.getPartyA())).append("\n");
-        sb.append("乙方：").append(nullOrPending(req.getPartyB())).append("\n");
-        sb.append("合同金额：").append(nullOrPending(req.getAmount())).append("\n");
-        sb.append("签署日期：").append(nullOrPending(req.getSignDate())).append("\n");
-        sb.append("生效日期：").append(nullOrPending(req.getEffectiveDate())).append("\n");
-        sb.append("到期日期：").append(nullOrPending(req.getExpireDate())).append("\n\n");
-
-        sb.append("一、服务内容\n");
-        sb.append(nullOrPending(req.getServiceContent())).append("\n\n");
-
-        sb.append("二、付款方式\n");
-        sb.append(nullOrPending(req.getPaymentTerms())).append("\n\n");
-
-        sb.append("三、违约责任\n");
-        sb.append(nullOrPending(req.getBreachLiability())).append("\n\n");
-
-        if (req.getExtraRequirements() != null && !req.getExtraRequirements().isBlank()) {
-            sb.append("四、补充约定\n");
-            sb.append(req.getExtraRequirements().trim()).append("\n\n");
-        }
-
-        sb.append("本合同由双方在平等、自愿的基础上签订，具体未尽事宜由双方协商确定。\n");
 
         return sb.toString().trim();
     }
-
     /**
      * =========================
      * 12. 新增逻辑：保存人工确认字段

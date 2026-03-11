@@ -1328,10 +1328,11 @@ async function loadRecentContracts() {
     if (emptyHint) emptyHint.style.display = "none";
 
     try {
-        const resp = await authFetch("/api/admin/contracts?page=1&size=10");
+        const resp = await authFetch("/api/contracts?page=1&size=10");
         if (!resp.ok) throw new Error(await resp.text());
 
-        const data = await resp.json();
+        const result = await resp.json();
+        const data = result.data || {};
         const records = data.records || [];
 
         if (!records.length) {
@@ -1479,7 +1480,7 @@ async function uploadContractFile() {
                   <div>${result.message || "未知错误"}</div>
                 `;
             }
-        }
+    const resp = await authFetch("/api/contracts?page=1&size=10");    }
     } catch (error) {
         console.error("合同上传异常：", error);
         alert("上传失败：网络异常或服务器错误");
