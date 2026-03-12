@@ -767,6 +767,17 @@
         }
     }
 
+    function getContractTypeText(type) {
+    const map = {
+        transport: '运输合同',
+        warehouse: '仓储合同',
+        supply: '供应链协议',
+        distribution: '配送服务合同',
+        outsourcing: '物流外包合同'
+    };
+    return map[type] || type || '-';
+}
+
     function getVariableLabel(key) {
     const map = {
         partyA: '甲方',
@@ -788,7 +799,22 @@
         expireDate: '到期日期',
         serviceContent: '服务内容',
         breachLiability: '违约责任',
-        extraRequirements: '补充要求'
+        extraRequirements: '补充要求',
+
+        originWarehouse: '起运仓库',
+        deliveryArea: '配送区域',
+        deliveryAddress: '配送地址',
+        deliveryMode: '配送方式',
+        deliveryTimeRequirement: '时效要求',
+        servicePeriod: '服务期限',
+        singleWeightLimit: '单件重量限制',
+        singleVolumeLimit: '单件体积限制',
+        claimPeriod: '投诉索赔期限',
+        pickupTimeLimit: '提货时限',
+        storageFeeStandard: '保管费标准',
+        deliveryTimeStandard: '配送时效',
+        insuranceOption: '保险方式',
+        penaltyRate: '滞纳金比例'
     };
     return map[key] || key;
 }
@@ -867,7 +893,7 @@
                     <td>${contract.contractId ?? '-'}</td>
                     <td>${escapeHtml(contract.contractNo || '-')}</td>
                     <td>${escapeHtml(contract.title || '-')}</td>
-                    <td>${escapeHtml(contract.contractType || '-')}</td>
+                    <td>${escapeHtml(getContractTypeText(contract.contractType))}</td>
                     <td>
                         <span class="status-badge ${getStatusClass(contract.status)}">
                             ${escapeHtml(getStatusText(contract.status))}

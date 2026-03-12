@@ -39,6 +39,22 @@ public class ContractGenerateDto {
         private String paymentMethod;
         private String paymentTerm;
         private String disputeCourt;
+
+        // 配送类模板字段
+        private String originWarehouse;
+        private String deliveryArea;
+        private String deliveryAddress;
+        private String deliveryMode;
+        private String deliveryTimeRequirement;
+        private String servicePeriod;
+        private String singleWeightLimit;
+        private String singleVolumeLimit;
+        private String claimPeriod;
+        private String pickupTimeLimit;
+        private String storageFeeStandard;
+        private String deliveryTimeStandard;
+        private String insuranceOption;
+        private String penaltyRate;
     }
 
     @Data
@@ -86,6 +102,22 @@ public class ContractGenerateDto {
         private String paymentMethod;
         private String paymentTerm;
         private String disputeCourt;
+
+        // 配送类模板字段
+        private String originWarehouse;
+        private String deliveryArea;
+        private String deliveryAddress;
+        private String deliveryMode;
+        private String deliveryTimeRequirement;
+        private String servicePeriod;
+        private String singleWeightLimit;
+        private String singleVolumeLimit;
+        private String claimPeriod;
+        private String pickupTimeLimit;
+        private String storageFeeStandard;
+        private String deliveryTimeStandard;
+        private String insuranceOption;
+        private String penaltyRate;
     }
 
     @Data

@@ -418,6 +418,8 @@ function renderTemplateManagement() {
             <option value="transport">运输合同</option>
             <option value="warehouse">仓储合同</option>
             <option value="supply">供应链协议</option>
+            <option value="distribution">配送服务合同</option>
+                <option value="outsourcing">物流外包合同</option>
           </select>
 
           <select id="templateStatusFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
@@ -613,7 +615,7 @@ async function loadTemplatesTable() {
                 <tr>
                   <td>${t.templateId ?? "-"}</td>
                   <td>${escapeHtml(t.name ?? "-")}</td>
-                  <td>${escapeHtml(t.contractType ?? "-")}</td>
+                  <td>${escapeHtml(getContractTypeText(t.contractType))}</td>
                   <td>${statusHtml}</td>
                   <td class="user-remark-cell" title="${escapeHtml(t.remark || "-")}">${escapeHtml(t.remark || "-")}</td>
                   <td>${t.updatedAt || "-"}</td>
@@ -644,6 +646,17 @@ function formatBytes(bytes) {
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i];
+}
+
+function getContractTypeText(type) {
+    const map = {
+        transport: "运输合同",
+        warehouse: "仓储合同",
+        supply: "供应链协议",
+        distribution: "配送服务合同",
+        outsourcing: "物流外包合同"
+    };
+    return map[type] || type || "-";
 }
 
 function getExt(filename) {
@@ -861,7 +874,7 @@ function renderDictionaryManagement() {
                             <td>枚举</td>
                             <td>分类信息</td>
                             <td>是</td>
-                            <td>运输/仓储/供应链</td>
+                            <td>运输/仓储/供应链/配送/外包</td>
                             <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
                         </tr>
                         <tr>
@@ -1160,6 +1173,8 @@ function renderContractUploadPanel() {
             <option value="transport">运输合同</option>
             <option value="warehouse">仓储合同</option>
             <option value="supply">供应链协议</option>
+            <option value="distribution">配送服务合同</option>
+                <option value="outsourcing">物流外包合同</option>
           </select>
         </div>
 
@@ -1346,7 +1361,7 @@ async function loadRecentContracts() {
               <td>${c.contractId ?? "-"}</td>
               <td>${escapeHtml(c.contractNo ?? "-")}</td>
               <td>${escapeHtml(c.title ?? "-")}</td>
-              <td>${escapeHtml(c.contractType ?? "-")}</td>
+              <td>${escapeHtml(getContractTypeText(c.contractType))}</td>
               <td>${escapeHtml(c.status ?? "-")}</td>
               <td>${escapeHtml(c.createdAt ?? "-")}</td>
               <td>

@@ -246,6 +246,21 @@ public class ContractServiceImpl implements ContractService {
         saveManualField(contract.getContractId(), "payment_method", "付款方式", req.getPaymentMethod());
         saveManualField(contract.getContractId(), "payment_term", "付款期限", req.getPaymentTerm());
         saveManualField(contract.getContractId(), "dispute_court", "争议法院", req.getDisputeCourt());
+        saveManualField(contract.getContractId(), "origin_warehouse", "起运仓库", req.getOriginWarehouse());
+        saveManualField(contract.getContractId(), "delivery_area", "配送区域", req.getDeliveryArea());
+        saveManualField(contract.getContractId(), "delivery_address", "配送地址", req.getDeliveryAddress());
+        saveManualField(contract.getContractId(), "delivery_mode", "配送方式", req.getDeliveryMode());
+        saveManualField(contract.getContractId(), "delivery_time_requirement", "时效要求", req.getDeliveryTimeRequirement());
+        saveManualField(contract.getContractId(), "service_period", "服务期限", req.getServicePeriod());
+        saveManualField(contract.getContractId(), "single_weight_limit", "单件重量限制", req.getSingleWeightLimit());
+        saveManualField(contract.getContractId(), "single_volume_limit", "单件体积限制", req.getSingleVolumeLimit());
+        saveManualField(contract.getContractId(), "claim_period", "投诉索赔期限", req.getClaimPeriod());
+        saveManualField(contract.getContractId(), "pickup_time_limit", "提货时限", req.getPickupTimeLimit());
+        saveManualField(contract.getContractId(), "storage_fee_standard", "保管费标准", req.getStorageFeeStandard());
+        saveManualField(contract.getContractId(), "delivery_time_standard", "配送时效", req.getDeliveryTimeStandard());
+        saveManualField(contract.getContractId(), "insurance_option", "保险方式", req.getInsuranceOption());
+        saveManualField(contract.getContractId(), "penalty_rate", "滞纳金比例", req.getPenaltyRate());
+
 
         return ContractGenerateDto.ConfirmResp.builder()
                 .contractId(contract.getContractId())
@@ -433,28 +448,44 @@ public class ContractServiceImpl implements ContractService {
             【模板内容】
             %s
 
-            【用户输入关键要素】
-            合同标题：%s
-            甲方：%s
-            乙方：%s
-            货物名称：%s
-            货物类别：%s
-            货物数量：%s
-            特殊要求：%s
-            仓储地址：%s
-            入库日期：%s
-            出库日期：%s
-            仓储期限：%s
-            合同金额：%s
-            付款方式：%s
-            付款期限：%s
-            争议法院：%s
-            签署日期：%s
-            生效日期：%s
-            到期日期：%s
-            服务内容：%s
-            违约责任：%s
-            补充要求：%s
+                【用户输入关键要素】
+                            合同标题：%s
+                            甲方：%s
+                            乙方：%s
+                            货物名称：%s
+                            货物类别：%s
+                            货物数量：%s
+                            特殊要求：%s
+                            仓储地址：%s
+                            入库日期：%s
+                            出库日期：%s
+                            仓储期限：%s
+                
+                            起运仓库：%s
+                            配送区域：%s
+                            配送地址：%s
+                            配送方式：%s
+                            时效要求：%s
+                            服务期限：%s
+                            单件重量限制：%s
+                            单件体积限制：%s
+                            投诉索赔期限：%s
+                            提货时限：%s
+                            保管费标准：%s
+                            配送时效：%s
+                            保险方式：%s
+                            滞纳金比例：%s
+                
+                            合同金额：%s
+                            付款方式：%s
+                            付款期限：%s
+                            争议法院：%s
+                            签署日期：%s
+                            生效日期：%s
+                            到期日期：%s
+                            服务内容：%s
+                            违约责任：%s
+                            补充要求：%s
 
             要求：
             1. 输出完整中文合同草案；
@@ -485,7 +516,21 @@ public class ContractServiceImpl implements ContractService {
                 nullToEmpty(req.getExpireDate()),
                 nullToEmpty(req.getServiceContent()),
                 nullToEmpty(req.getBreachLiability()),
-                nullToEmpty(req.getExtraRequirements())
+                nullToEmpty(req.getExtraRequirements()),
+                nullToEmpty(req.getOriginWarehouse()),
+                nullToEmpty(req.getDeliveryArea()),
+                nullToEmpty(req.getDeliveryAddress()),
+                nullToEmpty(req.getDeliveryMode()),
+                nullToEmpty(req.getDeliveryTimeRequirement()),
+                nullToEmpty(req.getServicePeriod()),
+                nullToEmpty(req.getSingleWeightLimit()),
+                nullToEmpty(req.getSingleVolumeLimit()),
+                nullToEmpty(req.getClaimPeriod()),
+                nullToEmpty(req.getPickupTimeLimit()),
+                nullToEmpty(req.getStorageFeeStandard()),
+                nullToEmpty(req.getDeliveryTimeStandard()),
+                nullToEmpty(req.getInsuranceOption()),
+                nullToEmpty(req.getPenaltyRate())
         );
     }
 

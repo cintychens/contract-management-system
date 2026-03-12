@@ -212,7 +212,11 @@ public class TemplateServiceImpl implements TemplateService {
 
     private String normalizeContractType(String contractType) {
         String s = contractType == null ? "" : contractType.trim().toLowerCase();
-        if (!"transport".equals(s) && !"warehouse".equals(s) && !"supply".equals(s)) {
+        if (!"transport".equals(s)
+                && !"warehouse".equals(s)
+                && !"supply".equals(s)
+                && !"distribution".equals(s)
+                && !"outsourcing".equals(s)) {
             throw new IllegalArgumentException("合同类型不合法");
         }
         return s;
