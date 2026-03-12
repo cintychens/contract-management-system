@@ -15,6 +15,12 @@ const templatesState = {
     editingId: null
 };
 
+const dictState = {
+    page: 1,
+    size: 50,
+    dictType: "CONTRACT_FIELD"
+};
+
 // ✅ 允许的文件类型
 const ALLOWED_TEMPLATE_MIME = new Set([
     "application/pdf",
@@ -814,17 +820,17 @@ function renderDictionaryManagement() {
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> 字段字典管理</h2>
                 <div class="header-actions">
-                    <button class="btn-primary">
+                    <button class="btn-primary" onclick="showAddDictModal()">
                         <i class="fas fa-plus"></i> 新增字段
                     </button>
                 </div>
             </div>
 
-            <div class="tabs">
-                <div class="tab active">合同字段</div>
-                <div class="tab">履约节点类型</div>
-                <div class="tab">预警规则</div>
-                <div class="tab">枚举值</div>
+            <div class="tabs" id="dictTabs">
+                <div class="tab active" onclick="switchDictTab('CONTRACT_FIELD', this)">合同字段</div>
+                <div class="tab" onclick="switchDictTab('NODE_TYPE', this)">履约节点类型</div>
+                <div class="tab" onclick="switchDictTab('ALERT_RULE', this)">预警规则</div>
+                <div class="tab" onclick="switchDictTab('ENUM_VALUE', this)">枚举值</div>
             </div>
 
             <div class="table-responsive">
@@ -837,60 +843,148 @@ function renderDictionaryManagement() {
                             <th>所属模块</th>
                             <th>是否必填</th>
                             <th>枚举值</th>
+                            <th>状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="dictTableBody">
                         <tr>
-                            <td>party_a</td>
-                            <td>甲方名称</td>
-                            <td>字符串</td>
-                            <td>基本信息</td>
-                            <td>是</td>
-                            <td>-</td>
-                            <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
-                        </tr>
-                        <tr>
-                            <td>party_b</td>
-                            <td>乙方名称</td>
-                            <td>字符串</td>
-                            <td>基本信息</td>
-                            <td>是</td>
-                            <td>-</td>
-                            <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
-                        </tr>
-                        <tr>
-                            <td>amount</td>
-                            <td>合同金额</td>
-                            <td>数字</td>
-                            <td>财务信息</td>
-                            <td>是</td>
-                            <td>-</td>
-                            <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
-                        </tr>
-                        <tr>
-                            <td>contract_type</td>
-                            <td>合同类型</td>
-                            <td>枚举</td>
-                            <td>分类信息</td>
-                            <td>是</td>
-                            <td>运输/仓储/供应链/配送/外包</td>
-                            <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
-                        </tr>
-                        <tr>
-                            <td>delivery_date</td>
-                            <td>交付日期</td>
-                            <td>日期</td>
-                            <td>履约节点</td>
-                            <td>否</td>
-                            <td>-</td>
-                            <td><button class="action-btn"><i class="fas fa-edit"></i></button></td>
+                            <td colspan="8" style="color:#6b7b8f; padding:18px;">加载中...</td>
                         </tr>
                     </tbody>
                 </table>
+
+                <div id="dictEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f; display:none;">
+                    暂无字典数据。
+                </div>
             </div>
         </div>
     `;
+}
+
+function initDictionaryPage() {
+    loadDictTable();
+}
+
+function switchDictTab(dictType, el) {
+    dictState.dictType = dictType;
+    dictState.page = 1;
+
+    document.querySelectorAll("#dictTabs .tab").forEach(tab => {
+        tab.classList.remove("active");
+    });
+    if (el) el.classList.add("active");
+
+    loadDictTable();
+}
+
+async function loadDictTable() {
+    const tbody = document.getElementById("dictTableBody");
+    const emptyHint = document.getElementById("dictEmptyHint");
+
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="8" style="color:#6b7b8f; padding:18px;">加载中...</td></tr>`;
+    if (emptyHint) emptyHint.style.display = "none";
+
+    try {
+        const qs = new URLSearchParams({
+            page: String(dictState.page),
+            size: String(dictState.size),
+            dictType: dictState.dictType
+        });
+
+        const resp = await authFetch(`/api/admin/dict-items?${qs.toString()}`);
+        if (!resp.ok) throw new Error(await resp.text());
+
+        const result = await resp.json();
+        const data = result.data || {};
+        const records = data.records || [];
+
+        if (!records.length) {
+            tbody.innerHTML = "";
+            if (emptyHint) emptyHint.style.display = "block";
+            return;
+        }
+
+        if (emptyHint) emptyHint.style.display = "none";
+
+        tbody.innerHTML = records.map(item => {
+            const requiredText = item.requiredFlag ? "是" : "否";
+            const statusHtml = item.status === "ENABLED"
+                ? `<span class="status-badge status-active">启用</span>`
+                : `<span class="status-badge status-disabled">禁用</span>`;
+
+            return `
+                <tr>
+                    <td>${escapeHtml(item.itemKey || "-")}</td>
+                    <td>${escapeHtml(item.itemName || "-")}</td>
+                    <td>${escapeHtml(item.valueType || "-")}</td>
+                    <td>${escapeHtml(item.moduleName || "-")}</td>
+                    <td>${requiredText}</td>
+                    <td>${escapeHtml(item.itemValue || "-")}</td>
+                    <td>${statusHtml}</td>
+                    <td>
+                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.id}, '${item.status}')">
+                            <i class="fas fa-toggle-on"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    } catch (e) {
+        console.error("loadDictTable error:", e);
+        tbody.innerHTML = `<tr><td colspan="8" style="color:#dc3545; padding:18px;">加载失败：${escapeHtml(String(e.message || e))}</td></tr>`;
+    }
+}
+
+async function editDictItem(id) {
+    try {
+        const resp = await authFetch(`/api/admin/dict-items/${id}`);
+        if (!resp.ok) throw new Error(await resp.text());
+
+        const result = await resp.json();
+        const item = result.data || {};
+
+        alert(
+            "编辑功能下一步再接，这里先确认详情已拿到：\n\n" +
+            "字段编码：" + (item.itemKey || "-") + "\n" +
+            "字段名称：" + (item.itemName || "-") + "\n" +
+            "字段类型：" + (item.valueType || "-")
+        );
+    } catch (e) {
+        console.error(e);
+        alert("获取字典详情失败：" + (e.message || e));
+    }
+}
+
+async function toggleDictStatus(id, currentStatus) {
+    const next = currentStatus === "ENABLED" ? "DISABLED" : "ENABLED";
+    const text = next === "ENABLED" ? "启用" : "禁用";
+
+    if (!confirm(`确认要${text}该字典项吗？`)) return;
+
+    try {
+        const resp = await authFetch(`/api/admin/dict-items/${id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: next })
+        });
+
+        if (!resp.ok) throw new Error(await resp.text());
+
+        await loadDictTable();
+    } catch (e) {
+        console.error(e);
+        alert("状态切换失败：" + (e.message || e));
+    }
+}
+
+function showAddDictModal() {
+    alert("新增字段弹窗下一步再接，这一步先完成列表和状态切换。");
 }
 
 // ========== 操作日志 ==========
