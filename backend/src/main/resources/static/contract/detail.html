@@ -470,8 +470,6 @@
             <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
         </div>
 
-        <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
-
         <div class="content-card">
             <div class="section-title">解析字段</div>
             <div class="table-responsive">
@@ -492,7 +490,11 @@
     </main>
 </div>
 
+
 <script>
+
+    let currentContractTitle = "合同文件";
+
     function authFetch(url, options = {}) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         const headers = new Headers(options.headers || {});
@@ -587,6 +589,10 @@
     return params.get('id') || params.get('contractId');
 }
 
+    function safeFileName(name) {
+    return name.replace(/[\\/:*?"<>|]/g, '_');
+}
+
     function downloadBlob(blob, fileName) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -615,7 +621,7 @@ async function handleExportWord() {
         }
 
         const blob = await response.blob();
-        downloadBlob(blob, `contract_${contractId}.docx`);
+        downloadBlob(blob, `${safeFileName(currentContractTitle)}.docx`);
     } catch (e) {
         console.error(e);
         alert('导出 Word 失败：' + (e.message || e));
@@ -639,7 +645,7 @@ async function handleExportPdf() {
         }
 
         const blob = await response.blob();
-        downloadBlob(blob, `contract_${contractId}.pdf`);
+        downloadBlob(blob, `${safeFileName(currentContractTitle)}.pdf`);
     } catch (e) {
         console.error(e);
         alert('导出 PDF 失败：' + (e.message || e));
@@ -661,6 +667,7 @@ async function handleExportPdf() {
             if (result.code !== 200) throw new Error(result.message || '获取合同详情失败');
 
             const contract = result.data || {};
+            currentContractTitle = contract.title || "合同文件";
             const grid = document.getElementById('contractInfoGrid');
 
             grid.innerHTML = `
