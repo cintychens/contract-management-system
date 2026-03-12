@@ -208,6 +208,43 @@
             margin-bottom: 24px;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            border: none;
+            border-radius: 12px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #2d6da0, #1a4b75);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(45, 109, 160, 0.25);
+        }
+
+        .action-btn.danger {
+            background: #eef5fb;
+            color: #1a4b75;
+            border: 1px solid #d7e4f2;
+        }
+
+        .action-btn.danger:hover {
+            background: #e3f0ff;
+        }
+
         .section-title {
             font-size: 20px;
             color: #1a4b75;
@@ -420,8 +457,20 @@
 
         <div class="content-card">
             <div class="section-title">合同正文</div>
-            <div class="content-box" id="contractContent">加载中...</div>
+
+            <div class="action-buttons">
+                <button class="action-btn primary" onclick="handleExportWord()">
+                    <i class="fas fa-file-word"></i> 导出 Word
+                </button>
+                <button class="action-btn danger" onclick="handleExportPdf()">
+                    <i class="fas fa-file-pdf"></i> 导出 PDF
+                </button>
+            </div>
+
+            <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
         </div>
+
+        <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
 
         <div class="content-card">
             <div class="section-title">解析字段</div>
@@ -534,9 +583,68 @@
     }
 
     function getContractId() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('id');
+    const params = new URLSearchParams(window.location.search);
+    return params.get('id') || params.get('contractId');
+}
+
+    function downloadBlob(blob, fileName) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}
+
+async function handleExportWord() {
+    const contractId = getContractId();
+    if (!contractId) {
+        alert('缺少合同ID，无法导出');
+        return;
     }
+
+    try {
+        const response = await authFetch(`/api/contracts/${contractId}/export/word`, {
+            method: 'GET'
+        });
+
+        if (!response.ok) {
+            throw new Error('导出 Word 失败');
+        }
+
+        const blob = await response.blob();
+        downloadBlob(blob, `contract_${contractId}.docx`);
+    } catch (e) {
+        console.error(e);
+        alert('导出 Word 失败：' + (e.message || e));
+    }
+}
+
+async function handleExportPdf() {
+    const contractId = getContractId();
+    if (!contractId) {
+        alert('缺少合同ID，无法导出');
+        return;
+    }
+
+    try {
+        const response = await authFetch(`/api/contracts/${contractId}/export/pdf`, {
+            method: 'GET'
+        });
+
+        if (!response.ok) {
+            throw new Error('导出 PDF 失败');
+        }
+
+        const blob = await response.blob();
+        downloadBlob(blob, `contract_${contractId}.pdf`);
+    } catch (e) {
+        console.error(e);
+        alert('导出 PDF 失败：' + (e.message || e));
+    }
+}
 
     async function loadContractDetail() {
         const contractId = getContractId();
