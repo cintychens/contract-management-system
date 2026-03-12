@@ -18,7 +18,9 @@ const templatesState = {
 const dictState = {
     page: 1,
     size: 50,
-    dictType: "CONTRACT_FIELD"
+    dictType: "CONTRACT_FIELD",
+    templateId: "",
+    templateList: []
 };
 
 // ✅ 允许的文件类型
@@ -75,7 +77,10 @@ function renderDashboard() {
 async function loadDashboardData() {
     try {
         const resp = await authFetch("/api/admin/dashboard");
-        if (!resp.ok) throw new Error("获取统计数据失败");
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error("获取统计数据失败: " + errText);
+        }
 
         const data = await resp.json();
 
@@ -89,7 +94,7 @@ async function loadDashboardData() {
         if (contractCount) contractCount.textContent = data.contractCount ?? "--";
         if (apiLatency) apiLatency.textContent = (data.apiLatency ?? "--") + " ms";
     } catch (err) {
-        console.error(err);
+        console.error("loadDashboardData error =", err);
     }
 }
 
@@ -773,7 +778,9 @@ async function toggleTemplateStatus(templateId, currentStatus) {
     if (!confirm(`确认要${text}该模板吗？`)) return;
 
     try {
-        const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "{}");
+        const userInfo = JSON.parse(
+            sessionStorage.getItem("userInfo") || localStorage.getItem("userInfo") || "{}"
+        );
 
         const resp = await authFetch(`/api/admin/templates/${templateId}/status`, {
             method: "PUT",
@@ -819,7 +826,11 @@ function renderDictionaryManagement() {
         <div class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> 字段字典管理</h2>
-                <div class="header-actions">
+                <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
+                    <select id="dictTemplateFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
+                        <option value="">全部模板</option>
+                    </select>
+
                     <button class="btn-primary" onclick="showAddDictModal()">
                         <i class="fas fa-plus"></i> 新增字段
                     </button>
@@ -862,8 +873,65 @@ function renderDictionaryManagement() {
     `;
 }
 
-function initDictionaryPage() {
+async function initDictionaryPage() {
+    await loadTemplateOptions();
+
+    const templateFilter = document.getElementById("dictTemplateFilter");
+    if (templateFilter) {
+        templateFilter.value = dictState.templateId || "";
+        templateFilter.addEventListener("change", () => {
+            dictState.templateId = templateFilter.value;
+            dictState.page = 1;
+            loadDictTable();
+        });
+    }
+
     loadDictTable();
+}
+
+async function loadTemplateOptions() {
+    const select = document.getElementById("dictTemplateFilter");
+    if (!select) return;
+
+    try {
+        const resp = await authFetch("/api/admin/templates?page=1&size=100");
+        console.log("templates resp status =", resp.status);
+
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error("loadTemplateOptions error response =", errorText);
+            throw new Error(errorText);
+        }
+
+        const result = await resp.json();
+        console.log("template options result =", result);
+
+        let records = [];
+
+        if (Array.isArray(result)) {
+            records = result;
+        } else if (Array.isArray(result.records)) {
+            records = result.records;
+        } else if (result.data && Array.isArray(result.data.records)) {
+            records = result.data.records;
+        } else if (result.data && Array.isArray(result.data)) {
+            records = result.data;
+        }
+
+        dictState.templateList = records;
+
+        select.innerHTML = `
+            <option value="">全部模板</option>
+            ${records.map(t => `
+                <option value="${t.templateId || t.id || ""}">
+                    ${escapeHtml(t.name || getContractTypeText(t.contractType) || ("模板" + (t.templateId || t.id || "")))}
+                </option>
+            `).join("")}
+        `;
+    } catch (e) {
+        console.error("loadTemplateOptions catch =", e);
+        select.innerHTML = `<option value="">全部模板</option>`;
+    }
 }
 
 function switchDictTab(dictType, el) {
@@ -888,18 +956,31 @@ async function loadDictTable() {
     if (emptyHint) emptyHint.style.display = "none";
 
     try {
-        const qs = new URLSearchParams({
-            page: String(dictState.page),
-            size: String(dictState.size),
-            dictType: dictState.dictType
-        });
+        let records = [];
 
-        const resp = await authFetch(`/api/admin/dict-items?${qs.toString()}`);
-        if (!resp.ok) throw new Error(await resp.text());
+        // 1) 选了模板：按模板绑定字段查询
+        if (dictState.templateId && dictState.dictType === "CONTRACT_FIELD") {
+            const resp = await authFetch(`/api/admin/template-field-bind/template/${dictState.templateId}`);
+            if (!resp.ok) throw new Error(await resp.text());
 
-        const result = await resp.json();
-        const data = result.data || {};
-        const records = data.records || [];
+            const result = await resp.json();
+            records = result.data || [];
+        }
+        // 2) 没选模板：查全部字段字典
+        else {
+            const qs = new URLSearchParams({
+                page: String(dictState.page),
+                size: String(dictState.size),
+                dictType: dictState.dictType
+            });
+
+            const resp = await authFetch(`/api/admin/dict-items?${qs.toString()}`);
+            if (!resp.ok) throw new Error(await resp.text());
+
+            const result = await resp.json();
+            const data = result.data || {};
+            records = data.records || [];
+        }
 
         if (!records.length) {
             tbody.innerHTML = "";
@@ -917,18 +998,18 @@ async function loadDictTable() {
 
             return `
                 <tr>
-                    <td>${escapeHtml(item.itemKey || "-")}</td>
-                    <td>${escapeHtml(item.itemName || "-")}</td>
+                    <td>${escapeHtml(item.itemKey || item.fieldKey || "-")}</td>
+                    <td>${escapeHtml(item.itemName || item.fieldName || "-")}</td>
                     <td>${escapeHtml(item.valueType || "-")}</td>
                     <td>${escapeHtml(item.moduleName || "-")}</td>
                     <td>${requiredText}</td>
                     <td>${escapeHtml(item.itemValue || "-")}</td>
                     <td>${statusHtml}</td>
                     <td>
-                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.id})">
+                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.id || item.bindId || 0})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.id}, '${item.status}')">
+                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.id || item.bindId || 0}, '${item.status}')">
                             <i class="fas fa-toggle-on"></i>
                         </button>
                     </td>

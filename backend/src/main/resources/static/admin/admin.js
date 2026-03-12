@@ -77,6 +77,7 @@ function switchTab(tabName, el) {
                 break;
             case "dictionary":
                 contentArea.innerHTML = renderDictionaryManagement();
+                initDictionaryPage();
                 break;
             case "logs":
                 contentArea.innerHTML = renderOperationLogs();

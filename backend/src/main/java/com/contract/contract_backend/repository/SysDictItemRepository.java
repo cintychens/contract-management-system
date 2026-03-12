@@ -5,6 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface SysDictItemRepository extends JpaRepository<SysDictItem, Long> {
 
     boolean existsByDictTypeAndItemKeyIgnoreCase(String dictType, String itemKey);
@@ -12,6 +14,8 @@ public interface SysDictItemRepository extends JpaRepository<SysDictItem, Long> 
     boolean existsByDictTypeAndItemKeyIgnoreCaseAndIdNot(String dictType, String itemKey, Long id);
 
     Page<SysDictItem> findByDictTypeIgnoreCase(String dictType, Pageable pageable);
+
+    List<SysDictItem> findByDictTypeIgnoreCase(String dictType);
 
     Page<SysDictItem> findByDictTypeIgnoreCaseAndItemNameContainingIgnoreCase(
             String dictType,

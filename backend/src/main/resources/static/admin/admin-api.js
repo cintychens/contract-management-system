@@ -1,6 +1,6 @@
 // ========== 接口公共方法 ==========
 function authFetch(url, options = {}) {
-    const token = sessionStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     const headers = new Headers(options.headers || {});
 
     if (token) {
