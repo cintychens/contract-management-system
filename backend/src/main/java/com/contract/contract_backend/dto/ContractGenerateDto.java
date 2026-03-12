@@ -26,6 +26,8 @@ public class ContractGenerateDto {
         private String paymentTerms;
         private String breachLiability;
         private String extraRequirements;
+        private String servicePeriod;   // ✅ 通用保留一份
+        private String penaltyRate;     // ✅ 通用保留一份
 
         // 仓储类模板字段
         private String cargoName;
@@ -46,7 +48,6 @@ public class ContractGenerateDto {
         private String deliveryAddress;
         private String deliveryMode;
         private String deliveryTimeRequirement;
-        private String servicePeriod;
         private String singleWeightLimit;
         private String singleVolumeLimit;
         private String claimPeriod;
@@ -54,7 +55,21 @@ public class ContractGenerateDto {
         private String storageFeeStandard;
         private String deliveryTimeStandard;
         private String insuranceOption;
-        private String penaltyRate;
+
+        // 外包类模板字段
+        private String partyAAddress;
+        private String partyALegalPerson;
+        private String partyAPhone;
+
+        private String partyBAddress;
+        private String partyBLegalPerson;
+        private String partyBPhone;
+
+        private String serviceScope;
+        private String serviceStandard;
+        private String feeStructure;
+        private String paymentDate;
+        private String exceptionHandling;
     }
 
     @Data
@@ -89,6 +104,8 @@ public class ContractGenerateDto {
         private String paymentTerms;
         private String breachLiability;
         private String extraRequirements;
+        private String servicePeriod;   // ✅ 通用保留一份
+        private String penaltyRate;     // ✅ 通用保留一份
 
         // 仓储类模板字段
         private String cargoName;
@@ -109,7 +126,6 @@ public class ContractGenerateDto {
         private String deliveryAddress;
         private String deliveryMode;
         private String deliveryTimeRequirement;
-        private String servicePeriod;
         private String singleWeightLimit;
         private String singleVolumeLimit;
         private String claimPeriod;
@@ -117,7 +133,21 @@ public class ContractGenerateDto {
         private String storageFeeStandard;
         private String deliveryTimeStandard;
         private String insuranceOption;
-        private String penaltyRate;
+
+        // 外包类模板字段
+        private String partyAAddress;
+        private String partyALegalPerson;
+        private String partyAPhone;
+
+        private String partyBAddress;
+        private String partyBLegalPerson;
+        private String partyBPhone;
+
+        private String serviceScope;
+        private String serviceStandard;
+        private String feeStructure;
+        private String paymentDate;
+        private String exceptionHandling;
     }
 
     @Data

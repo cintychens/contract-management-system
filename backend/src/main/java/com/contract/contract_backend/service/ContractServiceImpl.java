@@ -260,6 +260,19 @@ public class ContractServiceImpl implements ContractService {
         saveManualField(contract.getContractId(), "delivery_time_standard", "配送时效", req.getDeliveryTimeStandard());
         saveManualField(contract.getContractId(), "insurance_option", "保险方式", req.getInsuranceOption());
         saveManualField(contract.getContractId(), "penalty_rate", "滞纳金比例", req.getPenaltyRate());
+        saveManualField(contract.getContractId(), "party_a_address", "甲方地址", req.getPartyAAddress());
+        saveManualField(contract.getContractId(), "party_a_legal_person", "甲方法定代表人", req.getPartyALegalPerson());
+        saveManualField(contract.getContractId(), "party_a_phone", "甲方联系电话", req.getPartyAPhone());
+        saveManualField(contract.getContractId(), "party_b_address", "乙方地址", req.getPartyBAddress());
+        saveManualField(contract.getContractId(), "party_b_legal_person", "乙方法定代表人", req.getPartyBLegalPerson());
+        saveManualField(contract.getContractId(), "party_b_phone", "乙方联系电话", req.getPartyBPhone());
+        saveManualField(contract.getContractId(), "service_scope", "服务范围说明", req.getServiceScope());
+        saveManualField(contract.getContractId(), "service_standard", "服务标准", req.getServiceStandard());
+        saveManualField(contract.getContractId(), "service_period", "服务期间说明", req.getServicePeriod());
+        saveManualField(contract.getContractId(), "fee_structure", "费用构成", req.getFeeStructure());
+        saveManualField(contract.getContractId(), "payment_date", "付款日期", req.getPaymentDate());
+        saveManualField(contract.getContractId(), "exception_handling", "异常处理机制", req.getExceptionHandling());
+        saveManualField(contract.getContractId(), "penalty_rate", "违约金比例", req.getPenaltyRate());
 
 
         return ContractGenerateDto.ConfirmResp.builder()
@@ -486,6 +499,20 @@ public class ContractServiceImpl implements ContractService {
                             服务内容：%s
                             违约责任：%s
                             补充要求：%s
+                            
+                            甲方地址：%s
+                            甲方法定代表人：%s
+                            甲方联系电话：%s
+                            乙方地址：%s
+                            乙方法定代表人：%s
+                            乙方联系电话：%s
+                            服务范围说明：%s
+                            服务标准：%s
+                            服务期间说明：%s
+                            费用构成：%s
+                            付款日期：%s
+                            异常处理机制：%s
+                            违约金比例：%s
 
             要求：
             1. 输出完整中文合同草案；
@@ -530,6 +557,19 @@ public class ContractServiceImpl implements ContractService {
                 nullToEmpty(req.getStorageFeeStandard()),
                 nullToEmpty(req.getDeliveryTimeStandard()),
                 nullToEmpty(req.getInsuranceOption()),
+                nullToEmpty(req.getPenaltyRate()),
+                nullToEmpty(req.getPartyAAddress()),
+                nullToEmpty(req.getPartyALegalPerson()),
+                nullToEmpty(req.getPartyAPhone()),
+                nullToEmpty(req.getPartyBAddress()),
+                nullToEmpty(req.getPartyBLegalPerson()),
+                nullToEmpty(req.getPartyBPhone()),
+                nullToEmpty(req.getServiceScope()),
+                nullToEmpty(req.getServiceStandard()),
+                nullToEmpty(req.getServicePeriod()),
+                nullToEmpty(req.getFeeStructure()),
+                nullToEmpty(req.getPaymentDate()),
+                nullToEmpty(req.getExceptionHandling()),
                 nullToEmpty(req.getPenaltyRate())
         );
     }
@@ -567,6 +607,25 @@ public class ContractServiceImpl implements ContractService {
         content = replaceVar(content, "paymentMethod", req.getPaymentMethod());
         content = replaceVar(content, "paymentTerm", req.getPaymentTerm());
         content = replaceVar(content, "disputeCourt", req.getDisputeCourt());
+
+        // 外包类模板字段
+        content = replaceVar(content, "partyAAddress", req.getPartyAAddress());
+        content = replaceVar(content, "partyALegalPerson", req.getPartyALegalPerson());
+        content = replaceVar(content, "partyAPhone", req.getPartyAPhone());
+
+        content = replaceVar(content, "partyBAddress", req.getPartyBAddress());
+        content = replaceVar(content, "partyBLegalPerson", req.getPartyBLegalPerson());
+        content = replaceVar(content, "partyBPhone", req.getPartyBPhone());
+
+        content = replaceVar(content, "serviceScope", req.getServiceScope());
+        content = replaceVar(content, "serviceStandard", req.getServiceStandard());
+        content = replaceVar(content, "servicePeriod", req.getServicePeriod());
+
+        content = replaceVar(content, "feeStructure", req.getFeeStructure());
+        content = replaceVar(content, "paymentDate", req.getPaymentDate());
+
+        content = replaceVar(content, "exceptionHandling", req.getExceptionHandling());
+        content = replaceVar(content, "penaltyRate", req.getPenaltyRate());
 
         StringBuilder sb = new StringBuilder();
 

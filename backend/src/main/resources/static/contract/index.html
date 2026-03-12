@@ -780,8 +780,23 @@
 
     function getVariableLabel(key) {
     const map = {
+
+        // ========= 通用字段 =========
+        title: '合同标题',
         partyA: '甲方',
         partyB: '乙方',
+        amount: '合同金额',
+        signDate: '签署日期',
+        effectiveDate: '生效日期',
+        expireDate: '到期日期',
+        serviceContent: '服务内容',
+        paymentTerms: '付款条款',
+        breachLiability: '违约责任',
+        extraRequirements: '补充要求',
+        servicePeriod: '服务期限',
+        penaltyRate: '违约金比例',
+
+        // ========= 仓储类 =========
         cargoName: '货物名称',
         cargoCategory: '货物类别',
         cargoQuantity: '货物数量',
@@ -790,23 +805,23 @@
         inboundDate: '入库日期',
         outboundDate: '出库日期',
         storagePeriod: '仓储期限',
-        amount: '合同金额',
         paymentMethod: '付款方式',
         paymentTerm: '付款期限',
         disputeCourt: '争议法院',
-        signDate: '签署日期',
-        effectiveDate: '生效日期',
-        expireDate: '到期日期',
-        serviceContent: '服务内容',
-        breachLiability: '违约责任',
-        extraRequirements: '补充要求',
 
+        // ========= 供应链协议 =========
+        serviceScope: '服务范围',
+        serviceArea: '合作区域',
+        origin: '起运地',
+        destination: '目的地',
+        reconciliationCycle: '对账周期',
+
+        // ========= 配送类 =========
         originWarehouse: '起运仓库',
         deliveryArea: '配送区域',
         deliveryAddress: '配送地址',
         deliveryMode: '配送方式',
         deliveryTimeRequirement: '时效要求',
-        servicePeriod: '服务期限',
         singleWeightLimit: '单件重量限制',
         singleVolumeLimit: '单件体积限制',
         claimPeriod: '投诉索赔期限',
@@ -814,8 +829,21 @@
         storageFeeStandard: '保管费标准',
         deliveryTimeStandard: '配送时效',
         insuranceOption: '保险方式',
-        penaltyRate: '滞纳金比例'
+
+        // ========= 外包类 =========
+        partyAAddress: '甲方地址',
+        partyALegalPerson: '甲方法定代表人',
+        partyAPhone: '甲方联系电话',
+        partyBAddress: '乙方地址',
+        partyBLegalPerson: '乙方法定代表人',
+        partyBPhone: '乙方联系电话',
+        serviceStandard: '服务标准',
+        feeStructure: '费用构成',
+        paymentDate: '付款日期',
+        exceptionHandling: '异常处理机制'
+
     };
+
     return map[key] || key;
 }
 
@@ -967,36 +995,61 @@
 }
 
     async function loadGenerateVariables(templateId) {
-        const box = document.getElementById('generateFieldsContainer');
+    const box = document.getElementById('generateFieldsContainer');
 
-        if (!templateId) {
-            box.innerHTML = '';
+    if (!templateId) {
+        box.innerHTML = '';
+        return;
+    }
+
+    const textareaFields = new Set([
+        'serviceScope',
+        'serviceStandard',
+        'feeStructure',
+        'exceptionHandling',
+        'breachLiability',
+        'extraRequirements',
+        'serviceContent',
+        'specialRequirement'
+    ]);
+
+    try {
+        const resp = await authFetch(`/api/templates/${templateId}/variables`);
+        if (!resp.ok) throw new Error(await resp.text());
+
+        const result = await resp.json();
+        const vars = result.variables || [];
+
+        if (!vars.length) {
+            box.innerHTML = '<div style="color:#6b7b8f;">该模板暂无变量字段</div>';
             return;
         }
 
-        try {
-            const resp = await authFetch(`/api/templates/${templateId}/variables`);
-            if (!resp.ok) throw new Error(await resp.text());
+        box.innerHTML = vars.map(v => {
+            const label = escapeHtml(getVariableLabel(v));
+            const key = escapeHtml(v);
 
-            const result = await resp.json();
-            const vars = result.variables || [];
-
-            if (!vars.length) {
-                box.innerHTML = '<div style="color:#6b7b8f;">该模板暂无变量字段</div>';
-                return;
+            if (textareaFields.has(v)) {
+                return `
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>${label}</label>
+                        <textarea class="generate-field" data-key="${key}" rows="4"></textarea>
+                    </div>
+                `;
             }
 
-            box.innerHTML = vars.map(v => `
-    <div class="form-group">
-        <label>${escapeHtml(getVariableLabel(v))}</label>
-        <input class="generate-field" data-key="${escapeHtml(v)}" type="text">
-    </div>
-`).join('');
-        } catch (e) {
-            console.error(e);
-            box.innerHTML = `<div style="color:#dc3545;">字段加载失败：${escapeHtml(e.message || e)}</div>`;
-        }
+            return `
+                <div class="form-group">
+                    <label>${label}</label>
+                    <input class="generate-field" data-key="${key}" type="text">
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error(e);
+        box.innerHTML = `<div style="color:#dc3545;">字段加载失败：${escapeHtml(e.message || e)}</div>`;
     }
+}
 
     async function handleGenerateContract() {
         try {
