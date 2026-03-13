@@ -8,4 +8,10 @@ import java.util.List;
 public interface TemplateFieldBindRepository extends JpaRepository<TemplateFieldBind, Long> {
 
     List<TemplateFieldBind> findByTemplateIdAndStatusOrderBySortOrderAscIdAsc(Long templateId, String status);
+
+    List<TemplateFieldBind> findByTemplateIdOrderBySortOrderAscIdAsc(Long templateId);
+
+    boolean existsByFieldKey(String fieldKey);
+
+    void deleteByTemplateId(Long templateId);
 }

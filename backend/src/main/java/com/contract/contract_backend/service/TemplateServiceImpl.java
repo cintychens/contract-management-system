@@ -4,6 +4,8 @@ import com.contract.contract_backend.dto.AdminTemplateDto;
 import com.contract.contract_backend.dto.PageResult;
 import com.contract.contract_backend.entity.Template;
 import com.contract.contract_backend.entity.TemplateField;
+import com.contract.contract_backend.entity.TemplateFieldBind;
+import com.contract.contract_backend.repository.TemplateFieldBindRepository;
 import com.contract.contract_backend.repository.TemplateFieldRepository;
 import com.contract.contract_backend.repository.TemplateRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +13,12 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +26,9 @@ public class TemplateServiceImpl implements TemplateService {
 
     private final TemplateRepository templateRepository;
     private final TemplateFieldRepository templateFieldRepository;
+    private final TemplateFieldBindRepository templateFieldBindRepository;
+
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
 
     @Override
     public PageResult<AdminTemplateDto.TemplateRow> pageTemplates(
@@ -103,6 +113,10 @@ public class TemplateServiceImpl implements TemplateService {
                 .build();
 
         Template saved = templateRepository.save(template);
+
+        // 新增：保存模板后，自动重建模板字段绑定关系
+        rebuildTemplateFieldBinds(saved);
+
         return toRow(saved);
     }
 
@@ -128,7 +142,6 @@ public class TemplateServiceImpl implements TemplateService {
         template.setStatus(normalizeStatus(req.getStatus()));
         template.setUpdatedBy(req.getUpdatedBy() == null ? "admin" : req.getUpdatedBy().trim());
 
-        // 只有前端传了附件信息才更新，避免编辑时把原附件覆盖成 null
         if (req.getFileName() != null && !req.getFileName().isBlank()) {
             template.setFileName(req.getFileName());
         }
@@ -137,6 +150,10 @@ public class TemplateServiceImpl implements TemplateService {
         }
 
         Template saved = templateRepository.save(template);
+
+        // 新增：更新模板后，重新解析正文并重建字段绑定关系
+        rebuildTemplateFieldBinds(saved);
+
         return toRow(saved);
     }
 
@@ -159,6 +176,8 @@ public class TemplateServiceImpl implements TemplateService {
         Template template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new IllegalArgumentException("模板不存在: " + templateId));
 
+        // 建议：先删绑定表，再删模板
+        templateFieldBindRepository.deleteByTemplateId(templateId);
         templateRepository.delete(template);
     }
 
@@ -181,7 +200,7 @@ public class TemplateServiceImpl implements TemplateService {
             throw new IllegalArgumentException("模板不存在: " + templateId);
         }
 
-        return templateFieldRepository.findByTemplateIdOrderBySortOrderAsc(templateId)
+        return templateFieldBindRepository.findByTemplateIdOrderBySortOrderAscIdAsc(templateId)
                 .stream()
                 .map(this::toFieldRow)
                 .toList();
@@ -222,6 +241,42 @@ public class TemplateServiceImpl implements TemplateService {
         return s;
     }
 
+    private Set<String> extractFieldKeys(String content) {
+        Set<String> fieldKeys = new LinkedHashSet<>();
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(content);
+        while (matcher.find()) {
+            fieldKeys.add(matcher.group(1));
+        }
+        return fieldKeys;
+    }
+
+    @Transactional
+    protected void rebuildTemplateFieldBinds(Template template) {
+        templateFieldBindRepository.deleteByTemplateId(template.getTemplateId());
+
+        Set<String> fieldKeys = extractFieldKeys(template.getContent());
+        LocalDateTime now = LocalDateTime.now();
+
+        for (String fieldKey : fieldKeys) {
+            TemplateField field = templateFieldRepository.findByFieldKey(fieldKey)
+                    .orElseThrow(() -> new IllegalArgumentException("模板中存在未定义字段: " + fieldKey));
+
+            TemplateFieldBind bind = TemplateFieldBind.builder()
+                    .templateId(template.getTemplateId())
+                    .fieldKey(field.getFieldKey())
+                    .fieldNameSnapshot(field.getFieldName())
+                    .fieldTypeSnapshot(field.getFieldType())
+                    .requiredFlag(field.getRequiredFlag())
+                    .sortOrder(field.getSortOrder())
+                    .status(field.getStatus() == null ? "ENABLED" : field.getStatus())
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .build();
+
+            templateFieldBindRepository.save(bind);
+        }
+    }
+
     private AdminTemplateDto.TemplateRow toRow(Template t) {
         return AdminTemplateDto.TemplateRow.builder()
                 .templateId(t.getTemplateId())
@@ -252,15 +307,15 @@ public class TemplateServiceImpl implements TemplateService {
                 .build();
     }
 
-    private AdminTemplateDto.TemplateFieldRow toFieldRow(TemplateField f) {
+    private AdminTemplateDto.TemplateFieldRow toFieldRow(TemplateFieldBind b) {
         return AdminTemplateDto.TemplateFieldRow.builder()
-                .fieldId(f.getFieldId())
-                .templateId(f.getTemplateId())
-                .fieldKey(f.getFieldKey())
-                .fieldName(f.getFieldName())
-                .fieldType(f.getFieldType())
-                .requiredFlag(f.getRequiredFlag())
-                .sortOrder(f.getSortOrder())
+                .fieldId(null)
+                .templateId(b.getTemplateId())
+                .fieldKey(b.getFieldKey())
+                .fieldName(b.getFieldNameSnapshot())
+                .fieldType(b.getFieldTypeSnapshot())
+                .requiredFlag(b.getRequiredFlag())
+                .sortOrder(b.getSortOrder())
                 .build();
     }
 }

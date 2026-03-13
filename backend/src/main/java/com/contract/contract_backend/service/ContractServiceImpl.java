@@ -127,7 +127,7 @@ public class ContractServiceImpl implements ContractService {
      */
     @Override
     public List<ContractFieldResponse> getContractFields(Long contractId) {
-        List<ContractField> fields = contractFieldRepository.findByContractId(contractId);
+        List<ContractField> fields = contractFieldRepository.findByContractIdOrderBySortOrderAsc(contractId);
 
         return fields.stream().map(field -> ContractFieldResponse.builder()
                 .fieldId(field.getFieldId())

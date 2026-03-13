@@ -1,6 +1,7 @@
 package com.contract.contract_backend.repository;
 
 import com.contract.contract_backend.entity.Template;
+import com.contract.contract_backend.entity.TemplateField; // 添加缺失的导入
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,4 +37,5 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
      * 只查询已启用模板
      */
     List<Template> findByStatusIgnoreCase(String status);
+
 }

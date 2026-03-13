@@ -25,6 +25,12 @@ public class TemplateFieldBind {
     @Column(name = "FIELD_KEY", nullable = false, length = 100)
     private String fieldKey;
 
+    @Column(name = "FIELD_NAME_SNAPSHOT", length = 100)
+    private String fieldNameSnapshot;
+
+    @Column(name = "FIELD_TYPE_SNAPSHOT", length = 50)
+    private String fieldTypeSnapshot;
+
     @Column(name = "REQUIRED_FLAG", nullable = false)
     private Boolean requiredFlag;
 

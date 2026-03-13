@@ -28,6 +28,18 @@ public class ContractField {
     @Column(name = "field_name", nullable = false, length = 100)
     private String fieldName;
 
+    @Column(name = "field_type", length = 50)
+    private String fieldType;
+
+    @Column(name = "module_name", length = 100)
+    private String moduleName;
+
+    @Column(name = "required_flag")
+    private Boolean requiredFlag;
+
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(name = "field_value", length = 2000)
     private String fieldValue;
 

@@ -8,9 +8,11 @@ import java.util.Optional;
 
 public interface ContractFieldRepository extends JpaRepository<ContractField, Long> {
 
-    List<ContractField> findByContractId(Long contractId);
+    List<ContractField> findByContractIdOrderBySortOrderAsc(Long contractId);
 
     Optional<ContractField> findByContractIdAndFieldKey(Long contractId, String fieldKey);
+
+    boolean existsByFieldKey(String fieldKey);
 
     void deleteByContractId(Long contractId);
 }

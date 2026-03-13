@@ -958,15 +958,55 @@ async function loadDictTable() {
     try {
         let records = [];
 
-        // 1) 选了模板：按模板绑定字段查询
-        if (dictState.templateId && dictState.dictType === "CONTRACT_FIELD") {
-            const resp = await authFetch(`/api/admin/template-field-bind/template/${dictState.templateId}`);
-            if (!resp.ok) throw new Error(await resp.text());
+        // =========================
+        // 合同字段：走 TEMPLATE_FIELD / 模板字段接口
+        // =========================
+        if (dictState.dictType === "CONTRACT_FIELD") {
+            // 选了模板：查询该模板的字段
+            if (dictState.templateId) {
+                const resp = await authFetch(`/api/admin/templates/${dictState.templateId}/fields`);
+                if (!resp.ok) throw new Error(await resp.text());
 
-            const result = await resp.json();
-            records = result.data || [];
+                const result = await resp.json();
+
+                if (Array.isArray(result)) {
+                    records = result;
+                } else if (Array.isArray(result.data)) {
+                    records = result.data;
+                } else if (Array.isArray(result.records)) {
+                    records = result.records;
+                } else {
+                    records = [];
+                }
+            }
+            // 没选模板：查询全部字段字典
+            else {
+                const qs = new URLSearchParams({
+                    page: String(dictState.page),
+                    size: String(dictState.size)
+                });
+
+                const resp = await authFetch(`/api/admin/template-fields?${qs.toString()}`);
+                if (!resp.ok) throw new Error(await resp.text());
+
+                const result = await resp.json();
+
+                if (Array.isArray(result)) {
+                    records = result;
+                } else if (Array.isArray(result.data)) {
+                    records = result.data;
+                } else if (result.data && Array.isArray(result.data.records)) {
+                    records = result.data.records;
+                } else if (Array.isArray(result.records)) {
+                    records = result.records;
+                } else {
+                    records = [];
+                }
+            }
         }
-        // 2) 没选模板：查全部字段字典
+        // =========================
+        // 其他 tab：继续走 dict-items
+        // =========================
         else {
             const qs = new URLSearchParams({
                 page: String(dictState.page),
@@ -991,25 +1031,32 @@ async function loadDictTable() {
         if (emptyHint) emptyHint.style.display = "none";
 
         tbody.innerHTML = records.map(item => {
+            const fieldKey = item.fieldKey || item.itemKey || "-";
+            const fieldName = item.fieldName || item.itemName || "-";
+            const fieldType = item.fieldType || item.valueType || "-";
+            const moduleName = item.moduleName || "-";
             const requiredText = item.requiredFlag ? "是" : "否";
-            const statusHtml = item.status === "ENABLED"
+            const enumValue = item.itemValue || "-";
+            const status = item.status || "ENABLED";
+
+            const statusHtml = status === "ENABLED"
                 ? `<span class="status-badge status-active">启用</span>`
                 : `<span class="status-badge status-disabled">禁用</span>`;
 
             return `
                 <tr>
-                    <td>${escapeHtml(item.itemKey || item.fieldKey || "-")}</td>
-                    <td>${escapeHtml(item.itemName || item.fieldName || "-")}</td>
-                    <td>${escapeHtml(item.valueType || "-")}</td>
-                    <td>${escapeHtml(item.moduleName || "-")}</td>
+                    <td>${escapeHtml(fieldKey)}</td>
+                    <td>${escapeHtml(fieldName)}</td>
+                    <td>${escapeHtml(fieldType)}</td>
+                    <td>${escapeHtml(moduleName)}</td>
                     <td>${requiredText}</td>
-                    <td>${escapeHtml(item.itemValue || "-")}</td>
+                    <td>${escapeHtml(enumValue)}</td>
                     <td>${statusHtml}</td>
                     <td>
-                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.id || item.bindId || 0})">
+                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.fieldId || item.id || 0})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.id || item.bindId || 0}, '${item.status}')">
+                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.fieldId || item.id || 0}, '${status}')">
                             <i class="fas fa-toggle-on"></i>
                         </button>
                     </td>
