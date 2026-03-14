@@ -472,6 +472,59 @@
                 <div id="fieldEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无解析字段</div>
             </div>
         </div>
+        <div class="content-card">
+            <div class="section-title">合同流转</div>
+
+            <div class="info-grid" id="flowInfoGrid">
+                <div class="info-item">
+                    <div class="label">当前流转状态</div>
+                    <div class="value" id="flowStatusText">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">当前处理角色</div>
+                    <div class="value" id="flowRoleText">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">提交审批时间</div>
+                    <div class="value" id="flowSubmittedAt">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">最终审批时间</div>
+                    <div class="value" id="flowApprovedAt">-</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 18px;">
+                <div class="label" style="margin-bottom: 8px; color:#6b7b8f;">审批意见 / 流转备注</div>
+                <textarea id="flowComment"
+                          placeholder="请输入审批意见、退回原因或流转备注"
+                          style="width:100%; min-height:90px; border:1px solid #dbe6f1; border-radius:14px; padding:12px; resize:vertical; font-size:14px;"></textarea>
+            </div>
+
+            <div class="action-buttons" id="flowActionButtons" style="margin-top: 18px;">
+                <!-- 动态按钮 -->
+            </div>
+
+            <div style="margin-top: 24px;">
+                <div class="section-title" style="font-size:18px;">流转记录</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>动作</th>
+                            <th>状态流转</th>
+                            <th>角色流转</th>
+                            <th>操作人</th>
+                            <th>备注</th>
+                        </tr>
+                        </thead>
+                        <tbody id="flowRecordTableBody"></tbody>
+                    </table>
+                    <div id="flowRecordEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无流转记录</div>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -479,6 +532,7 @@
 <script>
 
     let currentContractTitle = "合同文件";
+    let currentContract = null;
 
     function authFetch(url, options = {}) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
@@ -505,33 +559,55 @@
         }
     }
 
+    function getRoleText(role) {
+        const map = {
+            BUSINESS: '业务人员',
+            LEGAL: '法务',
+            FINANCE: '财务',
+            APPROVER: '审批人',
+            ADMIN: '管理员',
+            USER: '普通用户'
+        };
+        return map[role] || role || '-';
+    }
+
     function getStatusText(status) {
         const map = {
             DRAFT: '草稿',
-            ACTIVE: '进行中',
+            UPLOADED: '已上传',
+            PENDING_LEGAL: '待法务审核',
+            PENDING_FINANCE: '待财务审核',
+            PENDING_APPROVAL: '待审批',
+            ACTIVE: '已生效',
+            IN_PROGRESS: '履约中',
             COMPLETED: '已完成',
             EXPIRED: '已到期',
             TERMINATED: '已终止',
-            UPLOADED: '已上传'
+            ARCHIVED: '已归档'
         };
         return map[status] || status || '-';
     }
 
     function getStatusClass(status) {
-        switch (status) {
-            case 'ACTIVE':
-            case 'COMPLETED':
-                return 'status-active';
-            case 'DRAFT':
-            case 'UPLOADED':
-                return 'status-pending';
-            case 'EXPIRED':
-            case 'TERMINATED':
-                return 'status-expired';
-            default:
-                return 'status-pending';
-        }
+    switch (status) {
+        case 'ACTIVE':
+        case 'COMPLETED':
+        case 'IN_PROGRESS':
+            return 'status-active';
+        case 'DRAFT':
+        case 'UPLOADED':
+        case 'PENDING_LEGAL':
+        case 'PENDING_FINANCE':
+        case 'PENDING_APPROVAL':
+            return 'status-pending';
+        case 'EXPIRED':
+        case 'TERMINATED':
+        case 'ARCHIVED':
+            return 'status-expired';
+        default:
+            return 'status-pending';
     }
+}
 
     function loadUserInfo() {
         try {
@@ -549,17 +625,47 @@
                 ADMIN: '系统管理员',
                 user: '普通用户',
                 USER: '普通用户',
+                BUSINESS: '业务人员',
+                business: '业务人员',
+                LEGAL: '法务',
+                legal: '法务',
+                FINANCE: '财务',
+                finance: '财务',
+                APPROVER: '审批人',
+                approver: '审批人',
                 manager: '合同经理',
                 MANAGER: '合同经理'
             };
-            const rawRole = (userInfo.role || userInfo.roleCode || '').toString();
+            const rawRole = (userInfo.roleCode || userInfo.role || '').toString().toUpperCase();
             document.getElementById('userRole').textContent =
-                roleMap[rawRole] || roleMap[rawRole.toUpperCase()] || rawRole || '普通用户';
+                roleMap[rawRole] || rawRole || '普通用户';
         } catch (e) {
             console.error(e);
             window.location.href = '/auth/login.html';
         }
     }
+
+    function getCurrentUserInfo() {
+        try {
+            const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo');
+            if (!userInfoStr) return null;
+            return JSON.parse(userInfoStr);
+        } catch (e) {
+            console.error('获取当前用户信息失败', e);
+            return null;
+        }
+    }
+
+    function getCurrentUserId() {
+        const user = getCurrentUserInfo();
+        return user?.userId || user?.id || null;
+    }
+
+    function getCurrentUserRole() {
+        const user = getCurrentUserInfo();
+        return user?.roleCode || user?.role || null;
+    }
+
 
     function logout() {
         localStorage.removeItem('token');
@@ -587,6 +693,183 @@
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+}
+
+function renderFlowSummary(contract) {
+    document.getElementById('flowStatusText').textContent = getStatusText(contract.status);
+    document.getElementById('flowRoleText').textContent = getRoleText(contract.currentHandlerRole);
+    document.getElementById('flowSubmittedAt').textContent = formatDateTime(contract.submittedAt);
+    document.getElementById('flowApprovedAt').textContent = formatDateTime(contract.approvedAt);
+}
+
+function renderFlowActions(contract) {
+    const container = document.getElementById('flowActionButtons');
+    container.innerHTML = '';
+
+    const role = getCurrentUserRole();
+    if (!contract || !contract.status) return;
+
+    const contractId = contract.contractId;
+
+    if (contract.status === 'DRAFT' && role === 'BUSINESS') {
+        container.innerHTML = `
+            <button class="action-btn primary" onclick="handleFlowSubmit(${contractId})">
+                <i class="fas fa-paper-plane"></i> 提交法务审核
+            </button>
+        `;
+        return;
+    }
+
+    if (contract.status === 'PENDING_LEGAL' && role === 'LEGAL') {
+        container.innerHTML = `
+            <button class="action-btn primary" onclick="handleLegalApprove(${contractId})">
+                <i class="fas fa-check"></i> 法务通过
+            </button>
+            <button class="action-btn danger" onclick="handleLegalReject(${contractId})">
+                <i class="fas fa-rotate-left"></i> 法务退回
+            </button>
+        `;
+        return;
+    }
+
+    if (contract.status === 'PENDING_FINANCE' && role === 'FINANCE') {
+        container.innerHTML = `
+            <button class="action-btn primary" onclick="handleFinanceApprove(${contractId})">
+                <i class="fas fa-check"></i> 财务通过
+            </button>
+            <button class="action-btn danger" onclick="handleFinanceReject(${contractId})">
+                <i class="fas fa-rotate-left"></i> 财务退回
+            </button>
+        `;
+        return;
+    }
+
+    if (contract.status === 'PENDING_APPROVAL' && role === 'APPROVER') {
+        container.innerHTML = `
+            <button class="action-btn primary" onclick="handleApproverApprove(${contractId})">
+                <i class="fas fa-stamp"></i> 审批通过
+            </button>
+            <button class="action-btn danger" onclick="handleApproverReject(${contractId})">
+                <i class="fas fa-ban"></i> 审批驳回
+            </button>
+        `;
+        return;
+    }
+
+    if (contract.status === 'ACTIVE') {
+        container.innerHTML = `
+            <span style="color:#10b981; font-weight:600;">当前合同已生效</span>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <span style="color:#6b7b8f;">当前角色在此状态下无可执行操作</span>
+    `;
+}
+
+function handleFlowSubmit(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/submit`, contractId);
+}
+
+function handleLegalApprove(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/legal/approve`, contractId);
+}
+
+function handleLegalReject(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/legal/reject`, contractId);
+}
+
+function handleFinanceApprove(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/finance/approve`, contractId);
+}
+
+function handleFinanceReject(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/finance/reject`, contractId);
+}
+
+function handleApproverApprove(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/approver/approve`, contractId);
+}
+
+function handleApproverReject(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/approver/reject`, contractId);
+}
+
+async function loadFlowRecords(contractId) {
+    const tbody = document.getElementById('flowRecordTableBody');
+    const emptyHint = document.getElementById('flowRecordEmptyHint');
+
+    try {
+        const resp = await authFetch(`/api/contracts/${contractId}/flow/records`);
+        if (!resp.ok) throw new Error('获取流转记录失败');
+
+        const result = await resp.json();
+        if (result.code !== 200) throw new Error(result.message || '获取流转记录失败');
+
+        const records = result.data || [];
+
+        if (!records.length) {
+            tbody.innerHTML = '';
+            emptyHint.style.display = 'block';
+            return;
+        }
+
+        tbody.innerHTML = records.map(item => `
+            <tr>
+                <td>${formatDateTime(item.createdAt)}</td>
+                <td>${escapeHtml(item.actionType || '-')}</td>
+                <td>${escapeHtml(getStatusText(item.fromStatus))} → ${escapeHtml(getStatusText(item.toStatus))}</td>
+                <td>${escapeHtml(getRoleText(item.fromRole))} → ${escapeHtml(getRoleText(item.toRole))}</td>
+                <td>${item.operatorId ?? '-'}</td>
+                <td>${escapeHtml(item.comment || '-')}</td>
+            </tr>
+        `).join('');
+
+        emptyHint.style.display = 'none';
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = `<tr><td colspan="6" style="color:#dc3545;">加载失败：${escapeHtml(e.message || e)}</td></tr>`;
+        emptyHint.style.display = 'none';
+    }
+}
+
+async function postFlowAction(url, contractId) {
+    const operatorId = getCurrentUserId();
+    const comment = document.getElementById('flowComment').value || '';
+
+    if (!operatorId) {
+        alert('未获取到当前用户ID，请重新登录');
+        return;
+    }
+
+    try {
+        const resp = await authFetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                operatorId,
+                comment
+            })
+        });
+
+        const result = await resp.json();
+
+        if (!resp.ok || result.code !== 200) {
+            throw new Error(result.message || '流转操作失败');
+        }
+
+        alert(result.message || '操作成功');
+
+        document.getElementById('flowComment').value = '';
+        await loadContractDetail();
+        await loadFlowRecords(contractId);
+    } catch (e) {
+        console.error(e);
+        alert('操作失败：' + (e.message || e));
+    }
 }
 
 async function handleExportWord() {
@@ -638,66 +921,84 @@ async function handleExportPdf() {
 }
 
     async function loadContractDetail() {
-        const contractId = getContractId();
-        if (!contractId) {
-            document.getElementById('contractContent').textContent = '缺少合同ID';
-            return;
-        }
-
-        try {
-            const resp = await authFetch(`/api/contracts/${contractId}`);
-            if (!resp.ok) throw new Error('获取合同详情失败');
-
-            const result = await resp.json();
-            if (result.code !== 200) throw new Error(result.message || '获取合同详情失败');
-
-            const contract = result.data || {};
-            currentContractTitle = contract.title || "合同文件";
-            const grid = document.getElementById('contractInfoGrid');
-
-            grid.innerHTML = `
-                <div class="info-item">
-                    <div class="label">合同ID</div>
-                    <div class="value">${contract.contractId ?? '-'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">合同编号</div>
-                    <div class="value">${escapeHtml(contract.contractNo || '-')}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">合同标题</div>
-                    <div class="value">${escapeHtml(contract.title || '-')}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">合同类型</div>
-                    <div class="value">${escapeHtml(contract.contractType || '-')}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">状态</div>
-                    <div class="value">
-                        <span class="status-badge ${getStatusClass(contract.status)}">${escapeHtml(getStatusText(contract.status))}</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="label">创建时间</div>
-                    <div class="value">${formatDateTime(contract.createdAt)}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">当前版本ID</div>
-                    <div class="value">${contract.currentVersionId ?? '-'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">模板ID</div>
-                    <div class="value">${contract.templateId ?? '-'}</div>
-                </div>
-            `;
-
-            document.getElementById('contractContent').textContent = contract.content || '暂无合同正文内容';
-        } catch (e) {
-            console.error(e);
-            document.getElementById('contractContent').textContent = '加载失败：' + (e.message || e);
-        }
+    const contractId = getContractId();
+    if (!contractId) {
+        document.getElementById('contractContent').textContent = '缺少合同ID';
+        return;
     }
+
+    try {
+        const resp = await authFetch(`/api/contracts/${contractId}`);
+        if (!resp.ok) throw new Error('获取合同详情失败');
+
+        const result = await resp.json();
+        if (result.code !== 200) throw new Error(result.message || '获取合同详情失败');
+
+        const contract = result.data || {};
+        currentContract = contract;
+        currentContractTitle = contract.title || "合同文件";
+
+        const grid = document.getElementById('contractInfoGrid');
+
+        grid.innerHTML = `
+            <div class="info-item">
+                <div class="label">合同ID</div>
+                <div class="value">${contract.contractId ?? '-'}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">合同编号</div>
+                <div class="value">${escapeHtml(contract.contractNo || '-')}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">合同标题</div>
+                <div class="value">${escapeHtml(contract.title || '-')}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">合同类型</div>
+                <div class="value">${escapeHtml(contract.contractType || '-')}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">状态</div>
+                <div class="value">
+                    <span class="status-badge ${getStatusClass(contract.status)}">
+                        ${escapeHtml(getStatusText(contract.status))}
+                    </span>
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="label">当前处理角色</div>
+                <div class="value">${escapeHtml(getRoleText(contract.currentHandlerRole))}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">创建时间</div>
+                <div class="value">${formatDateTime(contract.createdAt)}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">更新时间</div>
+                <div class="value">${formatDateTime(contract.updatedAt)}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">当前版本ID</div>
+                <div class="value">${contract.currentVersionId ?? '-'}</div>
+            </div>
+            <div class="info-item">
+                <div class="label">模板ID</div>
+                <div class="value">${contract.templateId ?? '-'}</div>
+            </div>
+        `;
+
+        document.getElementById('contractContent').textContent =
+            contract.content || '暂无合同正文内容';
+
+        renderFlowSummary(contract);
+        renderFlowActions(contract);
+        await loadFlowRecords(contract.contractId);
+
+    } catch (e) {
+        console.error(e);
+        document.getElementById('contractContent').textContent = '加载失败：' + (e.message || e);
+    }
+}
 
     async function loadContractFields() {
         const contractId = getContractId();
@@ -738,10 +1039,10 @@ async function handleExportPdf() {
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
         loadUserInfo();
-        loadContractDetail();
-        loadContractFields();
+        await loadContractDetail();
+        await loadContractFields();
     });
 </script>
 </body>
