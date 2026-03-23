@@ -3,6 +3,8 @@ package com.contract.contract_backend.controller;
 import com.contract.contract_backend.common.Result;
 import com.contract.contract_backend.dto.ContractFieldResponse;
 import com.contract.contract_backend.dto.ContractUploadResponse;
+import com.contract.contract_backend.dto.FlowActionReq;
+import com.contract.contract_backend.entity.ContractFlowRecord;
 import com.contract.contract_backend.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +15,9 @@ import com.contract.contract_backend.service.ContractExportService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-
 import java.util.List;
 import java.util.Map;
 
@@ -69,21 +71,6 @@ public class ContractController {
     @GetMapping("/{contractId}")
     public Result<Contract> getContractDetail(@PathVariable Long contractId) {
         return Result.success(contractService.getContractDetail(contractId));
-    }
-
-    @GetMapping("/{contractId}/export/word")
-    public ResponseEntity<byte[]> exportWord(@PathVariable Long contractId) {
-        Contract contract = contractService.getContractDetail(contractId);
-        byte[] data = contractExportService.exportWord(contractId);
-
-        String fileName = buildFileName(contract.getTitle(), ".docx");
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                ))
-                .body(data);
     }
 
     @GetMapping("/{contractId}/export/pdf")

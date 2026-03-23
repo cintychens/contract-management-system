@@ -19,6 +19,10 @@ import com.contract.contract_backend.repository.TemplateRepository;
 import com.contract.contract_backend.service.ContractParseService;
 import com.contract.contract_backend.service.ContractService;
 import com.contract.contract_backend.service.FileStorageService;
+import com.contract.contract_backend.common.constant.ContractStatus;
+import com.contract.contract_backend.common.constant.RoleCode;
+import com.contract.contract_backend.entity.ContractFlowRecord;
+import com.contract.contract_backend.repository.ContractFlowRecordRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -52,6 +56,7 @@ public class ContractServiceImpl implements ContractService {
     private final FileStorageService fileStorageService;
     private final ContractUploadProperties uploadProperties;
     private final ContractParseService contractParseService;
+    private final ContractFlowRecordRepository contractFlowRecordRepository;
 
     /**
      * =========================
@@ -84,9 +89,11 @@ public class ContractServiceImpl implements ContractService {
                 .contractNo(contractNo)
                 .title(title)
                 .contractType(contractType)
-                .status("UPLOADED")
+                .status(ContractStatus.DRAFT)
                 .createdBy(1L)
                 .createdAt(LocalDateTime.now())
+                .currentHandlerRole(RoleCode.BUSINESS)
+                .currentHandlerId(1L)
                 .content(extractedContent)
                 .build();
 
@@ -116,7 +123,7 @@ public class ContractServiceImpl implements ContractService {
                 .contractId(contract.getContractId())
                 .contractNo(contract.getContractNo())
                 .versionId(version.getVersionId())
-                .status("PARSED")
+                .status(ContractStatus.DRAFT)
                 .build();
     }
 
@@ -194,10 +201,12 @@ public class ContractServiceImpl implements ContractService {
                 .contractNo(contractNo)
                 .title(req.getTitle().trim())
                 .contractType(req.getContractType().trim())
-                .status("DRAFT")
-                .templateId(req.getTemplateId())
+                .status(ContractStatus.DRAFT)
                 .createdBy(1L)
                 .createdAt(LocalDateTime.now())
+                .currentHandlerRole(RoleCode.BUSINESS)
+                .currentHandlerId(1L)
+                .content(req.getDraftContent().trim())
                 .build();
 
         contract = contractRepository.save(contract);
@@ -332,6 +341,244 @@ public class ContractServiceImpl implements ContractService {
         return contractRepository.findById(contractId)
                 .orElseThrow(() -> new RuntimeException("合同不存在，contractId=" + contractId));
     }
+
+    @Override
+    @Transactional
+    public void submitForLegalReview(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.DRAFT.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不是草稿状态，不能提交审批");
+        }
+
+        String fromStatus = contract.getStatus();
+        String fromRole = contract.getCurrentHandlerRole();
+
+        contract.setStatus(ContractStatus.PENDING_LEGAL);
+        contract.setCurrentHandlerRole(RoleCode.LEGAL);
+        contract.setCurrentHandlerId(null);
+        contract.setSubmittedAt(LocalDateTime.now());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.PENDING_LEGAL,
+                fromRole,
+                RoleCode.LEGAL,
+                "SUBMIT",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    @Transactional
+    public void approveByLegal(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.PENDING_LEGAL.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在法务审核阶段");
+        }
+
+        String fromStatus = contract.getStatus();
+
+        contract.setStatus(ContractStatus.PENDING_FINANCE);
+        contract.setCurrentHandlerRole(RoleCode.FINANCE);
+        contract.setCurrentHandlerId(null);
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.PENDING_FINANCE,
+                RoleCode.LEGAL,
+                RoleCode.FINANCE,
+                "APPROVE",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    @Transactional
+    public void rejectByLegal(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.PENDING_LEGAL.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在法务审核阶段");
+        }
+
+        String fromStatus = contract.getStatus();
+
+        contract.setStatus(ContractStatus.DRAFT);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.DRAFT,
+                RoleCode.LEGAL,
+                RoleCode.BUSINESS,
+                "REJECT",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    @Transactional
+    public void approveByFinance(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.PENDING_FINANCE.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在财务审核阶段");
+        }
+
+        String fromStatus = contract.getStatus();
+
+        contract.setStatus(ContractStatus.PENDING_APPROVAL);
+        contract.setCurrentHandlerRole(RoleCode.APPROVER);
+        contract.setCurrentHandlerId(null);
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.PENDING_APPROVAL,
+                RoleCode.FINANCE,
+                RoleCode.APPROVER,
+                "APPROVE",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    @Transactional
+    public void rejectByFinance(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.PENDING_FINANCE.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在财务审核阶段");
+        }
+
+        String fromStatus = contract.getStatus();
+
+        contract.setStatus(ContractStatus.DRAFT);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.DRAFT,
+                RoleCode.FINANCE,
+                RoleCode.BUSINESS,
+                "REJECT",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    @Transactional
+    public void approveByApprover(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+
+        if (!ContractStatus.PENDING_APPROVAL.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在最终审批阶段");
+        }
+
+        String fromStatus = contract.getStatus();
+
+        contract.setStatus(ContractStatus.ACTIVE);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+        contract.setApprovedAt(LocalDateTime.now());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.ACTIVE,
+                RoleCode.APPROVER,
+                RoleCode.BUSINESS,
+                "APPROVE",
+                operatorId,
+                comment
+        );
+    }
+        @Override
+        @Transactional
+        public void rejectByApprover(Long contractId, Long operatorId, String comment) {
+            Contract contract = getContractOrThrow(contractId);
+
+            if (!ContractStatus.PENDING_APPROVAL.equals(contract.getStatus())) {
+                throw new RuntimeException("当前合同不在最终审批阶段");
+            }
+
+            String fromStatus = contract.getStatus();
+
+            contract.setStatus(ContractStatus.DRAFT);
+            contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+            contract.setCurrentHandlerId(contract.getCreatedBy());
+
+            contractRepository.save(contract);
+
+            saveFlowRecord(
+                    contractId,
+                    fromStatus,
+                    ContractStatus.DRAFT,
+                    RoleCode.APPROVER,
+                    RoleCode.BUSINESS,
+                    "REJECT",
+                    operatorId,
+                    comment
+            );
+        }
+
+        @Override
+        public List<ContractFlowRecord> getFlowRecords(Long contractId) {
+            getContractOrThrow(contractId);
+            return contractFlowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
+        }
+
+        private Contract getContractOrThrow(Long contractId) {
+            return contractRepository.findById(contractId)
+                    .orElseThrow(() -> new RuntimeException("合同不存在，ID=" + contractId));
+        }
+
+        private void saveFlowRecord(Long contractId,
+                String fromStatus,
+                String toStatus,
+                String fromRole,
+                String toRole,
+                String actionType,
+                Long operatorId,
+                String comment) {
+            ContractFlowRecord record = ContractFlowRecord.builder()
+                    .contractId(contractId)
+                    .fromStatus(fromStatus)
+                    .toStatus(toStatus)
+                    .fromRole(fromRole)
+                    .toRole(toRole)
+                    .actionType(actionType)
+                    .operatorId(operatorId == null ? 0L : operatorId)
+                    .comment(comment)
+                    .build();
+
+            contractFlowRecordRepository.save(record);
+        }
 
     /**
      * =========================

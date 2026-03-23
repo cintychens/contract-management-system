@@ -64,8 +64,11 @@ public class AuthServiceImpl implements AuthService {
 
         return LoginResponse.builder()
                 .token(token)
+                .userId(user.getUserId())
                 .username(user.getUsername())
-                .role(user.getRoleCode())
+                .fullName(user.getFullName())
+                .roleCode(user.getRoleCode())
+                .status(user.getStatus())
                 .build();
     }
 }
