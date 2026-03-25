@@ -30,6 +30,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Sort;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -299,7 +300,11 @@ public class ContractServiceImpl implements ContractService {
      */
     @Override
     public Map<String, Object> getContracts(int page, int size, String keyword, String status) {
-        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
+        Pageable pageable = PageRequest.of(
+                Math.max(page - 1, 0),
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
 
         Page<Contract> contractPage;
 
