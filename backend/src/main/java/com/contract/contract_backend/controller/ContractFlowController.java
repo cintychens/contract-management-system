@@ -135,4 +135,62 @@ public class ContractFlowController {
     public Result<List<ContractFlowRecord>> getFlowRecords(@PathVariable Long contractId) {
         return Result.success(contractFlowService.getFlowRecords(contractId));
     }
+
+    /**
+     * 完成合同
+     */
+    @PostMapping("/complete")
+    public Result<String> completeContract(
+            @PathVariable Long contractId,
+            @RequestBody FlowActionRequest request
+    ) {
+        contractFlowService.completeContract(
+                contractId,
+                request.getOperatorId(),
+                request.getComment()
+        );
+        return Result.success("合同已完成");
+    }
+
+    /**
+     * 终止合同
+     */
+    @PostMapping("/request-termination")
+    public Result<String> requestTermination(
+            @PathVariable Long contractId,
+            @RequestBody FlowActionRequest request
+    ) {
+        contractFlowService.requestTerminateContract(
+                contractId,
+                request.getOperatorId(),
+                request.getComment()
+        );
+        return Result.success("已提交终止申请");
+    }
+
+    @PostMapping("/reject-termination")
+    public Result<String> rejectTermination(
+            @PathVariable Long contractId,
+            @RequestBody FlowActionRequest request
+    ) {
+        contractFlowService.approverRejectTermination(
+                contractId,
+                request.getOperatorId(),
+                request.getComment()
+        );
+        return Result.success("已驳回终止申请");
+    }
+
+    @PostMapping("/approve-termination")
+    public Result<String> approveTermination(
+            @PathVariable Long contractId,
+            @RequestBody FlowActionRequest request
+    ) {
+        contractFlowService.approverApproveTermination(
+                contractId,
+                request.getOperatorId(),
+                request.getComment()
+        );
+        return Result.success("合同已终止");
+    }
 }

@@ -9,8 +9,8 @@ public class ContractStatus {
     public static final String ACTIVE = "ACTIVE";
     public static final String IN_PROGRESS = "IN_PROGRESS";
     public static final String COMPLETED = "COMPLETED";
+    public static final String PENDING_TERMINATION = "PENDING_TERMINATION";
     public static final String TERMINATED = "TERMINATED";
     public static final String ARCHIVED = "ARCHIVED";
-
     private ContractStatus() {}
 }

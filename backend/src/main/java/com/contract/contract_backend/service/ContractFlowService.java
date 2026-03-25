@@ -228,6 +228,123 @@ public class ContractFlowService {
         return flowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
     }
 
+    public void completeContract(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+        User operator = getUserOrThrow(operatorId);
+
+        validateRole(operator, RoleCode.BUSINESS, "只有业务角色可以完成合同");
+        validateStatus(contract, ContractStatus.ACTIVE, "当前合同不是已生效状态，不能完成");
+
+        String oldStatus = contract.getStatus();
+        String oldRole = contract.getCurrentHandlerRole();
+
+        contract.setStatus(ContractStatus.COMPLETED);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+        contract.setClosedAt(LocalDateTime.now());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                oldStatus,
+                ContractStatus.COMPLETED,
+                oldRole,
+                RoleCode.BUSINESS,
+                FlowActionType.COMPLETE,
+                operatorId,
+                comment
+        );
+    }
+
+    public void requestTerminateContract(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+        User operator = getUserOrThrow(operatorId);
+
+        validateRole(operator, RoleCode.BUSINESS, "只有业务角色可以发起终止申请");
+        validateStatus(contract, ContractStatus.ACTIVE, "当前合同不是已生效状态，不能申请终止");
+
+        String oldStatus = contract.getStatus();
+        String oldRole = contract.getCurrentHandlerRole();
+
+        contract.setStatus(ContractStatus.PENDING_TERMINATION);
+        contract.setCurrentHandlerRole(RoleCode.APPROVER);
+        contract.setCurrentHandlerId(null);
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                oldStatus,
+                ContractStatus.PENDING_TERMINATION,
+                oldRole,
+                RoleCode.APPROVER,
+                FlowActionType.REQUEST_TERMINATION,
+                operatorId,
+                comment
+        );
+    }
+
+    public void approverApproveTermination(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+        User operator = getUserOrThrow(operatorId);
+
+        validateRole(operator, RoleCode.APPROVER, "只有审批角色可以确认终止");
+        validateStatus(contract, ContractStatus.PENDING_TERMINATION, "当前合同不是待终止审批状态");
+
+        String oldStatus = contract.getStatus();
+        String oldRole = contract.getCurrentHandlerRole();
+
+        contract.setStatus(ContractStatus.TERMINATED);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+        contract.setClosedAt(LocalDateTime.now());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                oldStatus,
+                ContractStatus.TERMINATED,
+                oldRole,
+                RoleCode.BUSINESS,
+                FlowActionType.TERMINATE,
+                operatorId,
+                comment
+        );
+    }
+
+    public void approverRejectTermination(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
+        User operator = getUserOrThrow(operatorId);
+
+        // 只有审批人可以驳回
+        validateRole(operator, RoleCode.APPROVER, "只有审批角色可以驳回终止申请");
+        // 必须处于待终止审批
+        validateStatus(contract, ContractStatus.PENDING_TERMINATION, "当前合同不在待终止审批状态");
+
+        String oldStatus = contract.getStatus();
+        String oldRole = contract.getCurrentHandlerRole();
+
+        // 回到执行中（你当前用 ACTIVE 表示执行中）
+        contract.setStatus(ContractStatus.ACTIVE);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
+
+        contractRepository.save(contract);
+
+        saveFlowRecord(
+                contractId,
+                oldStatus,
+                ContractStatus.ACTIVE,
+                oldRole,
+                RoleCode.BUSINESS,
+                FlowActionType.REJECT_TERMINATION,
+                operatorId,
+                comment
+        );
+    }
+
     private Contract getContractOrThrow(Long contractId) {
         return contractRepository.findById(contractId)
                 .orElseThrow(() -> new RuntimeException("合同不存在，contractId=" + contractId));

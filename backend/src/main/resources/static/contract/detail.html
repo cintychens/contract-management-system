@@ -578,6 +578,7 @@
             PENDING_LEGAL: '待法务审核',
             PENDING_FINANCE: '待财务审核',
             PENDING_APPROVAL: '待审批',
+            PENDING_TERMINATION: '待终止审批',
             ACTIVE: '已生效',
             IN_PROGRESS: '履约中',
             COMPLETED: '已完成',
@@ -599,6 +600,7 @@
         case 'PENDING_LEGAL':
         case 'PENDING_FINANCE':
         case 'PENDING_APPROVAL':
+        case 'PENDING_TERMINATION':
             return 'status-pending';
         case 'EXPIRED':
         case 'TERMINATED':
@@ -756,12 +758,57 @@ function renderFlowActions(contract) {
         return;
     }
 
-    if (contract.status === 'ACTIVE') {
-        container.innerHTML = `
-            <span style="color:#10b981; font-weight:600;">当前合同已生效</span>
-        `;
-        return;
-    }
+    if (contract.status === 'ACTIVE' && role === 'BUSINESS') {
+    container.innerHTML = `
+        <button class="action-btn primary" onclick="handleComplete(${contractId})">
+            <i class="fas fa-circle-check"></i> 完成合同
+        </button>
+        <button class="action-btn danger" onclick="handleRequestTerminate(${contractId})">
+            <i class="fas fa-ban"></i> 申请终止
+        </button>
+    `;
+    return;
+}
+
+if (contract.status === 'PENDING_TERMINATION' && role === 'APPROVER') {
+    container.innerHTML = `
+        <button class="action-btn danger" onclick="handleApproveTerminate(${contractId})">
+            <i class="fas fa-stamp"></i> 确认终止
+        </button>
+        <button class="action-btn secondary" onclick="handleRejectTerminate(${contractId})">
+            <i class="fas fa-rotate-left"></i> 驳回终止
+        </button>
+    `;
+    return;
+}
+
+if (contract.status === 'ACTIVE') {
+    container.innerHTML = `
+        <span style="color:#10b981; font-weight:600;">当前合同已生效</span>
+    `;
+    return;
+}
+
+if (contract.status === 'PENDING_TERMINATION') {
+    container.innerHTML = `
+        <span style="color:#f59e0b; font-weight:600;">当前合同待终止审批</span>
+    `;
+    return;
+}
+
+if (contract.status === 'COMPLETED') {
+    container.innerHTML = `
+        <span style="color:#10b981; font-weight:600;">当前合同已完成</span>
+    `;
+    return;
+}
+
+if (contract.status === 'TERMINATED') {
+    container.innerHTML = `
+        <span style="color:#dc3545; font-weight:600;">当前合同已终止</span>
+    `;
+    return;
+}
 
     container.innerHTML = `
         <span style="color:#6b7b8f;">当前角色在此状态下无可执行操作</span>
@@ -794,6 +841,22 @@ function handleApproverApprove(contractId) {
 
 function handleApproverReject(contractId) {
     postFlowAction(`/api/contracts/${contractId}/flow/approver/reject`, contractId);
+}
+
+function handleComplete(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/complete`, contractId);
+}
+
+function handleRequestTerminate(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/request-termination`, contractId);
+}
+
+function handleApproveTerminate(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/approve-termination`, contractId);
+}
+
+function handleRejectTerminate(contractId) {
+    postFlowAction(`/api/contracts/${contractId}/flow/reject-termination`, contractId);
 }
 
 async function loadFlowRecords(contractId) {
@@ -861,7 +924,7 @@ async function postFlowAction(url, contractId) {
             throw new Error(result.message || '流转操作失败');
         }
 
-        alert(result.message || '操作成功');
+        alert(result.data || result.message || '操作成功');
 
         document.getElementById('flowComment').value = '';
         await loadContractDetail();
