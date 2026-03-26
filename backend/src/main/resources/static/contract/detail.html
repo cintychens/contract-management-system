@@ -332,6 +332,315 @@
             color: #dc3545;
         }
 
+        /* ===== 流程条 ===== */
+.flow-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.flow-step {
+    padding: 10px 18px;
+    border-radius: 24px;
+    background: #e6edf5;
+    color: #5b6b7c;
+    font-size: 15px;
+    font-weight: 700;
+    min-width: 92px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(45, 109, 160, 0.08);
+}
+
+.flow-step.done {
+    background: #4da3ff;
+    color: #fff;
+}
+
+.flow-step.active {
+    background: #1a4b75;
+    color: #fff;
+}
+
+.flow-arrow {
+    color: #9aa8b6;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.flow-action-hint {
+    margin-top: 10px;
+    margin-bottom: 16px;
+    color: #6b7b8f;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* ===== secondary按钮 ===== */
+.action-btn.secondary {
+    background: #f5f7fa;
+    color: #1a4b75;
+    border: 1px solid #d7e4f2;
+}
+
+.action-btn.secondary:hover {
+    background: #eaf2fb;
+}
+
+/* ===== Tabs ===== */
+.detail-tabs {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.detail-tab {
+    padding: 10px 18px;
+    border-radius: 22px;
+    background: #eef5fb;
+    color: #1a4b75;
+    border: 1px solid #d7e4f2;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.detail-tab:hover {
+    background: #e3f0ff;
+}
+
+.detail-tab.active {
+    background: linear-gradient(135deg, #2d6da0, #1a4b75);
+    color: white;
+    box-shadow: 0 8px 18px rgba(45, 109, 160, 0.18);
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* ===== 履约节点时间轴 ===== */
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 11px;
+    top: 30px;
+    width: 2px;
+    height: calc(100% + 10px);
+    background: #dbe6f1;
+}
+
+.timeline-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #c8d8ea;
+    flex-shrink: 0;
+    margin-top: 4px;
+    position: relative;
+    z-index: 2;
+}
+
+.timeline-item.done .timeline-dot {
+    background: #4da3ff;
+}
+
+.timeline-item.active .timeline-dot {
+    background: #1a4b75;
+}
+
+.timeline-content {
+    flex: 1;
+    background: #f8fbff;
+    border: 1px solid #e3ecf5;
+    border-radius: 16px;
+    padding: 16px 18px;
+}
+
+.timeline-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a4b75;
+    margin-bottom: 8px;
+}
+
+.timeline-time {
+    font-size: 14px;
+    color: #5f7d9c;
+    margin-bottom: 6px;
+}
+
+.timeline-status {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.done-text {
+    color: #10b981;
+}
+
+.active-text {
+    color: #1a4b75;
+}
+
+.pending-text {
+    color: #f59e0b;
+}
+
+/* ===== 预警提醒 ===== */
+.alert-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.alert-summary-card {
+    background: #f8fbff;
+    border: 1px solid #e3ecf5;
+    border-radius: 18px;
+    padding: 20px;
+    text-align: center;
+}
+
+.alert-summary-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.alert-summary-value.warning {
+    color: #f59e0b;
+}
+
+.alert-summary-value.danger {
+    color: #dc3545;
+}
+
+.alert-summary-value.normal {
+    color: #1a4b75;
+}
+
+.alert-summary-label {
+    font-size: 14px;
+    color: #6b7b8f;
+}
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    background: #f8fbff;
+    border: 1px solid #e3ecf5;
+    border-radius: 18px;
+    padding: 18px;
+}
+
+.alert-item-left {
+    display: flex;
+    gap: 14px;
+    flex: 1;
+}
+
+.alert-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.alert-item.warning .alert-icon {
+    background: #f59e0b;
+}
+
+.alert-item.danger .alert-icon {
+    background: #dc3545;
+}
+
+.alert-item.normal .alert-icon {
+    background: #2d6da0;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a4b75;
+    margin-bottom: 6px;
+}
+
+.alert-desc {
+    font-size: 14px;
+    color: #5f7d9c;
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
+
+.alert-meta {
+    font-size: 13px;
+    color: #8aa0b8;
+}
+
+.alert-tag {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.warning-tag {
+    background: #fff4e0;
+    color: #f59e0b;
+}
+
+.danger-tag {
+    background: #fee9e9;
+    color: #dc3545;
+}
+
+.normal-tag {
+    background: #e8f1fb;
+    color: #2d6da0;
+}
+
         @media (max-width: 1024px) {
             .sidebar {
                 width: 90px;
@@ -370,6 +679,14 @@
                 flex-direction: column;
                 gap: 15px;
             }
+
+             .alert-summary-grid {
+             grid-template-columns: 1fr;
+        }
+
+             .alert-item {
+             flex-direction: column;
+        }
 
             .info-grid {
                 grid-template-columns: 1fr;
@@ -435,99 +752,229 @@
             </div>
         </div>
 
-        <div class="content-card">
-            <div class="section-title">基本信息</div>
-            <div class="info-grid" id="contractInfoGrid"></div>
+        <!-- Tab导航：要放在所有内容上面 -->
+        <div class="detail-tabs">
+            <button class="detail-tab active" onclick="switchDetailTab('overview', this)">合同概览</button>
+            <button class="detail-tab" onclick="switchDetailTab('flow', this)">流转审批</button>
+            <button class="detail-tab" onclick="switchDetailTab('performance', this)">履约节点</button>
+            <button class="detail-tab" onclick="switchDetailTab('alert', this)">预警提醒</button>
         </div>
 
-        <div class="content-card">
-            <div class="section-title">合同正文</div>
-
-            <div class="action-buttons">
-                <button class="action-btn primary" onclick="handleExportWord()">
-                    <i class="fas fa-file-word"></i> 导出 Word
-                </button>
-                <button class="action-btn danger" onclick="handleExportPdf()">
-                    <i class="fas fa-file-pdf"></i> 导出 PDF
-                </button>
+        <!-- 合同概览 -->
+        <div id="tab-overview" class="tab-panel active">
+            <div class="content-card">
+                <div class="section-title">基本信息</div>
+                <div class="info-grid" id="contractInfoGrid"></div>
             </div>
 
-            <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
-        </div>
+            <div class="content-card">
+                <div class="section-title">合同正文</div>
 
-        <div class="content-card">
-            <div class="section-title">解析字段</div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>字段编码</th>
-                        <th>字段名称</th>
-                        <th>字段值</th>
-                        <th>置信度</th>
-                    </tr>
-                    </thead>
-                    <tbody id="fieldTableBody"></tbody>
-                </table>
-                <div id="fieldEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无解析字段</div>
-            </div>
-        </div>
-        <div class="content-card">
-            <div class="section-title">合同流转</div>
-
-            <div class="info-grid" id="flowInfoGrid">
-                <div class="info-item">
-                    <div class="label">当前流转状态</div>
-                    <div class="value" id="flowStatusText">-</div>
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="handleExportWord()">
+                        <i class="fas fa-file-word"></i> 导出 Word
+                    </button>
+                    <button class="action-btn danger" onclick="handleExportPdf()">
+                        <i class="fas fa-file-pdf"></i> 导出 PDF
+                    </button>
                 </div>
-                <div class="info-item">
-                    <div class="label">当前处理角色</div>
-                    <div class="value" id="flowRoleText">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">提交审批时间</div>
-                    <div class="value" id="flowSubmittedAt">-</div>
-                </div>
-                <div class="info-item">
-                    <div class="label">最终审批时间</div>
-                    <div class="value" id="flowApprovedAt">-</div>
-                </div>
+
+                <div class="content-box" id="contractContent" style="margin-top: 16px;">加载中...</div>
             </div>
 
-            <div style="margin-top: 18px;">
-                <div class="label" style="margin-bottom: 8px; color:#6b7b8f;">审批意见 / 流转备注</div>
-                <textarea id="flowComment"
-                          placeholder="请输入审批意见、退回原因或流转备注"
-                          style="width:100%; min-height:90px; border:1px solid #dbe6f1; border-radius:14px; padding:12px; resize:vertical; font-size:14px;"></textarea>
-            </div>
-
-            <div class="action-buttons" id="flowActionButtons" style="margin-top: 18px;">
-                <!-- 动态按钮 -->
-            </div>
-
-            <div style="margin-top: 24px;">
-                <div class="section-title" style="font-size:18px;">流转记录</div>
+            <div class="content-card">
+                <div class="section-title">解析字段</div>
                 <div class="table-responsive">
                     <table>
                         <thead>
                         <tr>
-                            <th>时间</th>
-                            <th>动作</th>
-                            <th>状态流转</th>
-                            <th>角色流转</th>
-                            <th>操作人</th>
-                            <th>备注</th>
+                            <th>字段编码</th>
+                            <th>字段名称</th>
+                            <th>字段值</th>
+                            <th>置信度</th>
                         </tr>
                         </thead>
-                        <tbody id="flowRecordTableBody"></tbody>
+                        <tbody id="fieldTableBody"></tbody>
                     </table>
-                    <div id="flowRecordEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无流转记录</div>
+                    <div id="fieldEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无解析字段</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 流转审批 -->
+        <div id="tab-flow" class="tab-panel">
+            <div class="content-card">
+                <div class="section-title">合同流转</div>
+
+                <div id="flowBar"></div>
+                <div id="flowActionHint" class="flow-action-hint"></div>
+
+                <div class="info-grid" id="flowInfoGrid">
+                    <div class="info-item">
+                        <div class="label">当前流转状态</div>
+                        <div class="value" id="flowStatusText">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">当前处理角色</div>
+                        <div class="value" id="flowRoleText">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">提交审批时间</div>
+                        <div class="value" id="flowSubmittedAt">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">最终审批时间</div>
+                        <div class="value" id="flowApprovedAt">-</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 18px;">
+                    <div class="label" style="margin-bottom: 8px; color:#6b7b8f;">审批意见 / 流转备注</div>
+                    <textarea id="flowComment"
+                              placeholder="请输入审批意见、退回原因或流转备注"
+                              style="width:100%; min-height:90px; border:1px solid #dbe6f1; border-radius:14px; padding:12px; resize:vertical; font-size:14px;"></textarea>
+                </div>
+
+                <div class="action-buttons" id="flowActionButtons" style="margin-top: 18px;">
+                    <!-- 动态按钮 -->
+                </div>
+
+                <div style="margin-top: 24px;">
+                    <div class="section-title" style="font-size:18px;">流转记录</div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>动作</th>
+                                <th>状态流转</th>
+                                <th>角色流转</th>
+                                <th>操作人</th>
+                                <th>备注</th>
+                            </tr>
+                            </thead>
+                            <tbody id="flowRecordTableBody"></tbody>
+                        </table>
+                        <div id="flowRecordEmptyHint" style="padding:20px 0; text-align:center; color:#6b7b8f;">暂无流转记录</div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 </div>
 
+<div id="tab-performance" class="tab-panel">
+    <div class="content-card">
+        <div class="section-title">履约节点时间轴</div>
+
+        <div class="timeline" id="performanceTimeline">
+            <div class="timeline-item done">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">合同签订</div>
+                    <div class="timeline-time">计划时间：2026-03-20 10:00:00</div>
+                    <div class="timeline-time">实际时间：2026-03-20 10:05:00</div>
+                    <div class="timeline-status done-text">状态：已完成</div>
+                </div>
+            </div>
+
+            <div class="timeline-item done">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">货物发运</div>
+                    <div class="timeline-time">计划时间：2026-03-22 09:00:00</div>
+                    <div class="timeline-time">实际时间：2026-03-22 09:20:00</div>
+                    <div class="timeline-status done-text">状态：已完成</div>
+                </div>
+            </div>
+
+            <div class="timeline-item active">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">到货验收</div>
+                    <div class="timeline-time">计划时间：2026-03-26 14:00:00</div>
+                    <div class="timeline-time">实际时间：-</div>
+                    <div class="timeline-status active-text">状态：进行中</div>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">付款结算</div>
+                    <div class="timeline-time">计划时间：2026-03-30 18:00:00</div>
+                    <div class="timeline-time">实际时间：-</div>
+                    <div class="timeline-status pending-text">状态：未开始</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-alert" class="tab-panel">
+    <div class="content-card">
+        <div class="section-title">预警提醒</div>
+
+        <div class="alert-summary-grid">
+            <div class="alert-summary-card">
+                <div class="alert-summary-value warning">2</div>
+                <div class="alert-summary-label">待处理提醒</div>
+            </div>
+            <div class="alert-summary-card">
+                <div class="alert-summary-value danger">1</div>
+                <div class="alert-summary-label">高风险预警</div>
+            </div>
+            <div class="alert-summary-card">
+                <div class="alert-summary-value normal">3</div>
+                <div class="alert-summary-label">总预警数</div>
+            </div>
+        </div>
+
+        <div class="alert-list" id="alertList">
+            <div class="alert-item warning">
+                <div class="alert-item-left">
+                    <div class="alert-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">付款节点即将到期</div>
+                        <div class="alert-desc">该合同付款节点将在 3 天后到期，请及时跟进付款流程。</div>
+                        <div class="alert-meta">提醒时间：2026-03-27 10:00:00</div>
+                    </div>
+                </div>
+                <div class="alert-tag warning-tag">待处理</div>
+            </div>
+
+            <div class="alert-item danger">
+                <div class="alert-item-left">
+                    <div class="alert-icon">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">验收节点已逾期</div>
+                        <div class="alert-desc">到货验收节点已超过计划时间 2 天，存在履约风险。</div>
+                        <div class="alert-meta">预警时间：2026-03-26 18:30:00</div>
+                    </div>
+                </div>
+                <div class="alert-tag danger-tag">高风险</div>
+            </div>
+
+            <div class="alert-item normal">
+                <div class="alert-item-left">
+                    <div class="alert-icon">
+                        <i class="fas fa-circle-info"></i>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">合同已完成流转</div>
+                        <div class="alert-desc">当前合同审批流程已全部完成，可进入履约执行阶段。</div>
+                        <div class="alert-meta">记录时间：2026-03-23 11:20:02</div>
+                    </div>
+                </div>
+                <div class="alert-tag normal-tag">已记录</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 
@@ -610,6 +1057,56 @@
             return 'status-pending';
     }
 }
+    function getActionText(action) {
+    const map = {
+        SUBMIT: '提交审核',
+        APPROVE: '审批通过',
+        REJECT: '退回',
+        COMPLETE: '完成合同',
+        REQUEST_TERMINATION: '申请终止',
+        TERMINATE: '确认终止',
+        REJECT_TERMINATION: '驳回终止'
+    };
+    return map[action] || action || '-';
+}
+
+    function renderFlowBar(status) {
+    const steps = [
+        { key: 'DRAFT', text: '草稿' },
+        { key: 'PENDING_LEGAL', text: '法务审核' },
+        { key: 'PENDING_FINANCE', text: '财务审核' },
+        { key: 'PENDING_APPROVAL', text: '审批' },
+        { key: 'ACTIVE', text: '已生效' },
+        { key: 'COMPLETED', text: '已完成' }
+    ];
+
+    const indexMap = {
+        DRAFT: 0,
+        PENDING_LEGAL: 1,
+        PENDING_FINANCE: 2,
+        PENDING_APPROVAL: 3,
+        ACTIVE: 4,
+        COMPLETED: 5,
+        TERMINATED: 5
+    };
+
+    const currentIndex = indexMap[status] ?? 0;
+
+    const html = steps.map((step, i) => {
+        let cls = "flow-step";
+        if (i < currentIndex) cls += " done";
+        else if (i === currentIndex) cls += " active";
+
+        return `
+            <span class="${cls}">${step.text}</span>
+            ${i < steps.length - 1 ? '<span class="flow-arrow">→</span>' : ''}
+        `;
+    }).join('');
+
+    document.getElementById("flowBar").innerHTML = `
+        <div class="flow-bar">${html}</div>
+    `;
+}
 
     function loadUserInfo() {
         try {
@@ -657,6 +1154,25 @@
             return null;
         }
     }
+
+    function switchDetailTab(tabName, el) {
+    document.querySelectorAll('.detail-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    if (el) {
+        el.classList.add('active');
+    }
+
+    const target = document.getElementById(`tab-${tabName}`);
+    if (target) {
+        target.classList.add('active');
+    }
+}
 
     function getCurrentUserId() {
         const user = getCurrentUserInfo();
@@ -706,7 +1222,9 @@ function renderFlowSummary(contract) {
 
 function renderFlowActions(contract) {
     const container = document.getElementById('flowActionButtons');
+    const hintEl = document.getElementById('flowActionHint');
     container.innerHTML = '';
+    hintEl.textContent = '';
 
     const role = getCurrentUserRole();
     if (!contract || !contract.status) return;
@@ -714,51 +1232,56 @@ function renderFlowActions(contract) {
     const contractId = contract.contractId;
 
     if (contract.status === 'DRAFT' && role === 'BUSINESS') {
-        container.innerHTML = `
-            <button class="action-btn primary" onclick="handleFlowSubmit(${contractId})">
-                <i class="fas fa-paper-plane"></i> 提交法务审核
-            </button>
-        `;
-        return;
-    }
+    hintEl.textContent = '当前处于草稿阶段，你可以提交法务审核';
+    container.innerHTML = `
+        <button class="action-btn primary" onclick="handleFlowSubmit(${contractId})">
+            <i class="fas fa-paper-plane"></i> 提交法务审核
+        </button>
+    `;
+    return;
+}
 
     if (contract.status === 'PENDING_LEGAL' && role === 'LEGAL') {
-        container.innerHTML = `
-            <button class="action-btn primary" onclick="handleLegalApprove(${contractId})">
-                <i class="fas fa-check"></i> 法务通过
-            </button>
-            <button class="action-btn danger" onclick="handleLegalReject(${contractId})">
-                <i class="fas fa-rotate-left"></i> 法务退回
-            </button>
-        `;
-        return;
-    }
+    hintEl.textContent = '当前处于法务审核阶段，你可以通过或退回合同';
+    container.innerHTML = `
+        <button class="action-btn primary" onclick="handleLegalApprove(${contractId})">
+            <i class="fas fa-check"></i> 法务通过
+        </button>
+        <button class="action-btn danger" onclick="handleLegalReject(${contractId})">
+            <i class="fas fa-rotate-left"></i> 法务退回
+        </button>
+    `;
+    return;
+}
 
     if (contract.status === 'PENDING_FINANCE' && role === 'FINANCE') {
-        container.innerHTML = `
-            <button class="action-btn primary" onclick="handleFinanceApprove(${contractId})">
-                <i class="fas fa-check"></i> 财务通过
-            </button>
-            <button class="action-btn danger" onclick="handleFinanceReject(${contractId})">
-                <i class="fas fa-rotate-left"></i> 财务退回
-            </button>
-        `;
-        return;
-    }
+    hintEl.textContent = '当前处于财务审核阶段，你可以通过或退回合同';
+    container.innerHTML = `
+        <button class="action-btn primary" onclick="handleFinanceApprove(${contractId})">
+            <i class="fas fa-check"></i> 财务通过
+        </button>
+        <button class="action-btn danger" onclick="handleFinanceReject(${contractId})">
+            <i class="fas fa-rotate-left"></i> 财务退回
+        </button>
+    `;
+    return;
+}
 
     if (contract.status === 'PENDING_APPROVAL' && role === 'APPROVER') {
-        container.innerHTML = `
-            <button class="action-btn primary" onclick="handleApproverApprove(${contractId})">
-                <i class="fas fa-stamp"></i> 审批通过
-            </button>
-            <button class="action-btn danger" onclick="handleApproverReject(${contractId})">
-                <i class="fas fa-ban"></i> 审批驳回
-            </button>
-        `;
-        return;
-    }
+    hintEl.textContent = '当前等待最终审批，你可以批准或驳回合同';
+    container.innerHTML = `
+        <button class="action-btn primary" onclick="handleApproverApprove(${contractId})">
+            <i class="fas fa-stamp"></i> 审批通过
+        </button>
+        <button class="action-btn danger" onclick="handleApproverReject(${contractId})">
+            <i class="fas fa-ban"></i> 审批驳回
+        </button>
+    `;
+    return;
+}
 
     if (contract.status === 'ACTIVE' && role === 'BUSINESS') {
+    hintEl.textContent = '当前合同已生效，你可以完成合同或申请终止';
     container.innerHTML = `
         <button class="action-btn primary" onclick="handleComplete(${contractId})">
             <i class="fas fa-circle-check"></i> 完成合同
@@ -771,6 +1294,7 @@ function renderFlowActions(contract) {
 }
 
 if (contract.status === 'PENDING_TERMINATION' && role === 'APPROVER') {
+    hintEl.textContent = '当前合同处于待终止审批阶段，你可以确认终止或驳回终止申请';
     container.innerHTML = `
         <button class="action-btn danger" onclick="handleApproveTerminate(${contractId})">
             <i class="fas fa-stamp"></i> 确认终止
@@ -783,6 +1307,7 @@ if (contract.status === 'PENDING_TERMINATION' && role === 'APPROVER') {
 }
 
 if (contract.status === 'ACTIVE') {
+    hintEl.textContent = '当前合同已生效';
     container.innerHTML = `
         <span style="color:#10b981; font-weight:600;">当前合同已生效</span>
     `;
@@ -790,6 +1315,7 @@ if (contract.status === 'ACTIVE') {
 }
 
 if (contract.status === 'PENDING_TERMINATION') {
+    hintEl.textContent = '当前合同待终止审批';
     container.innerHTML = `
         <span style="color:#f59e0b; font-weight:600;">当前合同待终止审批</span>
     `;
@@ -797,6 +1323,7 @@ if (contract.status === 'PENDING_TERMINATION') {
 }
 
 if (contract.status === 'COMPLETED') {
+    hintEl.textContent = '当前合同已完成';
     container.innerHTML = `
         <span style="color:#10b981; font-weight:600;">当前合同已完成</span>
     `;
@@ -804,12 +1331,14 @@ if (contract.status === 'COMPLETED') {
 }
 
 if (contract.status === 'TERMINATED') {
+    hintEl.textContent = '当前合同已终止';
     container.innerHTML = `
         <span style="color:#dc3545; font-weight:600;">当前合同已终止</span>
     `;
     return;
 }
 
+    hintEl.textContent = '当前角色在此状态下无可执行操作';
     container.innerHTML = `
         <span style="color:#6b7b8f;">当前角色在此状态下无可执行操作</span>
     `;
@@ -881,7 +1410,7 @@ async function loadFlowRecords(contractId) {
         tbody.innerHTML = records.map(item => `
             <tr>
                 <td>${formatDateTime(item.createdAt)}</td>
-                <td>${escapeHtml(item.actionType || '-')}</td>
+                <td>${escapeHtml(getActionText(item.actionType))}</td>
                 <td>${escapeHtml(getStatusText(item.fromStatus))} → ${escapeHtml(getStatusText(item.toStatus))}</td>
                 <td>${escapeHtml(getRoleText(item.fromRole))} → ${escapeHtml(getRoleText(item.toRole))}</td>
                 <td>${escapeHtml(item.operatorName || '-')}</td>
@@ -1054,6 +1583,7 @@ async function handleExportPdf() {
             contract.content || '暂无合同正文内容';
 
         renderFlowSummary(contract);
+        renderFlowBar(contract.status);
         renderFlowActions(contract);
         await loadFlowRecords(contract.contractId);
 
