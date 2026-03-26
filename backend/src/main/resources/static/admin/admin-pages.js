@@ -130,15 +130,30 @@ function renderUserManagement() {
           <div>管理员</div>
         </div>
         <div class="stat-mini-card">
-          <div class="stat-mini-value" id="normalUserCount">0</div>
-          <div>普通用户</div>
+          <div class="stat-mini-value" id="businessCount">0</div>
+          <div>业务人员</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="legalCount">0</div>
+          <div>法务人员</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="financeCount">0</div>
+          <div>财务人员</div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-value" id="approverCount">0</div>
+          <div>审批人员</div>
         </div>
       </div>
 
       <div class="tabs" id="userTabs">
         <div class="tab active" onclick="filterUsers('ALL', this)">全部用户</div>
-        <div class="tab" onclick="filterUsers('USER', this)">普通用户</div>
         <div class="tab" onclick="filterUsers('ADMIN', this)">管理员</div>
+        <div class="tab" onclick="filterUsers('BUSINESS', this)">业务人员</div>
+        <div class="tab" onclick="filterUsers('LEGAL', this)">法务人员</div>
+        <div class="tab" onclick="filterUsers('FINANCE', this)">财务人员</div>
+        <div class="tab" onclick="filterUsers('APPROVER', this)">审批人员</div>
       </div>
 
       <div class="table-responsive">
@@ -160,12 +175,12 @@ function renderUserManagement() {
           <tbody id="userTableBody"></tbody>
         </table>
 
-        <div id="userEmptyHint" style="padding: 40px 0; text-align: center; color: #6b7b8f;">
-          暂无用户数据，请点击右上角“新建用户”创建。
+        <div id="userEmptyHint" style="padding: 40px 0; text-align: center; color:#6b7b8f; display:none;">
+          暂无用户数据
         </div>
 
         <div id="userPagination"
-             style="margin-top: 20px; display:flex; justify-content: space-between; align-items:center; color:#6b7b8f;">
+             style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; color:#6b7b8f;">
           <div id="userPageInfo">—</div>
           <div style="display:flex; gap:10px;">
             <button class="btn-outline" id="userPrevBtn">上一页</button>
@@ -175,6 +190,18 @@ function renderUserManagement() {
       </div>
     </div>
   `;
+}
+
+function getUserRoleText(roleCode) {
+    const map = {
+        ADMIN: "管理员",
+        USER: "普通用户",
+        BUSINESS: "业务人员",
+        LEGAL: "法务人员",
+        FINANCE: "财务人员",
+        APPROVER: "审批人员"
+    };
+    return map[roleCode] || roleCode || "-";
 }
 
 function initUsersPage() {
@@ -221,18 +248,25 @@ async function loadUsersStats() {
         if (!resp.ok) throw new Error(await resp.text());
 
         const data = await resp.json();
+        console.log("users stats =", data);
 
         const totalEl = document.getElementById("userTotalCount");
         const activeEl = document.getElementById("userActiveCount");
         const disabledEl = document.getElementById("userDisabledCount");
         const adminEl = document.getElementById("adminCount");
-        const userEl = document.getElementById("normalUserCount");
+        const businessEl = document.getElementById("businessCount");
+        const legalEl = document.getElementById("legalCount");
+        const financeEl = document.getElementById("financeCount");
+        const approverEl = document.getElementById("approverCount");
 
-        if (adminEl) adminEl.textContent = data.adminCount ?? 0;
-        if (userEl) userEl.textContent = data.userCount ?? 0;
         if (totalEl) totalEl.textContent = data.total ?? 0;
         if (activeEl) activeEl.textContent = data.enabled ?? 0;
         if (disabledEl) disabledEl.textContent = data.disabled ?? 0;
+        if (adminEl) adminEl.textContent = data.adminCount ?? 0;
+        if (businessEl) businessEl.textContent = data.businessCount ?? 0;
+        if (legalEl) legalEl.textContent = data.legalCount ?? 0;
+        if (financeEl) financeEl.textContent = data.financeCount ?? 0;
+        if (approverEl) approverEl.textContent = data.approverCount ?? 0;
     } catch (e) {
         console.error("loadUsersStats error:", e);
     }
@@ -285,7 +319,7 @@ async function loadUsersTable() {
 
         tbody.innerHTML = records.map((u, idx) => {
             const seq = (page - 1) * size + (idx + 1);
-            const roleText = u.roleCode === "ADMIN" ? "管理员" : "普通用户";
+            const roleText = getUserRoleText(u.roleCode);
             const statusHtml = u.status === "ENABLED"
                 ? `<span class="status-badge status-active">启用</span>`
                 : `<span class="status-badge status-disabled">禁用</span>`;
@@ -345,7 +379,6 @@ function filterUsers(role, el) {
 
 function openEditUser(userId, username, roleCode, status, fullName = "", remark = "") {
     document.getElementById("editUsername").value = username;
-    document.getElementById("editRole").value = roleCode === "ADMIN" ? "admin" : "user";
     document.getElementById("editStatus").value = status === "ENABLED" ? "active" : "disabled";
 
     const fullNameEl = document.getElementById("editFullName");
@@ -362,14 +395,13 @@ function openEditUser(userId, username, roleCode, status, fullName = "", remark 
     form.onsubmit = async (e) => {
         e.preventDefault();
 
-        const role = document.getElementById("editRole").value;
         const st = document.getElementById("editStatus").value;
         const newFullName = document.getElementById("editFullName").value.trim();
         const newRemark = document.getElementById("editRemark").value.trim();
 
         const payload = {
             fullName: newFullName,
-            roleCode: role === "admin" ? "ADMIN" : "USER",
+            roleCode: roleCode,
             status: st === "active" ? "ENABLED" : "DISABLED",
             remark: newRemark
         };

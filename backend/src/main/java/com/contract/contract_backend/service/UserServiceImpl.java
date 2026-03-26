@@ -29,7 +29,7 @@ public class UserServiceImpl implements UserService {
         );
 
         String kw = (keyword == null) ? "" : keyword.trim();
-        String r = (role == null) ? "" : role.trim().toUpperCase(); // USER / ADMIN / ALL / ""
+        String r = (role == null) ? "" : role.trim().toUpperCase();
 
         boolean hasKw = !kw.isEmpty();
         boolean hasRole = !r.isEmpty() && !"ALL".equals(r);
@@ -62,6 +62,10 @@ public class UserServiceImpl implements UserService {
 
         long adminCount = userRepository.countByRoleCode("ADMIN");
         long userCount = userRepository.countByRoleCode("USER");
+        long businessCount = userRepository.countByRoleCode("BUSINESS");
+        long legalCount = userRepository.countByRoleCode("LEGAL");
+        long financeCount = userRepository.countByRoleCode("FINANCE");
+        long approverCount = userRepository.countByRoleCode("APPROVER");
 
         return AdminUserDto.Stats.builder()
                 .total(total)
@@ -69,6 +73,10 @@ public class UserServiceImpl implements UserService {
                 .disabled(disabled)
                 .adminCount(adminCount)
                 .userCount(userCount)
+                .businessCount(businessCount)
+                .legalCount(legalCount)
+                .financeCount(financeCount)
+                .approverCount(approverCount)
                 .build();
     }
 
@@ -87,7 +95,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (req.getRoleCode() != null && !req.getRoleCode().isBlank()) {
-            user.setRoleCode(req.getRoleCode().trim().toUpperCase()); // USER / ADMIN
+            user.setRoleCode(req.getRoleCode().trim().toUpperCase());
         }
 
         if (req.getStatus() != null && !req.getStatus().isBlank()) {

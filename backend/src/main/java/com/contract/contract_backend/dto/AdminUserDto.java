@@ -25,8 +25,8 @@ public class AdminUserDto {
         private String username;
         private String fullName;
         private String remark;
-        private String roleCode;   // USER / ADMIN
-        private String status;     // ENABLED / DISABLED
+        private String roleCode;
+        private String status;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
         private LocalDateTime lastLoginAt;
@@ -44,9 +44,12 @@ public class AdminUserDto {
         private long enabled;
         private long disabled;
 
-        // ✅ 新增：角色数量
         private long adminCount;
         private long userCount;
+        private long businessCount;
+        private long legalCount;
+        private long financeCount;
+        private long approverCount;
     }
 
     /**
