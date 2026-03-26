@@ -884,7 +884,7 @@ async function loadFlowRecords(contractId) {
                 <td>${escapeHtml(item.actionType || '-')}</td>
                 <td>${escapeHtml(getStatusText(item.fromStatus))} → ${escapeHtml(getStatusText(item.toStatus))}</td>
                 <td>${escapeHtml(getRoleText(item.fromRole))} → ${escapeHtml(getRoleText(item.toRole))}</td>
-                <td>${item.operatorId ?? '-'}</td>
+                <td>${escapeHtml(item.operatorName || '-')}</td>
                 <td>${escapeHtml(item.comment || '-')}</td>
             </tr>
         `).join('');

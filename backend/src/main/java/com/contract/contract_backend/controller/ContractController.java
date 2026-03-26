@@ -3,8 +3,6 @@ package com.contract.contract_backend.controller;
 import com.contract.contract_backend.common.Result;
 import com.contract.contract_backend.dto.ContractFieldResponse;
 import com.contract.contract_backend.dto.ContractUploadResponse;
-import com.contract.contract_backend.dto.FlowActionReq;
-import com.contract.contract_backend.entity.ContractFlowRecord;
 import com.contract.contract_backend.service.ContractService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

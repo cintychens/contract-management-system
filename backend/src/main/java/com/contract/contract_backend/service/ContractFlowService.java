@@ -225,7 +225,28 @@ public class ContractFlowService {
 
     public List<ContractFlowRecord> getFlowRecords(Long contractId) {
         getContractOrThrow(contractId);
-        return flowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
+
+        List<ContractFlowRecord> records =
+                flowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
+
+        for (ContractFlowRecord record : records) {
+            if (record.getOperatorId() != null) {
+                User user = userRepository.findById(record.getOperatorId()).orElse(null);
+                if (user != null) {
+                    if (user.getFullName() != null && !user.getFullName().isBlank()) {
+                        record.setOperatorName(user.getFullName());
+                    } else {
+                        record.setOperatorName(user.getUsername());
+                    }
+                } else {
+                    record.setOperatorName("未知用户");
+                }
+            } else {
+                record.setOperatorName("-");
+            }
+        }
+
+        return records;
     }
 
     public void completeContract(Long contractId, Long operatorId, String comment) {

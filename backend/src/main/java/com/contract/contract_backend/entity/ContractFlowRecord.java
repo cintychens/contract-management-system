@@ -63,6 +63,9 @@ public class ContractFlowRecord {
     @Column(name = "OPERATOR_ID", nullable = false)
     private Long operatorId;
 
+    @Transient
+    private String operatorName;
+
     /**
      * 审批/退回意见
      */
