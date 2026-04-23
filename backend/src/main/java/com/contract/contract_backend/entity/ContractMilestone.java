@@ -2,7 +2,7 @@ package com.contract.contract_backend.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -18,8 +18,8 @@ public class ContractMilestone {
 
     private Integer sortOrder;
 
-    private LocalDate dueDate;
-    private LocalDate actualDate;
+    private LocalDateTime dueDate;
+    private LocalDateTime actualDate;
 
     private String status;
 

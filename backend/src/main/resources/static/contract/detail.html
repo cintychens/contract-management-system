@@ -877,7 +877,21 @@
 <div id="tab-performance" class="tab-panel">
     <div class="content-card">
         <div class="section-title">履约节点时间轴</div>
+        <div id="progressContainer" style="margin:10px 0;"></div>
         <div class="timeline" id="performanceTimeline"></div>
+    </div>
+    <div class="content-card">
+        <div class="section-title">履约操作记录</div>
+        <table>
+            <thead>
+            <tr>
+                <th>时间</th>
+                <th>节点</th>
+                <th>状态变化</th>
+            </tr>
+            </thead>
+            <tbody id="milestoneLogTable"></tbody>
+        </table>
     </div>
 </div>
 
@@ -1402,6 +1416,19 @@ async function loadFlowRecords(contractId) {
     }
 }
 
+function formatDateTime(dt) {
+    if (!dt) return '-';
+
+    const d = new Date(dt);
+
+    return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0') + ' ' +
+        String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0') + ':' +
+        String(d.getSeconds()).padStart(2,'0');
+}
+
 async function postFlowAction(url, contractId) {
     const operatorId = getCurrentUserId();
     const comment = document.getElementById('flowComment').value || '';
@@ -1590,8 +1617,12 @@ async function handleExportPdf() {
         const resp = await authFetch(`/api/milestones/${contractId}`);
         if (!resp.ok) throw new Error('获取履约节点失败');
 
-        const list = await resp.json();
-        renderMilestones(list || []);
+        const result = await resp.json();
+        const list = result.data || result || [];
+
+        renderMilestones(list);
+        loadMilestoneLogs(contractId);
+
     } catch (e) {
         console.error(e);
         container.innerHTML = `
@@ -1602,63 +1633,148 @@ async function handleExportPdf() {
     }
 }
 
-    function renderMilestones(list) {
-    const container = document.getElementById('performanceTimeline');
-    if (!container) return;
+    function renderProgress(list) {
+    const total = list.length;
+    const done = list.filter(x => x.status === 'COMPLETED').length;
+    const percent = total === 0 ? 0 : Math.round(done / total * 100);
 
-    if (!list || list.length === 0) {
-        container.innerHTML = `
-            <div style="color:#6b7b8f; padding: 12px 0;">
-                暂无履约节点
-            </div>
-        `;
-        return;
-    }
+    const container = document.getElementById("progressContainer");
 
-    let html = '';
+    container.innerHTML = `
+        <div>履约进度：${done}/${total}（${percent}%）</div>
+        <div style="height:8px;background:#eee;border-radius:6px;margin-top:5px;">
+            <div style="width:${percent}%;background:#2d6da0;height:100%;border-radius:6px;"></div>
+        </div>
+    `;
+}
+
+    function generateAlerts(list) {
+    const now = new Date();
+    let html = "";
 
     list.forEach(item => {
-        let itemClass = '';
-        let statusClass = 'pending-text';
+        if (item.status === 'COMPLETED') return;
 
-        if (item.status === 'COMPLETED') {
-            itemClass = 'done';
-            statusClass = 'done-text';
-        } else if (item.status === 'IN_PROGRESS') {
-            itemClass = 'active';
-            statusClass = 'active-text';
-        } else if (item.status === 'OVERDUE') {
-            itemClass = 'active';
-            statusClass = 'pending-text';
+        const due = new Date(item.dueDate);
+        const diff = (due - now) / (1000*60*60*24);
+
+        if (diff < 0) {
+            html += `
+            <div class="alert-item danger">
+                ⚠ ${item.name} 已逾期 ${Math.abs(Math.floor(diff))} 天
+            </div>`;
+        } else if (diff <= 3) {
+            html += `
+            <div class="alert-item warning">
+                ⏰ ${item.name} 将在 ${Math.ceil(diff)} 天内到期
+            </div>`;
+        }
+    });
+
+    document.getElementById("alertList").innerHTML = html;
+}
+
+    function renderMilestones(list) {
+    const container = document.getElementById("performanceTimeline");
+    const now = new Date();
+
+    let html = "";
+
+    list.forEach((item, index) => {
+
+        let status = item.status;
+        let due = item.dueDate ? new Date(item.dueDate) : null;
+
+        // 自动状态计算
+        if (status !== 'COMPLETED' && due) {
+            if (due < now) {
+                status = 'OVERDUE';
+            } else if ((due - now) / (1000*60*60*24) <= 3) {
+                status = 'IN_PROGRESS';
+            }
         }
 
+        // 样式
+        let className = "timeline-item";
+        if (status === 'COMPLETED') className += " done";
+        else if (status === 'IN_PROGRESS') className += " active";
+
+        // 状态文本
+        let statusText = '';
+        let color = '';
+
+        if (status === 'COMPLETED') {
+            statusText = '已完成';
+            color = '#28a745';
+        } else if (status === 'IN_PROGRESS') {
+            statusText = '进行中';
+            color = '#2d6da0';
+        } else if (status === 'OVERDUE') {
+            statusText = '已逾期';
+            color = '#dc3545';
+        } else {
+            statusText = '未开始';
+            color = '#f39c12';
+        }
+
+        // ⭐ 权限 + 顺序控制（只写一次！）
+        const role = getCurrentUserRole();
+        let prev = list[index - 1];
+
+        let canOperate =
+            item.status !== 'COMPLETED' &&
+            (role === item.responsibleRole || role === 'ADMIN') &&
+            (!prev || prev.status === 'COMPLETED');
+
         html += `
-            <div class="timeline-item ${itemClass}">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">${escapeHtml(item.name || '-')}</div>
-                    <div class="timeline-time">计划时间：${escapeHtml(item.dueDate || '-')}</div>
-                    <div class="timeline-time">实际时间：${escapeHtml(item.actualDate || '-')}</div>
-                    <div class="timeline-status ${statusClass}">
-                        状态：${escapeHtml(getMilestoneStatusText(item.status))}
-                    </div>
-                    ${
-                        item.status !== 'COMPLETED'
-                            ? `<div style="margin-top:10px;">
-                                   <button class="action-btn primary" onclick="completeMilestone(${item.id})">
-                                       标记完成
-                                   </button>
-                               </div>`
-                            : ''
-                    }
+        <div class="${className}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+                <div class="timeline-title">${item.name}</div>
+                <div>负责人：${getRoleText(item.responsibleRole)}</div>
+                <div>计划时间：${formatDateTime(item.dueDate)}</div>
+                <div>实际时间：${formatDateTime(item.actualDate)}</div>
+                <div style="color:${color};font-weight:bold">
+                    状态：${statusText}
                 </div>
+
+                ${
+                    item.status === 'COMPLETED'
+                        ? '✔'
+                        : (canOperate
+                            ? `<button onclick="completeMilestone(${item.id})">标记完成</button>`
+                            : '')
+                }
             </div>
-        `;
+        </div>`;
     });
 
     container.innerHTML = html;
+
+    renderProgress(list);
+    generateAlerts(list);
 }
 
+    async function loadMilestoneLogs(contractId) {
+    try {
+        const resp = await authFetch(`/api/milestones/${contractId}/logs`);
+        const result = await resp.json();
+
+        const list = result.data || result || [];
+
+        document.getElementById("milestoneLogTable").innerHTML =
+            list.map(l => `
+                <tr>
+                    <td>${l.operateTime}</td>
+                    <td>${l.milestoneName || l.milestoneId}</td>
+                    <td>${l.oldStatus} → ${l.newStatus}</td>
+                </tr>
+            `).join('');
+
+    } catch (e) {
+        console.error(e);
+    }
+}
     async function completeMilestone(id) {
     try {
         const resp = await authFetch(`/api/milestones/${id}/complete`, {
@@ -1666,8 +1782,7 @@ async function handleExportPdf() {
         });
 
         if (!resp.ok) throw new Error('更新履约节点失败');
-
-        await loadMilestones();
+         await loadMilestones();
     } catch (e) {
         console.error(e);
         alert('更新失败：' + (e.message || e));
