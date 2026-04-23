@@ -31,28 +31,31 @@ public class ContractMilestoneService {
         return repository.findByContractIdOrderBySortOrder(contractId);
     }
 
-    // ⭐ 完成节点（最终完整版）
+    // ⭐ 完成节点（最终版）
     public void complete(Long id) {
 
-        // 1️⃣ 查节点
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
 
-        // 2️⃣ 查合同
         Contract contract = contractRepository.findById(m.getContractId())
                 .orElseThrow(() -> new RuntimeException("合同不存在"));
 
-        // 3️⃣ 必须已生效
+        // ⭐ 必须生效
         if (!ContractStatus.ACTIVE.equals(contract.getStatus())) {
             throw new RuntimeException("合同未生效，不能执行履约");
         }
 
-        // 4️⃣ 防重复点击
+        // ⭐ 防重复
         if ("COMPLETED".equals(m.getStatus())) {
             throw new RuntimeException("节点已完成，不能重复操作");
         }
 
-        // 5️⃣ 顺序校验
+        // ⭐ 必须先填写预计时间（新加逻辑）
+        if (m.getExpectedDate() == null) {
+            throw new RuntimeException("请先填写预计完成时间");
+        }
+
+        // ⭐ 顺序校验
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
@@ -71,7 +74,7 @@ public class ContractMilestoneService {
             }
         }
 
-        // 6️⃣ 写日志
+        // ⭐ 写日志
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
@@ -79,12 +82,12 @@ public class ContractMilestoneService {
         log.setOperateTime(LocalDateTime.now());
         logRepository.save(log);
 
-        // 7️⃣ 更新节点
+        // ⭐ 更新
         m.setStatus("COMPLETED");
         m.setActualDate(LocalDateTime.now());
         repository.save(m);
 
-        // 8️⃣ 检查是否全部完成
+        // ⭐ 全部完成 → 合同完成
         boolean allDone = repository
                 .findByContractIdOrderBySortOrder(m.getContractId())
                 .stream()
@@ -96,7 +99,7 @@ public class ContractMilestoneService {
         }
     }
 
-    // ⭐ 初始化履约节点
+    // ⭐ 初始化履约节点（已删除 dueDate）
     public void initMilestones(Long contractId, LocalDate startDate) {
 
         ContractMilestone m1 = new ContractMilestone();
@@ -105,7 +108,6 @@ public class ContractMilestoneService {
         m1.setResponsibleRole("BUSINESS");
         m1.setSortOrder(1);
         m1.setStatus("PENDING");
-        m1.setDueDate(startDate.atTime(23, 59, 59));
 
         ContractMilestone m2 = new ContractMilestone();
         m2.setContractId(contractId);
@@ -113,7 +115,6 @@ public class ContractMilestoneService {
         m2.setResponsibleRole("BUSINESS");
         m2.setSortOrder(2);
         m2.setStatus("PENDING");
-        m2.setDueDate(startDate.plusDays(3).atTime(23, 59, 59));
 
         ContractMilestone m3 = new ContractMilestone();
         m3.setContractId(contractId);
@@ -121,7 +122,6 @@ public class ContractMilestoneService {
         m3.setResponsibleRole("LEGAL");
         m3.setSortOrder(3);
         m3.setStatus("PENDING");
-        m3.setDueDate(startDate.plusDays(6).atTime(23, 59, 59));
 
         ContractMilestone m4 = new ContractMilestone();
         m4.setContractId(contractId);
@@ -129,8 +129,27 @@ public class ContractMilestoneService {
         m4.setResponsibleRole("FINANCE");
         m4.setSortOrder(4);
         m4.setStatus("PENDING");
-        m4.setDueDate(startDate.plusDays(10).atTime(23, 59, 59));
 
         repository.saveAll(List.of(m1, m2, m3, m4));
+    }
+
+    // ⭐ 设置预计时间
+    public void setExpected(Long id, LocalDateTime expectedDate, String role) {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+
+        // 权限控制
+        if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
+            throw new RuntimeException("无权限设置预计时间");
+        }
+
+        // 已完成不可修改
+        if ("COMPLETED".equals(m.getStatus())) {
+            throw new RuntimeException("节点已完成，不能修改预计时间");
+        }
+
+        m.setExpectedDate(expectedDate);
+        repository.save(m);
     }
 }

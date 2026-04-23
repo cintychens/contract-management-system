@@ -1754,22 +1754,35 @@ async function handleExportPdf() {
             <div class="timeline-content">
                 <div class="timeline-title">${item.name}</div>
                 <div>负责人：${getRoleText(item.responsibleRole)}</div>
-                <div>计划时间：${formatDateTime(item.dueDate)}</div>
+                <div>预计时间：${formatDateTime(item.expectedDate)}</div>
                 <div>实际时间：${formatDateTime(item.actualDate)}</div>
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
                 </div>
 
                 ${
-                    item.status === 'COMPLETED'
-                        ? '✔'
-                        : `<button
-                                ${!canOperate ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="无权限或未到该节点"' : ''}
-                                onclick="completeMilestone(${item.id})"
-                            >
-                                标记完成
-                            </button>`
-                }
+    item.status === 'COMPLETED'
+        ? '✔'
+        : `
+        ${
+            canOperate && !item.expectedDate
+                ? `
+                <input type="datetime-local" id="expected-${item.id}" style="margin-top:6px;" />
+                <button onclick="setExpected(${item.id})">
+                    设置预计时间
+                </button>
+                `
+                : ''
+        }
+
+        <button
+            ${!canOperate ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="无权限或未到该节点"' : ''}
+            onclick="completeMilestone(${item.id})"
+        >
+            标记完成
+        </button>
+        `
+}
             </div>
         </div>`;
     });
@@ -1778,6 +1791,36 @@ async function handleExportPdf() {
 
     renderProgress(list);
     generateAlerts(list);
+}
+
+    async function setExpected(id) {
+
+    const val = document.getElementById(`expected-${id}`).value;
+
+    if (!val) {
+        alert("请选择预计时间");
+        return;
+    }
+
+    try {
+        const resp = await authFetch(`/api/milestones/${id}/expected`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                expectedDate: val
+            })
+        });
+
+        if (!resp.ok) throw new Error("设置失败");
+
+        await loadMilestones();
+
+    } catch (e) {
+        console.error(e);
+        alert("设置失败：" + e.message);
+    }
 }
 
     async function loadMilestoneLogs(contractId) {
@@ -1806,7 +1849,7 @@ async function handleExportPdf() {
     const expected = item.expectedDate ? new Date(item.expectedDate) : null;
     const actual = item.actualDate ? new Date(item.actualDate) : null;
 
-    if (!expected) return 'NORMAL'; // 未填写预计时间
+    if (!expected) return 'NORMAL';
 
     // 已完成
     if (actual) {
@@ -1816,8 +1859,8 @@ async function handleExportPdf() {
     // 未完成
     if (now > expected) return 'OVERDUE';
 
-    const diffDays = (expected - now) / (1000 * 60 * 60 * 24);
-    if (diffDays <= 2) return 'WARNING';
+    const diff = (expected - now) / (1000*60*60*24);
+    if (diff <= 2) return 'WARNING';
 
     return 'NORMAL';
 }
