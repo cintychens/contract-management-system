@@ -638,6 +638,19 @@
     flex-shrink: 0;
 }
 
+/* ⭐ 新增风险颜色 */
+.timeline-item.danger .timeline-dot {
+    background: #dc3545;
+}
+
+.timeline-item.warning .timeline-dot {
+    background: #f39c12;
+}
+
+.timeline-item.done .timeline-dot {
+    background: #28a745;
+}
+
 .warning-tag {
     background: #fff4e0;
     color: #f59e0b;
@@ -1685,7 +1698,7 @@ async function handleExportPdf() {
         let status = item.status;
         let due = item.dueDate ? new Date(item.dueDate) : null;
 
-        // 自动状态计算
+        // ⭐ 自动状态计算
         if (status !== 'COMPLETED' && due) {
             if (due < now) {
                 status = 'OVERDUE';
@@ -1694,34 +1707,43 @@ async function handleExportPdf() {
             }
         }
 
-        // 样式
+        // ⭐⭐ 必须先算 risk（关键修复点）
+        const risk = getRiskLevel(item);
+
+        // ⭐ 样式
         let className = "timeline-item";
+
+        if (risk === 'OVERDUE') className += " danger";
+        else if (risk === 'WARNING') className += " warning";
+        else if (risk === 'ON_TIME') className += " done";
+
         if (status === 'COMPLETED') className += " done";
         else if (status === 'IN_PROGRESS') className += " active";
 
-        // 状态文本
+        // ⭐ 状态文字（中文）
         let statusText = '';
         let color = '';
 
-        if (status === 'COMPLETED') {
-            statusText = '已完成';
+        if (risk === 'ON_TIME') {
+            statusText = '按时完成';
             color = '#28a745';
-        } else if (status === 'IN_PROGRESS') {
-            statusText = '进行中';
-            color = '#2d6da0';
-        } else if (status === 'OVERDUE') {
-            statusText = '已逾期';
+        } else if (risk === 'OVERDUE') {
+            statusText = item.actualDate ? '延期完成' : '已逾期';
             color = '#dc3545';
-        } else {
-            statusText = '未开始';
+        } else if (risk === 'WARNING') {
+            statusText = '即将逾期';
             color = '#f39c12';
+        } else {
+            statusText = '正常';
+            color = '#2d6da0';
         }
 
-        // ⭐ 权限 + 顺序控制（只写一次！）
+        // ⭐ 权限 + 顺序控制
         const role = getCurrentUserRole();
         let prev = list[index - 1];
 
         let canOperate =
+            currentContract?.status === 'ACTIVE' &&
             item.status !== 'COMPLETED' &&
             (role === item.responsibleRole || role === 'ADMIN') &&
             (!prev || prev.status === 'COMPLETED');
@@ -1741,9 +1763,12 @@ async function handleExportPdf() {
                 ${
                     item.status === 'COMPLETED'
                         ? '✔'
-                        : (canOperate
-                            ? `<button onclick="completeMilestone(${item.id})">标记完成</button>`
-                            : '')
+                        : `<button
+                                ${!canOperate ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="无权限或未到该节点"' : ''}
+                                onclick="completeMilestone(${item.id})"
+                            >
+                                标记完成
+                            </button>`
                 }
             </div>
         </div>`;
@@ -1775,14 +1800,46 @@ async function handleExportPdf() {
         console.error(e);
     }
 }
+    function getRiskLevel(item) {
+    const now = new Date();
+
+    const expected = item.expectedDate ? new Date(item.expectedDate) : null;
+    const actual = item.actualDate ? new Date(item.actualDate) : null;
+
+    if (!expected) return 'NORMAL'; // 未填写预计时间
+
+    // 已完成
+    if (actual) {
+        return actual <= expected ? 'ON_TIME' : 'OVERDUE';
+    }
+
+    // 未完成
+    if (now > expected) return 'OVERDUE';
+
+    const diffDays = (expected - now) / (1000 * 60 * 60 * 24);
+    if (diffDays <= 2) return 'WARNING';
+
+    return 'NORMAL';
+}
+
     async function completeMilestone(id) {
+
+    const btn = event.target;
+
+    if (btn.disabled) {
+        alert("当前无权限操作");
+        return;
+    }
+
     try {
         const resp = await authFetch(`/api/milestones/${id}/complete`, {
             method: 'POST'
         });
 
         if (!resp.ok) throw new Error('更新履约节点失败');
-         await loadMilestones();
+
+        await loadMilestones();
+
     } catch (e) {
         console.error(e);
         alert('更新失败：' + (e.message || e));

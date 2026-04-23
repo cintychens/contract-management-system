@@ -25,26 +25,69 @@
     const urlParams = new URLSearchParams(window.location.search);
     const contractId = urlParams.get("id");
 
+    // ⭐ 带token请求（避免401）
+    function authFetch(url, options = {}) {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+        const headers = new Headers(options.headers || {});
+        if (token) {
+            headers.set("Authorization", "Bearer " + token);
+        }
+
+        return fetch(url, { ...options, headers });
+    }
+
     function loadMilestones() {
-        fetch(`/api/milestones/${contractId}`)
+        authFetch(`/api/milestones/${contractId}`)
             .then(res => res.json())
             .then(data => render(data));
+    }
+
+    // ⭐ 获取当前角色
+    function getCurrentUserRole() {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo") || sessionStorage.getItem("userInfo"));
+        return userInfo?.roleCode || userInfo?.role || '';
+    }
+
+    // ⭐ 时间格式优化
+    function formatDateTime(dt) {
+        if (!dt) return '';
+        const d = new Date(dt);
+        return d.toLocaleString();
     }
 
     function render(list) {
         let html = "";
 
-        list.forEach(m => {
+        const role = getCurrentUserRole();
+
+        list.forEach((m, index) => {
+
+            let prev = list[index - 1];
+
+            // ⭐ 权限 + 顺序控制
+            let canOperate =
+                m.status !== 'COMPLETED' &&
+                (role === m.responsibleRole || role === 'ADMIN') &&
+                (!prev || prev.status === 'COMPLETED');
+
             html += `
             <tr>
                 <td>${m.name}</td>
-                <td>${m.dueDate || ''}</td>
-                <td>${m.actualDate || ''}</td>
+                <td>${formatDateTime(m.dueDate)}</td>
+                <td>${formatDateTime(m.actualDate)}</td>
                 <td>${m.status}</td>
                 <td>
-                    ${m.status !== 'COMPLETED'
-                        ? `<button onclick="complete(${m.id})">完成</button>`
-                        : '✔'}
+                    ${
+                        m.status === 'COMPLETED'
+                            ? '✔'
+                            : `<button
+                                    ${!canOperate ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="无权限或未到该节点"' : ''}
+                                    onclick="complete(${m.id}, this)"
+                               >
+                                    完成
+                               </button>`
+                    }
                 </td>
             </tr>`;
         });
@@ -52,8 +95,15 @@
         document.getElementById("milestoneList").innerHTML = html;
     }
 
-    function complete(id) {
-        fetch(`/api/milestones/${id}/complete`, {
+    function complete(id, btn) {
+
+        // ⭐ 防止非法点击
+        if (btn.disabled) {
+            alert("当前无权限操作");
+            return;
+        }
+
+        authFetch(`/api/milestones/${id}/complete`, {
             method: "POST"
         }).then(() => loadMilestones());
     }

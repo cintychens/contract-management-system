@@ -1,10 +1,12 @@
 package com.contract.contract_backend.service;
 
+import com.contract.contract_backend.common.constant.ContractStatus;
+import com.contract.contract_backend.entity.Contract;
 import com.contract.contract_backend.entity.ContractMilestone;
 import com.contract.contract_backend.entity.ContractMilestoneLog;
-import com.contract.contract_backend.repository.ContractMilestoneRepository;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
-
+import com.contract.contract_backend.repository.ContractMilestoneRepository;
+import com.contract.contract_backend.repository.ContractRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,28 +23,42 @@ public class ContractMilestoneService {
     @Autowired
     private ContractMilestoneLogRepository logRepository;
 
+    @Autowired
+    private ContractRepository contractRepository;
+
     // 查询
     public List<ContractMilestone> list(Long contractId) {
         return repository.findByContractIdOrderBySortOrder(contractId);
     }
 
-    // 完成节点（带顺序控制）
+    // ⭐ 完成节点（最终完整版）
     public void complete(Long id) {
 
-        // 1. 查当前节点
+        // 1️⃣ 查节点
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
 
-        // 2. 获取同合同所有节点（按顺序）
+        // 2️⃣ 查合同
+        Contract contract = contractRepository.findById(m.getContractId())
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+        // 3️⃣ 必须已生效
+        if (!ContractStatus.ACTIVE.equals(contract.getStatus())) {
+            throw new RuntimeException("合同未生效，不能执行履约");
+        }
+
+        // 4️⃣ 防重复点击
+        if ("COMPLETED".equals(m.getStatus())) {
+            throw new RuntimeException("节点已完成，不能重复操作");
+        }
+
+        // 5️⃣ 顺序校验
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
-        // 3. ⭐ 顺序校验（核心）
         for (int i = 0; i < list.size(); i++) {
-
             if (list.get(i).getId().equals(id)) {
 
-                // 不是第一个节点
                 if (i > 0) {
                     ContractMilestone prev = list.get(i - 1);
 
@@ -50,15 +66,12 @@ public class ContractMilestoneService {
                         throw new RuntimeException("必须按顺序完成节点");
                     }
                 }
+
+                break;
             }
         }
 
-        // 4. 防止重复点击
-        if ("COMPLETED".equals(m.getStatus())) {
-            return;
-        }
-
-        // 5. 写日志
+        // 6️⃣ 写日志
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
@@ -66,11 +79,58 @@ public class ContractMilestoneService {
         log.setOperateTime(LocalDateTime.now());
         logRepository.save(log);
 
-        // 6. 更新状态
+        // 7️⃣ 更新节点
         m.setStatus("COMPLETED");
         m.setActualDate(LocalDateTime.now());
-
-        // 7. 保存
         repository.save(m);
+
+        // 8️⃣ 检查是否全部完成
+        boolean allDone = repository
+                .findByContractIdOrderBySortOrder(m.getContractId())
+                .stream()
+                .allMatch(x -> "COMPLETED".equals(x.getStatus()));
+
+        if (allDone) {
+            contract.setStatus(ContractStatus.COMPLETED);
+            contractRepository.save(contract);
+        }
+    }
+
+    // ⭐ 初始化履约节点
+    public void initMilestones(Long contractId, LocalDate startDate) {
+
+        ContractMilestone m1 = new ContractMilestone();
+        m1.setContractId(contractId);
+        m1.setName("发货");
+        m1.setResponsibleRole("BUSINESS");
+        m1.setSortOrder(1);
+        m1.setStatus("PENDING");
+        m1.setDueDate(startDate.atTime(23, 59, 59));
+
+        ContractMilestone m2 = new ContractMilestone();
+        m2.setContractId(contractId);
+        m2.setName("到货");
+        m2.setResponsibleRole("BUSINESS");
+        m2.setSortOrder(2);
+        m2.setStatus("PENDING");
+        m2.setDueDate(startDate.plusDays(3).atTime(23, 59, 59));
+
+        ContractMilestone m3 = new ContractMilestone();
+        m3.setContractId(contractId);
+        m3.setName("验收");
+        m3.setResponsibleRole("LEGAL");
+        m3.setSortOrder(3);
+        m3.setStatus("PENDING");
+        m3.setDueDate(startDate.plusDays(6).atTime(23, 59, 59));
+
+        ContractMilestone m4 = new ContractMilestone();
+        m4.setContractId(contractId);
+        m4.setName("付款");
+        m4.setResponsibleRole("FINANCE");
+        m4.setSortOrder(4);
+        m4.setStatus("PENDING");
+        m4.setDueDate(startDate.plusDays(10).atTime(23, 59, 59));
+
+        repository.saveAll(List.of(m1, m2, m3, m4));
     }
 }

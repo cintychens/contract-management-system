@@ -23,6 +23,8 @@ import com.contract.contract_backend.common.constant.ContractStatus;
 import com.contract.contract_backend.common.constant.RoleCode;
 import com.contract.contract_backend.entity.ContractFlowRecord;
 import com.contract.contract_backend.repository.ContractFlowRecordRepository;
+import com.contract.contract_backend.service.ContractMilestoneService;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -40,6 +44,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,6 +63,7 @@ public class ContractServiceImpl implements ContractService {
     private final ContractUploadProperties uploadProperties;
     private final ContractParseService contractParseService;
     private final ContractFlowRecordRepository contractFlowRecordRepository;
+    private final ContractMilestoneService milestoneService;
 
     /**
      * =========================
@@ -67,7 +73,12 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public ContractUploadResponse uploadContract(MultipartFile file, String title, String contractType) {
+        // ⭐ 权限控制（放在方法最前面）
+        String role = getCurrentUserRole();
 
+        if (!RoleCode.BUSINESS.equals(role) && !RoleCode.ADMIN.equals(role)) {
+            throw new RuntimeException("无权限创建合同");
+        }
         validateUpload(file, title, contractType);
 
         String originalFileName = FileTypeUtil.sanitizeFileName(file.getOriginalFilename());
@@ -99,6 +110,10 @@ public class ContractServiceImpl implements ContractService {
                 .build();
 
         contract = contractRepository.save(contract);
+        milestoneService.initMilestones(
+                contract.getContractId(),
+                LocalDate.now()
+        );
 
         ContractVersion version = ContractVersion.builder()
                 .contractId(contract.getContractId())
@@ -183,6 +198,12 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public ContractGenerateDto.ConfirmResp confirmGeneratedContract(ContractGenerateDto.ConfirmReq req) {
+        // ⭐ 权限控制（放在方法最前面）
+        String role = getCurrentUserRole();
+
+        if (!RoleCode.BUSINESS.equals(role) && !RoleCode.ADMIN.equals(role)) {
+            throw new RuntimeException("无权限创建合同");
+        }
         if (req == null) {
             throw new IllegalArgumentException("请求不能为空");
         }
@@ -211,6 +232,10 @@ public class ContractServiceImpl implements ContractService {
                 .build();
 
         contract = contractRepository.save(contract);
+        milestoneService.initMilestones(
+                contract.getContractId(),
+                LocalDate.now()
+        );
 
         String content = req.getDraftContent().trim();
 
@@ -1047,5 +1072,16 @@ public class ContractServiceImpl implements ContractService {
         }
 
         return sb.toString();
+    }
+
+    private String getCurrentUserRole() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || auth.getAuthorities().isEmpty()) {
+            throw new RuntimeException("未获取到用户角色");
+        }
+
+        return auth.getAuthorities().iterator().next().getAuthority();
     }
 }
