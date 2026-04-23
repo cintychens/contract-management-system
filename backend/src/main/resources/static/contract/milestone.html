@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>履约节点管理</title>
+</head>
+<body>
+
+<h2>履约节点管理</h2>
+
+<table border="1" width="100%" style="text-align:center;">
+    <thead>
+    <tr>
+        <th>节点</th>
+        <th>计划时间</th>
+        <th>实际时间</th>
+        <th>状态</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody id="milestoneList"></tbody>
+</table>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const contractId = urlParams.get("id");
+
+    function loadMilestones() {
+        fetch(`/api/milestones/${contractId}`)
+            .then(res => res.json())
+            .then(data => render(data));
+    }
+
+    function render(list) {
+        let html = "";
+
+        list.forEach(m => {
+            html += `
+            <tr>
+                <td>${m.name}</td>
+                <td>${m.dueDate || ''}</td>
+                <td>${m.actualDate || ''}</td>
+                <td>${m.status}</td>
+                <td>
+                    ${m.status !== 'COMPLETED'
+                        ? `<button onclick="complete(${m.id})">完成</button>`
+                        : '✔'}
+                </td>
+            </tr>`;
+        });
+
+        document.getElementById("milestoneList").innerHTML = html;
+    }
+
+    function complete(id) {
+        fetch(`/api/milestones/${id}/complete`, {
+            method: "POST"
+        }).then(() => loadMilestones());
+    }
+
+    loadMilestones();
+</script>
+
+</body>
+</html>

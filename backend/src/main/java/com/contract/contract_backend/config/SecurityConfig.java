@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
 
+                        .requestMatchers("/api/milestones/**").permitAll()
                         // /me 必须登录
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
 

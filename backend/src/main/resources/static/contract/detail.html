@@ -872,57 +872,16 @@
                 </div>
             </div>
         </div>
-    </main>
-</div>
 
+<!-- 履约节点 -->
 <div id="tab-performance" class="tab-panel">
     <div class="content-card">
         <div class="section-title">履约节点时间轴</div>
-
-        <div class="timeline" id="performanceTimeline">
-            <div class="timeline-item done">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">合同签订</div>
-                    <div class="timeline-time">计划时间：2026-03-20 10:00:00</div>
-                    <div class="timeline-time">实际时间：2026-03-20 10:05:00</div>
-                    <div class="timeline-status done-text">状态：已完成</div>
-                </div>
-            </div>
-
-            <div class="timeline-item done">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">货物发运</div>
-                    <div class="timeline-time">计划时间：2026-03-22 09:00:00</div>
-                    <div class="timeline-time">实际时间：2026-03-22 09:20:00</div>
-                    <div class="timeline-status done-text">状态：已完成</div>
-                </div>
-            </div>
-
-            <div class="timeline-item active">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">到货验收</div>
-                    <div class="timeline-time">计划时间：2026-03-26 14:00:00</div>
-                    <div class="timeline-time">实际时间：-</div>
-                    <div class="timeline-status active-text">状态：进行中</div>
-                </div>
-            </div>
-
-            <div class="timeline-item">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-title">付款结算</div>
-                    <div class="timeline-time">计划时间：2026-03-30 18:00:00</div>
-                    <div class="timeline-time">实际时间：-</div>
-                    <div class="timeline-status pending-text">状态：未开始</div>
-                </div>
-            </div>
-        </div>
+        <div class="timeline" id="performanceTimeline"></div>
     </div>
 </div>
 
+<!-- 预警提醒 -->
 <div id="tab-alert" class="tab-panel">
     <div class="content-card">
         <div class="section-title">预警提醒</div>
@@ -985,7 +944,7 @@
                 <div class="alert-tag normal-tag">已记录</div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
 <script>
@@ -1183,6 +1142,11 @@
     const target = document.getElementById(`tab-${tabName}`);
     if (target) {
         target.classList.add('active');
+    }
+
+    // 加这一段
+    if (tabName === 'performance') {
+        loadMilestones();
     }
 }
 
@@ -1605,6 +1569,111 @@ async function handleExportPdf() {
     }
 }
 
+    function getMilestoneStatusText(status) {
+    const map = {
+        PENDING: '未开始',
+        IN_PROGRESS: '进行中',
+        COMPLETED: '已完成',
+        OVERDUE: '已逾期'
+    };
+    return map[status] || status || '-';
+}
+
+    async function loadMilestones() {
+    const contractId = getContractId();
+    if (!contractId) return;
+
+    const container = document.getElementById('performanceTimeline');
+    if (!container) return;
+
+    try {
+        const resp = await authFetch(`/api/milestones/${contractId}`);
+        if (!resp.ok) throw new Error('获取履约节点失败');
+
+        const list = await resp.json();
+        renderMilestones(list || []);
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = `
+            <div style="color:#dc3545; padding: 12px 0;">
+                加载失败：${escapeHtml(e.message || e)}
+            </div>
+        `;
+    }
+}
+
+    function renderMilestones(list) {
+    const container = document.getElementById('performanceTimeline');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+            <div style="color:#6b7b8f; padding: 12px 0;">
+                暂无履约节点
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+
+    list.forEach(item => {
+        let itemClass = '';
+        let statusClass = 'pending-text';
+
+        if (item.status === 'COMPLETED') {
+            itemClass = 'done';
+            statusClass = 'done-text';
+        } else if (item.status === 'IN_PROGRESS') {
+            itemClass = 'active';
+            statusClass = 'active-text';
+        } else if (item.status === 'OVERDUE') {
+            itemClass = 'active';
+            statusClass = 'pending-text';
+        }
+
+        html += `
+            <div class="timeline-item ${itemClass}">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">${escapeHtml(item.name || '-')}</div>
+                    <div class="timeline-time">计划时间：${escapeHtml(item.dueDate || '-')}</div>
+                    <div class="timeline-time">实际时间：${escapeHtml(item.actualDate || '-')}</div>
+                    <div class="timeline-status ${statusClass}">
+                        状态：${escapeHtml(getMilestoneStatusText(item.status))}
+                    </div>
+                    ${
+                        item.status !== 'COMPLETED'
+                            ? `<div style="margin-top:10px;">
+                                   <button class="action-btn primary" onclick="completeMilestone(${item.id})">
+                                       标记完成
+                                   </button>
+                               </div>`
+                            : ''
+                    }
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+    async function completeMilestone(id) {
+    try {
+        const resp = await authFetch(`/api/milestones/${id}/complete`, {
+            method: 'POST'
+        });
+
+        if (!resp.ok) throw new Error('更新履约节点失败');
+
+        await loadMilestones();
+    } catch (e) {
+        console.error(e);
+        alert('更新失败：' + (e.message || e));
+    }
+}
+
     async function loadContractFields() {
         const contractId = getContractId();
         if (!contractId) return;
@@ -1648,6 +1717,7 @@ async function handleExportPdf() {
         loadUserInfo();
         await loadContractDetail();
         await loadContractFields();
+        await loadMilestones();
     });
 </script>
 </body>
