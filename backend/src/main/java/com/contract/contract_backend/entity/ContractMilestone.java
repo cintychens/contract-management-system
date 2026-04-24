@@ -51,4 +51,7 @@ public class ContractMilestone {
 
     // ⭐ 是否已上报延期
     private Boolean delayReported;
+
+    private LocalDateTime delayTime;
+
 }

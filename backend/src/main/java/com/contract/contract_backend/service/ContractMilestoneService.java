@@ -26,17 +26,11 @@ public class ContractMilestoneService {
     @Autowired
     private ContractRepository contractRepository;
 
-    // =========================
-    // 查询
-    // =========================
     public List<ContractMilestone> list(Long contractId) {
         return repository.findByContractIdOrderBySortOrder(contractId);
     }
 
-    // =========================
-    // ⭐ 完成节点（增强：补 operator）
-    // =========================
-    public void complete(Long id, String role) {
+    public void complete(Long id, String role, String username) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -56,13 +50,11 @@ public class ContractMilestoneService {
             throw new RuntimeException("请先填写预计完成时间");
         }
 
-        // 顺序校验
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId().equals(id)) {
-
                 if (i > 0) {
                     ContractMilestone prev = list.get(i - 1);
                     if (!"COMPLETED".equals(prev.getStatus())) {
@@ -73,31 +65,29 @@ public class ContractMilestoneService {
             }
         }
 
-        // ⭐ 日志（增强：operator + 时间统一）
         LocalDateTime now = LocalDateTime.now();
+
+        if (m.getExpectedDate() != null &&
+                LocalDateTime.now().isAfter(m.getExpectedDate()) &&
+                (m.getDelayReason() == null || m.getDelayReason().isEmpty())) {
+
+            throw new RuntimeException("请先填写延期原因，再调整预计时间");
+        }
 
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
         log.setNewStatus("COMPLETED");
         log.setMilestoneName(m.getName());
-        log.setOperator(role); // ⭐ 新增
+        log.setOperator(username);
+        log.setOperatorRole(role);
         log.setOperateTime(now);
         logRepository.save(log);
 
-        // ⭐ 更新
         m.setActualDate(now);
         m.setStatus("COMPLETED");
-
-        if (m.getExpectedDate() != null && now.isAfter(m.getExpectedDate())) {
-            if (m.getDelayReason() == null || m.getDelayReason().isEmpty()) {
-                throw new RuntimeException("已延期，必须先填写延期原因");
-            }
-        }
-
         repository.save(m);
 
-        // ⭐ 全部完成 → 合同完成
         boolean allDone = repository
                 .findByContractIdOrderBySortOrder(m.getContractId())
                 .stream()
@@ -109,14 +99,10 @@ public class ContractMilestoneService {
         }
     }
 
-    // ⭐ 兼容旧代码（单独一个方法！）
     public void complete(Long id) {
-        complete(id, "SYSTEM");
+        complete(id, "SYSTEM", "SYSTEM");
     }
 
-    // =========================
-    // 初始化履约节点（不动）
-    // =========================
     public void initMilestones(Long contractId, LocalDate startDate) {
 
         ContractMilestone m1 = new ContractMilestone();
@@ -150,9 +136,6 @@ public class ContractMilestoneService {
         repository.saveAll(List.of(m1, m2, m3, m4));
     }
 
-    // =========================
-    // ⭐ 设置预计时间（增强日志）
-    // =========================
     public void setExpected(Long id, LocalDateTime expectedDate, String role) {
 
         ContractMilestone m = repository.findById(id)
@@ -178,10 +161,10 @@ public class ContractMilestoneService {
                 : m.getExpectedDate().toLocalDate();
 
         m.setExpectedDate(expectedDate);
-
         repository.save(m);
 
-        // ⭐ 日志
+        LocalDateTime now = LocalDateTime.now();
+
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus("EXPECTED_CHANGE");
@@ -190,15 +173,18 @@ public class ContractMilestoneService {
         log.setNewDate(expectedDate.toLocalDate());
         log.setMilestoneName(m.getName());
         log.setOperator(role);
-        log.setOperateTime(LocalDateTime.now());
+        log.setOperatorRole(role);
+        log.setOperateTime(now);
+
+        log.setRemark("预计时间调整：" +
+                (oldDate == null ? "未设置" : oldDate.toString()) +
+                " → " +
+                expectedDate.toLocalDate().toString());
 
         logRepository.save(log);
     }
 
-    // =========================
-    // ⭐ 上报延期（增强日志）
-    // =========================
-    public void reportDelay(Long id, String reason, String role) {
+    public void reportDelay(Long id, String reason, String role, String username) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -219,21 +205,30 @@ public class ContractMilestoneService {
             throw new RuntimeException("节点已完成，不能上报延期");
         }
 
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("延期原因不能为空");
+        }
+
         String oldStatus = m.getStatus();
+        LocalDateTime now = LocalDateTime.now();
 
+        // ⭐⭐⭐ 就是这里加
         m.setDelayReason(reason);
-
+        m.setDelayReported(true);
+        m.setDelayTime(now);
         repository.save(m);
 
-        // ⭐ 日志
+        // 日志（你已经写对了）
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(oldStatus);
         log.setNewStatus("DELAY_REPORTED");
         log.setMilestoneName(m.getName());
-        log.setOperator(role);
-        log.setOperateTime(LocalDateTime.now());
-
+        log.setOperator(username);
+        log.setOperatorRole(role);
+        log.setOperateTime(now);
+        log.setDelayTime(now);
+        log.setRemark(reason);
         logRepository.save(log);
     }
 }

@@ -915,6 +915,7 @@
                             <th>节点</th>
                             <th>状态变化</th>
                             <th>操作人</th>
+                            <th>备注</th>
                         </tr>
                         </thead>
                         <tbody id="milestoneLogTable"></tbody>
@@ -1838,6 +1839,13 @@ function renderMilestones(list) {
                            </div>`
                         : ''
                 }
+                ${
+    item.delayTime
+        ? `<div style="color:#333;font-size:15px;font-weight:500;">
+                延期时间：${formatDateTime(item.delayTime)}
+           </div>`
+        : ''
+}
 
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
@@ -1856,47 +1864,44 @@ function renderMilestones(list) {
                         ? '✔'
                         : `
                         ${
-    canOperate && (
-        !item.expectedDate || item.delayReason
-    )
+    canOperate && (!item.expectedDate || item.delayReason)
+    ? `
+    <div style="margin-top:6px;">
+        <input type="datetime-local" id="expected-${item.id}" />
+        <button onclick="setExpected(${item.id})">
+            ${item.expectedDate ? '调整预计时间' : '设置预计时间'}
+        </button>
+    </div>
+    `
+    : ''
+}
+                        ${
+   canOperate
         ? `
-        <div style="margin-top:6px;">
-            <input type="datetime-local" id="expected-${item.id}" />
-            <button onclick="setExpected(${item.id})">
-                ${item.expectedDate ? '调整预计时间' : '设置预计时间'}
-            </button>
-        </div>
+        <textarea id="reason-${item.id}"
+            placeholder="请输入延期原因"
+            style="width:100%;margin-top:6px;border-radius:8px;"></textarea>
+
+        <button class="delay-btn" data-id="${item.id}">
+            上报延期
+        </button>
         `
         : ''
 }
-
-
                         ${
-                            canOperate && isOverdue && !item.delayReason
-                                ? `
-                                <textarea id="reason-${item.id}"
-                                    placeholder="请输入延期原因"
-                                    style="width:100%;margin-top:6px;border-radius:8px;"></textarea>
-
-                                <button class="delay-btn" data-id="${item.id}">
-                                    上报延期
-                                </button>
-                                `
-                                : ''
-                        }
-
-                        ${
-                            canOperate && (
-                                !isOverdue ||
-                                (isOverdue && item.delayReason)
-                            )
-                                ? `
-                                <button class="complete-btn" data-id="${item.id}">
-                                    最终完成
-                                </button>
-                                `
-                                : ''
-                        }
+    canOperate &&
+    item.expectedDate &&   // ⭐ 必须有预计时间
+    (
+        !isOverdue ||
+        (isOverdue && item.delayReason)
+    )
+        ? `
+        <button class="complete-btn" data-id="${item.id}">
+            最终完成
+        </button>
+        `
+        : ''
+}
                         `
                 }
 
@@ -1917,11 +1922,19 @@ function renderMilestones(list) {
         });
 
         document.querySelectorAll('.delay-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const id = this.getAttribute('data-id');
-                reportDelay(id);
-            });
-        });
+    btn.addEventListener('click', function () {
+
+        const id = this.getAttribute('data-id');
+
+        // ⭐ 从当前卡片中找 textarea（不再依赖 id 拼接）
+        const container = this.closest('.timeline-content');
+        const textarea = container.querySelector('textarea');
+
+        const reason = textarea ? textarea.value.trim() : "";
+
+        reportDelay(id, reason);
+    });
+});
 
     }, 0);
 
@@ -1929,31 +1942,31 @@ function renderMilestones(list) {
     generateAlerts(list);
 }
 
-    async function reportDelay(id) {
+    async function reportDelay(id, delayReason) {
 
-    const reasonInput = document.getElementById(`reason-${id}`);
-    const delayReason = reasonInput ? reasonInput.value : "";
-
-    if (!delayReason.trim()) {
+    if (!delayReason || !delayReason.trim()) {
         alert("必须填写延期原因");
         return;
     }
 
     try {
-        const resp = await authFetch(`/api/milestones/${id}/delay`, {  // ✅ 修复点
+        const resp = await authFetch(`/api/milestones/${id}/delay`, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                delayReason: delayReason
+                reason: delayReason.trim(),
+                delayReason: delayReason.trim()
             })
         });
 
-        if (!resp.ok) throw new Error("上报失败");
+        if (!resp.ok) {
+            const msg = await resp.text();
+            throw new Error(msg);
+        }
 
         alert("延期已记录");
-
         await loadMilestones();
 
     } catch (e) {
@@ -1971,18 +1984,57 @@ function renderMilestones(list) {
         return;
     }
 
+    const selected = new Date(val);
+    const now = new Date();
+
+    // ⭐ 获取页面上的延期原因输入框
+    const textarea = document.getElementById(`reason-${id}`);
+    const reason = textarea ? textarea.value.trim() : "";
+
+    // ⭐⭐⭐ 情况1：选择的是“过去时间”（逾期）
+    if (selected < now) {
+
+        // ❗没有填写原因 → 提示填写
+        if (!reason) {
+            if (textarea) {
+                textarea.style.display = 'block';
+                textarea.focus();
+                alert("该时间已逾期，请先填写延期原因，再点击【上报延期】");
+            } else {
+                alert("请填写延期原因");
+            }
+            return;
+        }
+
+        // ✅ 已填写原因 → 自动提交延期
+        try {
+            await reportDelayWithReason(id, reason);
+            return;
+        } catch (e) {
+            console.error(e);
+            alert("延期提交失败：" + e.message);
+            return;
+        }
+    }
+
+    // ⭐⭐⭐ 情况2：正常时间（未来时间）
     try {
+        const iso = val.replace(" ", "T") + ":00";
+
         const resp = await authFetch(`/api/milestones/${id}/expected`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                expectedDate: val
+                expectedDate: iso
             })
         });
 
-        if (!resp.ok) throw new Error("设置失败");
+        if (!resp.ok) {
+            const msg = await resp.text();
+            throw new Error(msg);
+        }
 
         await loadMilestones();
 
@@ -1990,6 +2042,25 @@ function renderMilestones(list) {
         console.error(e);
         alert("设置失败：" + e.message);
     }
+}
+
+    async function reportDelayWithReason(id, reason) {
+
+    const resp = await authFetch(`/api/milestones/${id}/delay`, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            reason: reason.trim(),
+            delayReason: reason.trim()
+        })
+    });
+
+    if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg || "上报延期失败");
+    }
+
+    await loadMilestones();
 }
 
     async function loadMilestoneLogs(contractId) {
@@ -2021,7 +2092,10 @@ function renderMilestones(list) {
             <td>${formatDateTime(l.operateTime)}</td>
             <td>${l.milestoneName || '-'}</td>
             <td>${getMilestoneLogStatusText(l.oldStatus)} → ${getMilestoneLogStatusText(l.newStatus)}</td>
-            <td>${l.operator || '-'}</td>
+            <td>
+              ${l.operator || '-'}${l.operatorRole ? `（${getRoleText(l.operatorRole)}）` : ''}
+            </td>
+            <td>${l.remark || '-'}</td>
         </tr>
     `).join('');
 

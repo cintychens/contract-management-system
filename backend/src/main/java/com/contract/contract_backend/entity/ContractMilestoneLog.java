@@ -22,8 +22,14 @@ public class ContractMilestoneLog {
     private LocalDate newDate;
 
     private String operator;
+    private String operatorRole;
 
     private LocalDateTime operateTime;
 
     private String milestoneName;
+
+    private LocalDateTime delayTime;
+
+    @Column(length = 255)
+    private String remark;
 }

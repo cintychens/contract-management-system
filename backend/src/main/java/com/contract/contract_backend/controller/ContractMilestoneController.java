@@ -1,5 +1,7 @@
 package com.contract.contract_backend.controller;
 
+import com.contract.contract_backend.entity.User;
+import com.contract.contract_backend.repository.UserRepository;
 import com.contract.contract_backend.entity.ContractMilestone;
 import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
@@ -28,6 +30,9 @@ public class ContractMilestoneController {
     @Autowired
     private ContractMilestoneLogRepository logRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     // =========================
     // 查询履约节点
     // =========================
@@ -43,7 +48,9 @@ public class ContractMilestoneController {
     public void complete(@PathVariable Long id) {
 
         String role = getCurrentUserRole();
-        service.complete(id, role);
+        String username = getCurrentUsername();
+
+        service.complete(id, role, username);
     }
 
     // =========================
@@ -79,8 +86,9 @@ public class ContractMilestoneController {
         String reason = body.get("delayReason");
 
         String role = getCurrentUserRole();
+        String username = getCurrentUsername();
 
-        service.reportDelay(id, reason, role);
+        service.reportDelay(id, reason, role, username);
     }
 
     // =========================
@@ -118,5 +126,21 @@ public class ContractMilestoneController {
                 .next()
                 .getAuthority()
                 .replace("ROLE_", "");
+    }
+
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null) {
+            return "未知用户";
+        }
+
+        String username = auth.getName();
+
+        return userRepository.findByUsername(username)
+                .map(user -> user.getFullName() != null && !user.getFullName().isBlank()
+                        ? user.getFullName()
+                        : user.getUsername())
+                .orElse(username);
     }
 }
