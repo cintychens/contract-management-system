@@ -107,3 +107,74 @@ async function initGlobal() {
     loadUserInfo();
     await loadGlobalAlerts();
 }
+
+async function loadGlobalAlerts() {
+    try {
+        const resp = await authFetch('/api/milestones/alerts');
+
+        if (!resp.ok) return;
+
+        const list = await resp.json();
+
+        const count = list.length;
+
+        const badge = document.getElementById('globalAlertBadge');
+
+        if (!badge) return;
+
+        if (count > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = count;
+        } else {
+            badge.style.display = 'none';
+        }
+
+    } catch (e) {
+        console.warn("预警加载失败", e);
+    }
+
+    function authFetch(url, options = {}) {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = new Headers(options.headers || {});
+        if (token) headers.set('Authorization', 'Bearer ' + token);
+        return fetch(url, { ...options, headers });
+    }
+
+    function getCurrentUserInfo() {
+        const str = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo');
+        return str ? JSON.parse(str) : null;
+    }
+
+    function getRoleText(role) {
+        const map = {
+            ADMIN: '管理员',
+            BUSINESS: '业务人员',
+            LEGAL: '法务',
+            FINANCE: '财务',
+            APPROVER: '审批人',
+            USER: '普通用户'
+        };
+        return map[(role || '').toUpperCase()] || role || '-';
+    }
+
+    // ⭐ 全局红点
+    async function loadGlobalAlerts() {
+        try {
+            const resp = await authFetch('/api/milestones/alerts');
+            if (!resp.ok) return;
+
+            const list = await resp.json();
+            const badge = document.getElementById('globalAlertBadge');
+            if (!badge) return;
+
+            if (list.length > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = list.length > 99 ? '99+' : list.length;
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (e) {
+            console.warn('预警加载失败', e);
+        }
+    }
+}

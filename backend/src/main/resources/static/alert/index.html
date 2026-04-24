@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>合同详情 · 智能物流合同管理系统</title>
+    <title>预警中心 · 智能物流合同管理系统</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -126,6 +126,7 @@
             margin-left: 280px;
             padding: 30px 35px;
             background: #f5f9ff;
+            min-height: 100vh;
         }
 
         .top-bar {
@@ -162,6 +163,11 @@
             border-radius: 40px;
             background: #f0f7ff;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-info:hover {
+            background: #e3f0ff;
         }
 
         .avatar {
@@ -191,235 +197,124 @@
             color: #5f7d9c;
         }
 
-        /* 卡片 */
-        .content-card {
+        /* 预警统计卡片 */
+        .alert-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(45, 109, 160, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(45, 109, 160, 0.12);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 26px;
+            color: white;
+        }
+
+        .stat-icon.critical { background: linear-gradient(135deg, #dc3545, #b91c2c); }
+        .stat-icon.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .stat-icon.info { background: linear-gradient(135deg, #2d6da0, #1a4b75); }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .stat-number.critical { color: #dc3545; }
+        .stat-number.warning { color: #f59e0b; }
+        .stat-number.info { color: #2d6da0; }
+
+        .stat-label {
+            font-size: 14px;
+            color: #5f7d9c;
+            font-weight: 500;
+        }
+
+        /* 预警列表区域 */
+        .alert-section {
             background: white;
             border-radius: 28px;
             padding: 24px;
             box-shadow: 0 8px 20px rgba(45, 109, 160, 0.05);
             border: 1px solid rgba(45, 109, 160, 0.1);
-            margin-bottom: 24px;
         }
 
-        .action-buttons {
+        .section-header {
             display: flex;
-            gap: 12px;
-            margin-top: 16px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
             flex-wrap: wrap;
-        }
-
-        .action-btn {
-            border: none;
-            border-radius: 12px;
-            padding: 10px 18px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .action-btn.primary {
-            background: linear-gradient(135deg, #2d6da0, #1a4b75);
-            color: white;
-        }
-
-        .action-btn.primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 18px rgba(45, 109, 160, 0.25);
-        }
-
-        .action-btn.danger {
-            background: #eef5fb;
-            color: #1a4b75;
-            border: 1px solid #d7e4f2;
-        }
-
-        .action-btn.secondary {
-            background: #f5f7fa;
-            color: #1a4b75;
-            border: 1px solid #d7e4f2;
+            gap: 12px;
         }
 
         .section-title {
             font-size: 20px;
-            color: #1a4b75;
-            margin-bottom: 16px;
             font-weight: 700;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 18px;
-        }
-
-        .info-item {
-            background: #f8fbff;
-            border: 1px solid #e3ecf5;
-            border-radius: 18px;
-            padding: 16px;
-        }
-
-        .info-item .label {
-            font-size: 13px;
-            color: #6b7b8f;
-            margin-bottom: 8px;
-        }
-
-        .info-item .value {
             color: #1a4b75;
-            font-weight: 600;
-            word-break: break-word;
-        }
-
-        .content-box {
-            background: #f8fbff;
-            border: 1px solid #e3ecf5;
-            border-radius: 18px;
-            padding: 18px;
-            min-height: 180px;
-            white-space: pre-wrap;
-            line-height: 1.8;
-        }
-
-        .status-badge {
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .status-active { background: #e3f7ec; color: #10b981; }
-        .status-pending { background: #fff4e0; color: #f59e0b; }
-        .status-expired { background: #fee9e9; color: #dc3545; }
-
-        /* 流转条 */
-        .flow-bar {
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin-top: 20px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
+            gap: 10px;
         }
-        .flow-step {
-            padding: 10px 18px;
-            border-radius: 24px;
-            background: #e6edf5;
-            color: #5b6b7c;
-            font-weight: 700;
-            min-width: 92px;
-            text-align: center;
-        }
-        .flow-step.done { background: #4da3ff; color: #fff; }
-        .flow-step.active { background: #1a4b75; color: #fff; }
-        .flow-arrow { color: #9aa8b6; font-weight: 700; font-size: 18px; }
 
-        /* Tabs */
-        .detail-tabs {
+        .filter-tabs {
             display: flex;
-            gap: 16px;
+            gap: 10px;
             background: #f0f6fc;
-            border-radius: 32px;
-            padding: 6px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
+            padding: 4px;
+            border-radius: 40px;
         }
-        .detail-tab {
-            padding: 12px 26px;
-            border-radius: 28px;
-            background: #eef5fb;
-            color: #1a4b75;
-            border: 1px solid #d7e4f2;
-            font-weight: 700;
+
+        .filter-tab {
+            padding: 8px 20px;
+            border-radius: 32px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            text-align: center;
+            background: transparent;
+            border: none;
+            color: #5f7d9c;
         }
-        .detail-tab.active {
-            background: linear-gradient(135deg, #2d6da0, #1a4b75);
+
+        .filter-tab.active {
+            background: #2d6da0;
             color: white;
-            box-shadow: 0 12px 24px rgba(45, 109, 160, 0.25);
-        }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        /* 时间轴 */
-        .timeline {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-top: 10px;
-        }
-        .timeline-item {
-            display: flex;
-            gap: 16px;
-            position: relative;
-        }
-        .timeline-item:not(:last-child)::after {
-            content: "";
-            position: absolute;
-            left: 11px;
-            top: 30px;
-            width: 2px;
-            height: calc(100% + 10px);
-            background: #dbe6f1;
-        }
-        .timeline-dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #c8d8ea;
-            flex-shrink: 0;
-            z-index: 2;
-            margin-top: 4px;
-        }
-        .timeline-item.done .timeline-dot { background: #28a745; }
-        .timeline-item.active .timeline-dot { background: #1a4b75; }
-        .timeline-item.danger .timeline-dot { background: #dc3545; }
-        .timeline-item.warning .timeline-dot { background: #f39c12; }
-        .timeline-content {
-            flex: 1;
-            background: #f8fbff;
-            border: 1px solid #e3ecf5;
-            border-radius: 16px;
-            padding: 16px 18px;
-        }
-        .timeline-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #1a4b75;
-            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(45, 109, 160, 0.3);
         }
 
-        /* 预警卡片 */
-        .alert-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-            margin-bottom: 24px;
-        }
-        .alert-summary-card {
-            background: #f8fbff;
-            border: 1px solid #e3ecf5;
-            border-radius: 18px;
-            padding: 20px;
-            text-align: center;
-        }
-        .alert-summary-value {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .alert-summary-value.warning { color: #f59e0b; }
-        .alert-summary-value.danger { color: #dc3545; }
-        .alert-summary-value.normal { color: #1a4b75; }
+        /* 预警列表样式 */
         .alert-list {
             display: flex;
             flex-direction: column;
             gap: 16px;
+            max-height: 550px;
+            overflow-y: auto;
+            padding-right: 4px;
         }
+
         .alert-item {
             display: flex;
             justify-content: space-between;
@@ -427,66 +322,523 @@
             gap: 16px;
             background: #f8fbff;
             border: 1px solid #e3ecf5;
-            border-radius: 18px;
-            padding: 18px;
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.2s;
             flex-wrap: wrap;
         }
-        .alert-item-left {
+
+        .alert-item:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-color: #cbdde9;
+        }
+
+        .alert-item.critical {
+            border-left: 4px solid #dc3545;
+        }
+        .alert-item.warning {
+            border-left: 4px solid #f59e0b;
+        }
+        .alert-item.info {
+            border-left: 4px solid #2d6da0;
+        }
+
+        .alert-info {
             display: flex;
-            gap: 14px;
+            gap: 16px;
             flex: 1;
         }
-        .alert-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
+
+        .alert-badge {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 20px;
             color: white;
-            font-size: 18px;
+            flex-shrink: 0;
         }
-        .alert-item.warning .alert-icon { background: #f59e0b; }
-        .alert-item.danger .alert-icon { background: #dc3545; }
-        .alert-item.normal .alert-icon { background: #2d6da0; }
-        .alert-tag {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+        .alert-badge.critical { background: #dc3545; }
+        .alert-badge.warning { background: #f59e0b; }
+        .alert-badge.info { background: #2d6da0; }
+
+        .alert-details {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-size: 16px;
             font-weight: 700;
+            color: #1a4b75;
+            margin-bottom: 6px;
         }
-        .warning-tag { background: #fff4e0; color: #f59e0b; }
-        .danger-tag { background: #fee9e9; color: #dc3545; }
-        .normal-tag { background: #e8f1fb; color: #2d6da0; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #eef2f6;
-        }
-        th { color: #4f6f8f; font-weight: 600; }
-        textarea, input {
-            border-radius: 12px;
-            border: 1px solid #dbe6f1;
-            padding: 10px;
+
+        .alert-desc {
             font-size: 14px;
+            color: #5f7d9c;
+            margin-bottom: 8px;
+            line-height: 1.5;
         }
+
+        .alert-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: #8aa0b8;
+        }
+
+        .alert-meta i {
+            width: 14px;
+            margin-right: 4px;
+        }
+
+        .alert-action {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary-sm {
+            background: #2d6da0;
+            color: white;
+        }
+        .btn-primary-sm:hover {
+            background: #1a4b75;
+            transform: translateY(-1px);
+        }
+        .btn-outline-sm {
+            background: transparent;
+            border: 1px solid #cbdde9;
+            color: #2d6da0;
+        }
+        .btn-outline-sm:hover {
+            background: #eef5fb;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8aa0b8;
+        }
+
+        .empty-state i {
+            font-size: 56px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
         @media (max-width: 1024px) {
             .sidebar { width: 90px; }
             .sidebar .logo-text, .sidebar .nav-item span { display: none; }
             .main-content { margin-left: 90px; }
             .nav-item { justify-content: center; }
         }
+
         @media (max-width: 768px) {
             .main-content { padding: 20px; }
-            .info-grid, .alert-summary-grid { grid-template-columns: 1fr; }
+            .top-bar { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .alert-stats-grid { grid-template-columns: 1fr; gap: 12px; }
+            .alert-info { flex-direction: column; }
+            .alert-action { width: 100%; justify-content: flex-end; margin-top: 8px; }
         }
     </style>
 </head>
 <body>
+<div class="dashboard-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="logo-text">
+                    <h2>智链·合同</h2>
+                    <p>物流合同管理</p>
+                </div>
+            </div>
+        </div>
 
+        <nav class="nav-menu">
+            <div class="nav-item" onclick="window.location.href='/dashboard/index.html'">
+                <i class="fas fa-chart-pie"></i>
+                <span>数据仪表盘</span>
+            </div>
+            <div class="nav-item" onclick="window.location.href='/contract/index.html'">
+                <i class="fas fa-file-contract"></i>
+                <span>合同管理</span>
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-bell"></i>
+                <span>预警提醒</span>
+                <span id="globalAlertBadge" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); background:#dc3545; color:white; border-radius:12px; padding:2px 8px; font-size:12px; display:none;">0</span>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-item">
+                <i class="fas fa-cog"></i>
+                <span>系统设置</span>
+            </div>
+            <div class="nav-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>退出登录</span>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 - 预警中心 -->
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1><i class="fas fa-bell"></i> 预警中心</h1>
+            </div>
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">加载中...</div>
+                        <div class="user-role" id="userRole">用户</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: #2d6da0; font-size: 14px;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="alert-stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-icon critical"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-number critical" id="criticalCount">0</div>
+                <div class="stat-label">高风险逾期</div>
+                <div style="font-size:12px; color:#dc3545; margin-top:6px;">已超过截止时间</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon warning"><i class="fas fa-clock"></i></div>
+                <div class="stat-number warning" id="warningCount">0</div>
+                <div class="stat-label">即将到期提醒</div>
+                <div style="font-size:12px; color:#f59e0b; margin-top:6px;">3天内到期</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon info"><i class="fas fa-file-signature"></i></div>
+                <div class="stat-number info" id="contractTotalCount">0</div>
+                <div class="stat-label">监控中合同</div>
+                <div style="font-size:12px; color:#2d6da0; margin-top:6px;">活跃合同总数</div>
+            </div>
+        </div>
+
+        <!-- 预警列表区域 -->
+        <div class="alert-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-list-ul"></i> 合同履约预警明细
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">全部预警</button>
+                    <button class="filter-tab" data-filter="critical">高风险逾期</button>
+                    <button class="filter-tab" data-filter="warning">即将到期</button>
+                </div>
+            </div>
+            <div id="alertListContainer" class="alert-list">
+                <!-- 动态渲染预警列表 -->
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>暂无预警信息，所有合同节点均在正常范围内</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // ======================== 辅助函数 ========================
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function formatDateTime(dt) {
+        if (!dt) return '-';
+        const d = new Date(dt);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' +
+               String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+
+    function getRoleText(roleCode) {
+        const roleMap = {
+            'ADMIN': '管理员', 'BUSINESS': '业务人员', 'LEGAL': '法务',
+            'FINANCE': '财务', 'APPROVER': '审批人', 'USER': '普通用户'
+        };
+        return roleMap[roleCode] || roleCode || '负责人';
+    }
+
+    // Token & 用户
+    function authFetch(url, options = {}) {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = new Headers(options.headers || {});
+        if (token) headers.set('Authorization', 'Bearer ' + token);
+        return fetch(url, { ...options, headers });
+    }
+
+    function getCurrentUserInfo() {
+    try {
+        const str = sessionStorage.getItem('userInfo') || localStorage.getItem('userInfo');
+        return str ? JSON.parse(str) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+    function loadUserInfo() {
+        const userInfo = getCurrentUserInfo();
+        if (!userInfo) {
+            window.location.href = '/auth/login.html';
+            return;
+        }
+        document.getElementById('userName').textContent = userInfo.username || userInfo.userName || '用户';
+        const firstChar = (userInfo.username || userInfo.userName || 'U').charAt(0).toUpperCase();
+        document.getElementById('userAvatar').textContent = firstChar;
+        const roleCode = userInfo.roleCode || userInfo.role || 'USER';
+        document.getElementById('userRole').textContent = getRoleText(roleCode);
+    }
+
+    function logout() {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/auth/login.html';
+    }
+
+    // ======================== 核心：生成预警数据（模拟/真实接口接入点） ========================
+    // 该函数会获取所有合同及履约节点，计算过期/即将到期数据并渲染
+    let currentFilter = 'all';
+    let allAlertsCache = [];   // 存储原始预警列表
+    let contractList = []
+
+    async function fetchAndRenderAlerts() {
+    try {
+
+        // =========================
+        // ⭐ 1. 获取所有合同（只改这里）
+        // =========================
+        const contractResp = await authFetch('/api/contracts');
+        const contractResult = await contractResp.json();
+
+        // ✅ 关键：从 Result.data.records 取
+        const contracts = contractResult?.data?.records || [];
+
+        // =========================
+        // ⭐ 2. 获取预警（保持不变）
+        // =========================
+        const alertResp = await authFetch('/api/milestones/alerts');
+        const alertResult = await alertResp.json();
+
+        const alerts = Array.isArray(alertResult)
+            ? alertResult
+            : (alertResult.data || []);
+
+        // ⭐ 调试（建议保留）
+        console.log("contracts:", contracts);
+        console.log("alerts:", alerts);
+
+        // =========================
+        // ⭐ 3. 合同 + 预警 合并（保持不变）
+        // =========================
+        const contractMap = {};
+
+        contracts.forEach(c => {
+            contractMap[c.id] = {
+                contractId: c.id,
+                contractTitle: c.contractName || c.title || c.name || '未命名合同',
+                contractNo: c.contractNo || c.code || c.contractCode || '无编号',
+                critical: 0,
+                warning: 0,
+                total: 0
+            };
+        });
+
+        alerts.forEach(a => {
+            if (!contractMap[a.contractId]) return;
+
+            if (a.type === 'critical') contractMap[a.contractId].critical++;
+            if (a.type === 'warning') contractMap[a.contractId].warning++;
+
+            contractMap[a.contractId].total++;
+        });
+
+        contractList = Object.values(contractMap);
+
+        // =========================
+        // ⭐ 4. 统计（保持不变）
+        // =========================
+        const criticalList = alerts.filter(a => a.type === 'critical');
+        const warningList = alerts.filter(a => a.type === 'warning');
+
+        document.getElementById('criticalCount').innerText = criticalList.length;
+        document.getElementById('warningCount').innerText = warningList.length;
+        document.getElementById('contractTotalCount').innerText = contracts.length;
+
+        // =========================
+        // ⭐ 6. 渲染
+        // =========================
+        renderAlertListByFilter(currentFilter);
+
+    } catch (error) {
+        console.error('❌ 预警加载失败:', error);
+    }
+}
+
+    // 根据filter渲染预警列表
+    function renderAlertListByFilter(filter) {
+
+    const container = document.getElementById('alertListContainer');
+
+    // =========================
+    // ⭐ 1. 过滤逻辑（关键修复）
+    // =========================
+    let filtered = contractList;
+
+    if (filter === 'critical') {
+        filtered = contractList.filter(c => c.critical > 0);
+    } else if (filter === 'warning') {
+        filtered = contractList.filter(c => c.warning > 0 && c.critical === 0);
+    } else {
+        // ⭐ “全部预警”一定要显示全部合同
+        filtered = contractList;
+    }
+
+    // =========================
+    // ⭐ 2. 空状态（只针对筛选）
+    // =========================
+    if (!filtered.length && filter !== 'all') {
+
+        let text = '暂无预警';
+
+        if (filter === 'critical') text = '暂无逾期合同';
+        if (filter === 'warning') text = '暂无即将到期合同';
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>${text}</p>
+            </div>`;
+        return;
+    }
+
+    // =========================
+    // ⭐ 3. 渲染
+    // =========================
+    container.innerHTML = filtered.map(c => {
+
+        // 风险等级
+        const level =
+            c.critical > 0 ? 'critical' :
+            c.warning > 0 ? 'warning' : 'info';
+
+        // 图标
+        const icon =
+            c.critical > 0 ? 'fa-exclamation-triangle' :
+            c.warning > 0 ? 'fa-clock' : 'fa-check-circle';
+
+        // 描述
+        const desc = c.total === 0
+            ? '暂无预警'
+            : `共有 ${c.total} 个预警（逾期 ${c.critical} / 即将到期 ${c.warning}）`;
+
+        return `
+        <div class="alert-item ${level}">
+            <div class="alert-info">
+
+                <div class="alert-badge ${level}">
+                    <i class="fas ${icon}"></i>
+                </div>
+
+                <div class="alert-details">
+                    <div class="alert-title">
+                        📄 ${escapeHtml(c.contractTitle)}
+                        <span style="font-size:12px;color:#8aa0b8;">
+                            (${escapeHtml(c.contractNo)})
+                        </span>
+                    </div>
+
+                    <div class="alert-desc">
+                        ${desc}
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-action">
+                <button class="btn-sm btn-primary-sm"
+                    onclick="goContractDetail(${c.contractId})">
+                    查看详情
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+    function goContractDetail(contractId) {
+    window.location.href = `/contract/detail.html?id=${contractId}`;
+}
+
+    // 预警操作：跳转到对应合同详情页（或打开详情弹窗）
+    window.handleAlertAction = function(contractId, milestoneId) {
+        // 跳转到合同详情页，并高亮对应履约节点（可通过URL传递参数）
+        window.location.href = `/contract/detail.html?id=${contractId}&highlightMilestone=${milestoneId}`;
+    };
+
+    // 稍后提醒：可做本地记录，演示简单提示
+    window.remindLater = function(alertId) {
+        // 简单演示：仅弹提示；实际可存入 localStorage 延迟提醒
+        alert('已为您记录，系统将在明天再次提醒您关注该节点。');
+        // 可选：从本地移除临时提醒，但为了演示不做数据变动
+    };
+
+    // 切换筛选
+    function bindFilterEvents() {
+        const tabs = document.querySelectorAll('.filter-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentFilter = tab.getAttribute('data-filter');
+                renderAlertListByFilter(currentFilter);
+            });
+        });
+    }
+
+    // 刷新数据入口（可用于定时刷新）
+    async function refreshData() {
+        await fetchAndRenderAlerts();
+    }
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', async () => {
+        loadUserInfo();
+        bindFilterEvents();
+        await fetchAndRenderAlerts();
+        // 可选：每隔60秒自动刷新一次预警数据
+        setInterval(() => {
+            fetchAndRenderAlerts().catch(e => console.warn('自动刷新预警失败', e));
+        }, 60000);
+    });
+</script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import com.contract.contract_backend.entity.ContractMilestone;
 import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
 import com.contract.contract_backend.repository.ContractMilestoneRepository;
+import com.contract.contract_backend.dto.MilestoneAlertDTO;
 import com.contract.contract_backend.repository.ContractRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.time.Duration;
 
 @Service
 public class ContractMilestoneService {
@@ -230,5 +233,51 @@ public class ContractMilestoneService {
         log.setDelayTime(now);
         log.setRemark(reason);
         logRepository.save(log);
+    }
+
+    public List<MilestoneAlertDTO> getMilestoneAlerts() {
+
+        List<ContractMilestone> list = repository.findAll();
+        LocalDateTime now = LocalDateTime.now();
+
+        List<MilestoneAlertDTO> result = new ArrayList<>();
+
+        for (ContractMilestone m : list) {
+
+            if (m.getActualDate() != null) continue;
+            if (m.getExpectedDate() == null) continue;
+
+            long diff = Duration.between(now, m.getExpectedDate()).toDays();
+
+            String type;
+            if (diff < 0) {
+                type = "critical";
+            } else if (diff <= 3) {
+                type = "warning";
+            } else {
+                continue;
+            }
+
+            MilestoneAlertDTO dto = new MilestoneAlertDTO();
+            dto.setMilestoneId(m.getId());
+            dto.setContractId(m.getContractId());
+            dto.setMilestoneName(m.getName());
+            dto.setExpectedDate(m.getExpectedDate());
+            dto.setResponsibleRole(m.getResponsibleRole());
+            dto.setType(type);
+            dto.setDiffDays(diff);
+            dto.setDelayReason(m.getDelayReason());
+
+            // 查合同信息（你已有 ContractRepository）
+            Contract c = contractRepository.findById(m.getContractId()).orElse(null);
+            if (c != null) {
+                dto.setContractTitle(c.getTitle());
+                dto.setContractNo(c.getContractNo());
+            }
+
+            result.add(dto);
+        }
+
+        return result;
     }
 }

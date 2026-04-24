@@ -591,6 +591,24 @@
                 <span>合同管理</span>
             </div>
 
+            <div class="nav-item" onclick="window.location.href='/alert/index.html'" style="position:relative;">
+                <i class="fas fa-bell"></i>
+                <span>预警提醒</span>
+
+                <span id="globalAlertBadge" style="
+        position:absolute;
+        right:15px;
+        top:50%;
+        transform:translateY(-50%);
+        background:#dc3545;
+        color:white;
+        border-radius:12px;
+        padding:2px 8px;
+        font-size:12px;
+        display:none;
+    ">0</span>
+            </div>
+
             <div class="nav-divider"></div>
 
             <div class="nav-item">
@@ -1163,6 +1181,7 @@ document.getElementById('userRole').textContent =
         loadUserInfo();
         initCharts();
         loadDashboardContracts();
+        loadGlobalAlerts();
 
         document.getElementById('trendPeriod').addEventListener('change', function() {
             renderTrendChart(dashboardContracts);

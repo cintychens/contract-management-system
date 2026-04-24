@@ -7,6 +7,7 @@ import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
 import com.contract.contract_backend.repository.ContractMilestoneRepository;
 import com.contract.contract_backend.service.ContractMilestoneService;
+import com.contract.contract_backend.dto.MilestoneAlertDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
@@ -89,6 +90,11 @@ public class ContractMilestoneController {
         String username = getCurrentUsername();
 
         service.reportDelay(id, reason, role, username);
+    }
+
+    @GetMapping("/alerts")
+    public List<MilestoneAlertDTO> getAlerts() {
+        return service.getMilestoneAlerts(); // ⭐ 用你已有的 service
     }
 
     // =========================
