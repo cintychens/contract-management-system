@@ -844,16 +844,17 @@
             document.getElementById('userAvatar').textContent = (userInfo.username || 'U').charAt(0).toUpperCase();
 
             const roleMap = {
-                admin: '超级管理员',
-                ADMIN: '系统管理员',
-                user: '普通用户',
-                USER: '普通用户',
-                manager: '合同经理',
-                MANAGER: '合同经理'
+                ADMIN: '管理员',
+                BUSINESS: '业务人员',
+                LEGAL: '法务',
+                FINANCE: '财务',
+                APPROVER: '审批人',
+               USER: '普通用户'
             };
-            const rawRole = (userInfo.role || userInfo.roleCode || '').toString();
+            const role = (userInfo.roleCode || userInfo.role || '').toUpperCase();
+
             document.getElementById('userRole').textContent =
-                roleMap[rawRole] || roleMap[rawRole.toUpperCase()] || rawRole || '普通用户';
+                roleMap[role] || '普通用户';
         } catch (e) {
             console.error(e);
             window.location.href = '/auth/login.html';

@@ -925,69 +925,69 @@
 
         </div>
 
-<!-- 预警提醒 -->
-<div id="tab-alert" class="tab-panel">
-    <div class="content-card">
-        <div class="section-title">预警提醒</div>
+        <!-- 预警提醒 -->
+        <div id="tab-alert" class="tab-panel">
+            <div class="content-card">
+                <div class="section-title">预警提醒</div>
 
-        <div class="alert-summary-grid">
-            <div class="alert-summary-card">
-                <div class="alert-summary-value warning">2</div>
-                <div class="alert-summary-label">待处理提醒</div>
-            </div>
-            <div class="alert-summary-card">
-                <div class="alert-summary-value danger">1</div>
-                <div class="alert-summary-label">高风险预警</div>
-            </div>
-            <div class="alert-summary-card">
-                <div class="alert-summary-value normal">3</div>
-                <div class="alert-summary-label">总预警数</div>
-            </div>
-        </div>
-
-        <div class="alert-list" id="alertList">
-            <div class="alert-item warning">
-                <div class="alert-item-left">
-                    <div class="alert-icon">
-                        <i class="fas fa-bell"></i>
+                <div class="alert-summary-grid">
+                    <div class="alert-summary-card">
+                        <div class="alert-summary-value warning">2</div>
+                        <div class="alert-summary-label">待处理提醒</div>
                     </div>
-                    <div class="alert-content">
-                        <div class="alert-title">付款节点即将到期</div>
-                        <div class="alert-desc">该合同付款节点将在 3 天后到期，请及时跟进付款流程。</div>
-                        <div class="alert-meta">提醒时间：2026-03-27 10:00:00</div>
+                    <div class="alert-summary-card">
+                        <div class="alert-summary-value danger">1</div>
+                        <div class="alert-summary-label">高风险预警</div>
+                    </div>
+                    <div class="alert-summary-card">
+                        <div class="alert-summary-value normal">3</div>
+                        <div class="alert-summary-label">总预警数</div>
                     </div>
                 </div>
-                <div class="alert-tag warning-tag">待处理</div>
-            </div>
 
-            <div class="alert-item danger">
-                <div class="alert-item-left">
-                    <div class="alert-icon">
-                        <i class="fas fa-triangle-exclamation"></i>
+                <div class="alert-list" id="alertList">
+                    <div class="alert-item warning">
+                        <div class="alert-item-left">
+                            <div class="alert-icon">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-title">付款节点即将到期</div>
+                                <div class="alert-desc">该合同付款节点将在 3 天后到期，请及时跟进付款流程。</div>
+                                <div class="alert-meta">提醒时间：2026-03-27 10:00:00</div>
+                            </div>
+                        </div>
+                        <div class="alert-tag warning-tag">待处理</div>
                     </div>
-                    <div class="alert-content">
-                        <div class="alert-title">验收节点已逾期</div>
-                        <div class="alert-desc">到货验收节点已超过计划时间 2 天，存在履约风险。</div>
-                        <div class="alert-meta">预警时间：2026-03-26 18:30:00</div>
+
+                    <div class="alert-item danger">
+                        <div class="alert-item-left">
+                            <div class="alert-icon">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-title">验收节点已逾期</div>
+                                <div class="alert-desc">到货验收节点已超过计划时间 2 天，存在履约风险。</div>
+                                <div class="alert-meta">预警时间：2026-03-26 18:30:00</div>
+                            </div>
+                        </div>
+                        <div class="alert-tag danger-tag">高风险</div>
+                    </div>
+
+                    <div class="alert-item normal">
+                        <div class="alert-item-left">
+                            <div class="alert-icon">
+                                <i class="fas fa-circle-info"></i>
+                            </div>
+                            <div class="alert-content">
+                                <div class="alert-title">合同已完成流转</div>
+                                <div class="alert-desc">当前合同审批流程已全部完成，可进入履约执行阶段。</div>
+                                <div class="alert-meta">记录时间：2026-03-23 11:20:02</div>
+                            </div>
+                        </div>
+                        <div class="alert-tag normal-tag">已记录</div>
                     </div>
                 </div>
-                <div class="alert-tag danger-tag">高风险</div>
-            </div>
-
-            <div class="alert-item normal">
-                <div class="alert-item-left">
-                    <div class="alert-icon">
-                        <i class="fas fa-circle-info"></i>
-                    </div>
-                    <div class="alert-content">
-                        <div class="alert-title">合同已完成流转</div>
-                        <div class="alert-desc">当前合同审批流程已全部完成，可进入履约执行阶段。</div>
-                        <div class="alert-meta">记录时间：2026-03-23 11:20:02</div>
-                    </div>
-                </div>
-                <div class="alert-tag normal-tag">已记录</div>
-            </div>
-        </div>
     </main>
 </div>
 
@@ -1021,6 +1021,9 @@
             ADMIN: '管理员',
             USER: '普通用户'
         };
+
+        const key = (role || '').toUpperCase();
+
         return map[role] || role || '-';
     }
 
@@ -1139,24 +1142,17 @@
             document.getElementById('userAvatar').textContent = (userInfo.username || 'U').charAt(0).toUpperCase();
 
             const roleMap = {
-                admin: '超级管理员',
-                ADMIN: '系统管理员',
-                user: '普通用户',
-                USER: '普通用户',
+                ADMIN: '管理员',
                 BUSINESS: '业务人员',
-                business: '业务人员',
                 LEGAL: '法务',
-                legal: '法务',
                 FINANCE: '财务',
-                finance: '财务',
                 APPROVER: '审批人',
-                approver: '审批人',
-                manager: '合同经理',
-                MANAGER: '合同经理'
+                USER: '普通用户'
             };
-            const rawRole = (userInfo.roleCode || userInfo.role || '').toString().toUpperCase();
-            document.getElementById('userRole').textContent =
-                roleMap[rawRole] || rawRole || '普通用户';
+            const role = (userInfo.roleCode || userInfo.role || '').toUpperCase();
+
+document.getElementById('userRole').textContent =
+    roleMap[role] || '普通用户';
         } catch (e) {
             console.error(e);
             window.location.href = '/auth/login.html';
