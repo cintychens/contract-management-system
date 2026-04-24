@@ -26,13 +26,17 @@ public class ContractMilestoneService {
     @Autowired
     private ContractRepository contractRepository;
 
+    // =========================
     // 查询
+    // =========================
     public List<ContractMilestone> list(Long contractId) {
         return repository.findByContractIdOrderBySortOrder(contractId);
     }
 
-    // ⭐ 完成节点（最终版）
-    public void complete(Long id) {
+    // =========================
+    // ⭐ 完成节点（增强：补 operator）
+    // =========================
+    public void complete(Long id, String role) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -40,22 +44,19 @@ public class ContractMilestoneService {
         Contract contract = contractRepository.findById(m.getContractId())
                 .orElseThrow(() -> new RuntimeException("合同不存在"));
 
-        // ⭐ 必须生效
         if (!ContractStatus.ACTIVE.equals(contract.getStatus())) {
             throw new RuntimeException("合同未生效，不能执行履约");
         }
 
-        // ⭐ 防重复
         if ("COMPLETED".equals(m.getStatus())) {
             throw new RuntimeException("节点已完成，不能重复操作");
         }
 
-        // ⭐ 必须先填写预计时间（新加逻辑）
         if (m.getExpectedDate() == null) {
             throw new RuntimeException("请先填写预计完成时间");
         }
 
-        // ⭐ 顺序校验
+        // 顺序校验
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
@@ -64,27 +65,36 @@ public class ContractMilestoneService {
 
                 if (i > 0) {
                     ContractMilestone prev = list.get(i - 1);
-
                     if (!"COMPLETED".equals(prev.getStatus())) {
                         throw new RuntimeException("必须按顺序完成节点");
                     }
                 }
-
                 break;
             }
         }
 
-        // ⭐ 写日志
+        // ⭐ 日志（增强：operator + 时间统一）
+        LocalDateTime now = LocalDateTime.now();
+
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
         log.setNewStatus("COMPLETED");
-        log.setOperateTime(LocalDateTime.now());
+        log.setMilestoneName(m.getName());
+        log.setOperator(role); // ⭐ 新增
+        log.setOperateTime(now);
         logRepository.save(log);
 
         // ⭐ 更新
+        m.setActualDate(now);
         m.setStatus("COMPLETED");
-        m.setActualDate(LocalDateTime.now());
+
+        if (m.getExpectedDate() != null && now.isAfter(m.getExpectedDate())) {
+            if (m.getDelayReason() == null || m.getDelayReason().isEmpty()) {
+                throw new RuntimeException("已延期，必须先填写延期原因");
+            }
+        }
+
         repository.save(m);
 
         // ⭐ 全部完成 → 合同完成
@@ -99,7 +109,14 @@ public class ContractMilestoneService {
         }
     }
 
-    // ⭐ 初始化履约节点（已删除 dueDate）
+    // ⭐ 兼容旧代码（单独一个方法！）
+    public void complete(Long id) {
+        complete(id, "SYSTEM");
+    }
+
+    // =========================
+    // 初始化履约节点（不动）
+    // =========================
     public void initMilestones(Long contractId, LocalDate startDate) {
 
         ContractMilestone m1 = new ContractMilestone();
@@ -133,23 +150,90 @@ public class ContractMilestoneService {
         repository.saveAll(List.of(m1, m2, m3, m4));
     }
 
-    // ⭐ 设置预计时间
+    // =========================
+    // ⭐ 设置预计时间（增强日志）
+    // =========================
     public void setExpected(Long id, LocalDateTime expectedDate, String role) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
 
-        // 权限控制
         if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
             throw new RuntimeException("无权限设置预计时间");
         }
 
-        // 已完成不可修改
         if ("COMPLETED".equals(m.getStatus())) {
             throw new RuntimeException("节点已完成，不能修改预计时间");
         }
 
+        if (m.getExpectedDate() != null &&
+                LocalDateTime.now().isAfter(m.getExpectedDate()) &&
+                (m.getDelayReason() == null || m.getDelayReason().isEmpty())) {
+
+            throw new RuntimeException("请先填写延期原因，再调整预计时间");
+        }
+
+        LocalDate oldDate = m.getExpectedDate() == null
+                ? null
+                : m.getExpectedDate().toLocalDate();
+
         m.setExpectedDate(expectedDate);
+
         repository.save(m);
+
+        // ⭐ 日志
+        ContractMilestoneLog log = new ContractMilestoneLog();
+        log.setMilestoneId(id);
+        log.setOldStatus("EXPECTED_CHANGE");
+        log.setNewStatus("EXPECTED_CHANGE");
+        log.setOldDate(oldDate);
+        log.setNewDate(expectedDate.toLocalDate());
+        log.setMilestoneName(m.getName());
+        log.setOperator(role);
+        log.setOperateTime(LocalDateTime.now());
+
+        logRepository.save(log);
+    }
+
+    // =========================
+    // ⭐ 上报延期（增强日志）
+    // =========================
+    public void reportDelay(Long id, String reason, String role) {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+
+        if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
+            throw new RuntimeException("无权限操作");
+        }
+
+        if (m.getExpectedDate() == null) {
+            throw new RuntimeException("请先设置预计时间");
+        }
+
+        if (!LocalDateTime.now().isAfter(m.getExpectedDate())) {
+            throw new RuntimeException("未逾期，无需上报延期");
+        }
+
+        if ("COMPLETED".equals(m.getStatus())) {
+            throw new RuntimeException("节点已完成，不能上报延期");
+        }
+
+        String oldStatus = m.getStatus();
+
+        m.setDelayReason(reason);
+
+        repository.save(m);
+
+        // ⭐ 日志
+        ContractMilestoneLog log = new ContractMilestoneLog();
+        log.setMilestoneId(id);
+        log.setOldStatus(oldStatus);
+        log.setNewStatus("DELAY_REPORTED");
+        log.setMilestoneName(m.getName());
+        log.setOperator(role);
+        log.setOperateTime(LocalDateTime.now());
+
+        logRepository.save(log);
     }
 }

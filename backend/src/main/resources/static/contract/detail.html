@@ -886,27 +886,43 @@
             </div>
         </div>
 
-<!-- 履约节点 -->
-<div id="tab-performance" class="tab-panel">
-    <div class="content-card">
-        <div class="section-title">履约节点时间轴</div>
-        <div id="progressContainer" style="margin:10px 0;"></div>
-        <div class="timeline" id="performanceTimeline"></div>
-    </div>
-    <div class="content-card">
-        <div class="section-title">履约操作记录</div>
-        <table>
-            <thead>
-            <tr>
-                <th>时间</th>
-                <th>节点</th>
-                <th>状态变化</th>
-            </tr>
-            </thead>
-            <tbody id="milestoneLogTable"></tbody>
-        </table>
-    </div>
-</div>
+        <!-- 履约节点 -->
+        <div id="tab-performance" class="tab-panel">
+
+            <!-- ⭐ 履约节点时间轴 -->
+            <div class="content-card">
+                <div class="section-title">履约节点时间轴</div>
+
+                <div id="progressContainer" style="margin:10px 0;"></div>
+
+                <div class="timeline" id="performanceTimeline"></div>
+            </div>
+
+            <!-- ⭐ 履约操作记录 -->
+            <div class="content-card">
+                <div class="section-title">履约操作记录</div>
+
+                <button onclick="toggleLogs()" id="logBtn"
+                        style="margin-bottom:10px;">
+                    查看履约记录
+                </button>
+
+                <div id="logContainer" style="display:none;">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>节点</th>
+                            <th>状态变化</th>
+                            <th>操作人</th>
+                        </tr>
+                        </thead>
+                        <tbody id="milestoneLogTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
 
 <!-- 预警提醒 -->
 <div id="tab-alert" class="tab-panel">
@@ -995,15 +1011,6 @@
             .replaceAll("'", '&#39;');
     }
 
-    function formatDateTime(value) {
-        if (!value) return '-';
-        try {
-            return value.replace('T', ' ').slice(0, 19);
-        } catch {
-            return value;
-        }
-    }
-
     function getRoleText(role) {
         const map = {
             BUSINESS: '业务人员',
@@ -1033,6 +1040,19 @@
         };
         return map[status] || status || '-';
     }
+
+    function toggleLogs() {
+    const el = document.getElementById("logContainer");
+    const btn = document.getElementById("logBtn");
+
+    if (el.style.display === "none") {
+        el.style.display = "block";
+        btn.innerText = "收起履约记录";
+    } else {
+        el.style.display = "none";
+        btn.innerText = "查看履约记录";
+    }
+}
 
     function getStatusClass(status) {
     switch (status) {
@@ -1480,6 +1500,16 @@ async function postFlowAction(url, contractId) {
     }
 }
 
+function formatDateTime(value) {
+    if (!value) return '-';
+    try {
+        return value.replace('T', ' ').slice(0, 19);
+    } catch {
+        return value;
+    }
+}
+
+
 async function handleExportWord() {
     const contractId = getContractId();
     if (!contractId) {
@@ -1530,6 +1560,9 @@ async function handleExportPdf() {
 
     async function loadContractDetail() {
     const contractId = getContractId();
+
+    console.log("当前 contractId =", contractId); // ⭐调试
+
     if (!contractId) {
         document.getElementById('contractContent').textContent = '缺少合同ID';
         return;
@@ -1537,21 +1570,40 @@ async function handleExportPdf() {
 
     try {
         const resp = await authFetch(`/api/contracts/${contractId}`);
-        if (!resp.ok) throw new Error('获取合同详情失败');
 
-        const result = await resp.json();
-        if (result.code !== 200) throw new Error(result.message || '获取合同详情失败');
+        // ⭐ 先拿原始返回（关键）
+        const text = await resp.text();
+        console.log("接口原始返回：", text);
+
+        if (!resp.ok) {
+            throw new Error(`HTTP错误 ${resp.status}：` + text);
+        }
+
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (err) {
+            throw new Error("返回不是JSON：" + text);
+        }
+
+        console.log("解析后 result =", result);
+
+        if (result.code !== 200) {
+            throw new Error(result.message || '接口返回失败');
+        }
 
         const contract = result.data || {};
         currentContract = contract;
         currentContractTitle = contract.title || "合同文件";
+
+        console.log("contract =", contract);
 
         const grid = document.getElementById('contractInfoGrid');
 
         grid.innerHTML = `
             <div class="info-item">
                 <div class="label">合同ID</div>
-                <div class="value">${contract.contractId ?? '-'}</div>
+                <div class="value">${contract.contractId ?? contract.id ?? '-'}</div>
             </div>
             <div class="info-item">
                 <div class="label">合同编号</div>
@@ -1575,7 +1627,7 @@ async function handleExportPdf() {
             </div>
             <div class="info-item">
                 <div class="label">当前处理角色</div>
-                <div class="value">${escapeHtml(getRoleText(contract.currentHandlerRole))}</div>
+                <div class="value">${escapeHtml(getRoleText(contract.currentHandlerRole || contract.currentRole))}</div>
             </div>
             <div class="info-item">
                 <div class="label">创建时间</div>
@@ -1585,14 +1637,6 @@ async function handleExportPdf() {
                 <div class="label">更新时间</div>
                 <div class="value">${formatDateTime(contract.updatedAt)}</div>
             </div>
-            <div class="info-item">
-                <div class="label">当前版本ID</div>
-                <div class="value">${contract.currentVersionId ?? '-'}</div>
-            </div>
-            <div class="info-item">
-                <div class="label">模板ID</div>
-                <div class="value">${contract.templateId ?? '-'}</div>
-            </div>
         `;
 
         document.getElementById('contractContent').textContent =
@@ -1601,20 +1645,26 @@ async function handleExportPdf() {
         renderFlowSummary(contract);
         renderFlowBar(contract.status);
         renderFlowActions(contract);
-        await loadFlowRecords(contract.contractId);
+
+        // ⭐ 兼容 id / contractId
+        await loadFlowRecords(contract.contractId || contract.id);
 
     } catch (e) {
-        console.error(e);
-        document.getElementById('contractContent').textContent = '加载失败：' + (e.message || e);
+        console.error("真实错误：", e);
+
+        document.getElementById('contractContent').textContent =
+            '加载失败：' + (e.message || e);
     }
 }
 
-    function getMilestoneStatusText(status) {
+    function getMilestoneLogStatusText(status) {
     const map = {
         PENDING: '未开始',
         IN_PROGRESS: '进行中',
         COMPLETED: '已完成',
-        OVERDUE: '已逾期'
+        OVERDUE: '已逾期',
+        DELAY_REPORTED: '已上报延期',
+        EXPECTED_CHANGE: '预计时间调整'
     };
     return map[status] || status || '-';
 }
@@ -1668,7 +1718,7 @@ async function handleExportPdf() {
     list.forEach(item => {
         if (item.status === 'COMPLETED') return;
 
-        const due = new Date(item.dueDate);
+        const due = new Date(item.expectedDate);
         const diff = (due - now) / (1000*60*60*24);
 
         if (diff < 0) {
@@ -1687,7 +1737,20 @@ async function handleExportPdf() {
     document.getElementById("alertList").innerHTML = html;
 }
 
-    function renderMilestones(list) {
+    function getRealStatus(item) {
+    const now = new Date();
+
+    if (item.actualDate) return 'COMPLETED';
+
+    if (item.expectedDate) {
+        const due = new Date(item.expectedDate);
+        if (due < now) return 'OVERDUE';
+    }
+
+    return item.status;
+}
+
+function renderMilestones(list) {
     const container = document.getElementById("performanceTimeline");
     const now = new Date();
 
@@ -1695,102 +1758,208 @@ async function handleExportPdf() {
 
     list.forEach((item, index) => {
 
-        let status = item.status;
-        let due = item.dueDate ? new Date(item.dueDate) : null;
+        let due = item.expectedDate ? new Date(item.expectedDate) : null;
+        let realStatus = getRealStatus(item);
 
-        // ⭐ 自动状态计算
-        if (status !== 'COMPLETED' && due) {
-            if (due < now) {
-                status = 'OVERDUE';
-            } else if ((due - now) / (1000*60*60*24) <= 3) {
-                status = 'IN_PROGRESS';
-            }
-        }
-
-        // ⭐⭐ 必须先算 risk（关键修复点）
         const risk = getRiskLevel(item);
 
         // ⭐ 样式
         let className = "timeline-item";
 
-        if (risk === 'OVERDUE') className += " danger";
+        if (realStatus === 'COMPLETED') className += " done";
+        else if (risk === 'OVERDUE') className += " danger";
         else if (risk === 'WARNING') className += " warning";
-        else if (risk === 'ON_TIME') className += " done";
+        else className += " active";
 
-        if (status === 'COMPLETED') className += " done";
-        else if (status === 'IN_PROGRESS') className += " active";
-
-        // ⭐ 状态文字（中文）
+        // ⭐ 状态文字（最终正确逻辑）
         let statusText = '';
         let color = '';
 
-        if (risk === 'ON_TIME') {
-            statusText = '按时完成';
-            color = '#28a745';
-        } else if (risk === 'OVERDUE') {
-            statusText = item.actualDate ? '延期完成' : '已逾期';
+        if (item.actualDate) {
+
+            const actual = new Date(item.actualDate);
+            const expected = item.expectedDate ? new Date(item.expectedDate) : null;
+
+            if (expected && actual > expected) {
+                statusText = '延期完成';
+                color = '#dc3545';
+            } else {
+                statusText = '按时完成';
+                color = '#28a745';
+            }
+
+        }
+        else if (item.delayReason) {
+            statusText = '已上报延期';
+            color = '#f59e0b';
+        }
+        else if (risk === 'OVERDUE') {
+            statusText = '已逾期';
             color = '#dc3545';
-        } else if (risk === 'WARNING') {
+        }
+        else if (risk === 'WARNING') {
             statusText = '即将逾期';
             color = '#f39c12';
-        } else {
+        }
+        else {
             statusText = '正常';
             color = '#2d6da0';
         }
 
-        // ⭐ 权限 + 顺序控制
+        // ⭐ 权限控制（修复版）
         const role = getCurrentUserRole();
         let prev = list[index - 1];
 
         let canOperate =
-            currentContract?.status === 'ACTIVE' &&
-            item.status !== 'COMPLETED' &&
-            (role === item.responsibleRole || role === 'ADMIN') &&
-            (!prev || prev.status === 'COMPLETED');
+            ['ACTIVE', 'IN_PROGRESS'].includes(currentContract?.status) &&
+            realStatus !== 'COMPLETED' &&
+            (
+                role === item.responsibleRole ||
+                role === 'ADMIN'
+            ) &&
+            (!prev || getRealStatus(prev) === 'COMPLETED');
+
+        const isOverdue = item.expectedDate && new Date(item.expectedDate) < now;
 
         html += `
         <div class="${className}">
             <div class="timeline-dot"></div>
             <div class="timeline-content">
+
                 <div class="timeline-title">${item.name}</div>
                 <div>负责人：${getRoleText(item.responsibleRole)}</div>
                 <div>预计时间：${formatDateTime(item.expectedDate)}</div>
                 <div>实际时间：${formatDateTime(item.actualDate)}</div>
+
+                ${
+                    item.delayReason
+                        ? `<div style="color:#dc3545;">
+                                延期原因：${escapeHtml(item.delayReason)}
+                           </div>`
+                        : ''
+                }
+
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
                 </div>
 
                 ${
-    item.status === 'COMPLETED'
-        ? '✔'
-        : `
-        ${
-            canOperate && !item.expectedDate
-                ? `
-                <input type="datetime-local" id="expected-${item.id}" style="margin-top:6px;" />
-                <button onclick="setExpected(${item.id})">
-                    设置预计时间
-                </button>
-                `
-                : ''
-        }
+                    item.delayReason
+                        ? `<div style="color:#f59e0b;font-size:13px;margin-top:4px;">
+                                 已延期，可重新设置预计完成时间
+                           </div>`
+                        : ''
+                }
 
-        <button
-            ${!canOperate ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="无权限或未到该节点"' : ''}
-            onclick="completeMilestone(${item.id})"
-        >
-            标记完成
-        </button>
+                ${
+                    realStatus === 'COMPLETED'
+                        ? '✔'
+                        : `
+                        ${
+    canOperate && (
+        !item.expectedDate || item.delayReason
+    )
+        ? `
+        <div style="margin-top:6px;">
+            <input type="datetime-local" id="expected-${item.id}" />
+            <button onclick="setExpected(${item.id})">
+                ${item.expectedDate ? '调整预计时间' : '设置预计时间'}
+            </button>
+        </div>
         `
+        : ''
 }
+
+
+                        ${
+                            canOperate && isOverdue && !item.delayReason
+                                ? `
+                                <textarea id="reason-${item.id}"
+                                    placeholder="请输入延期原因"
+                                    style="width:100%;margin-top:6px;border-radius:8px;"></textarea>
+
+                                <button class="delay-btn" data-id="${item.id}">
+                                    上报延期
+                                </button>
+                                `
+                                : ''
+                        }
+
+                        ${
+                            canOperate && (
+                                !isOverdue ||
+                                (isOverdue && item.delayReason)
+                            )
+                                ? `
+                                <button class="complete-btn" data-id="${item.id}">
+                                    最终完成
+                                </button>
+                                `
+                                : ''
+                        }
+                        `
+                }
+
             </div>
         </div>`;
     });
 
     container.innerHTML = html;
 
+    // ⭐ 绑定按钮事件（关键）
+    setTimeout(() => {
+
+        document.querySelectorAll('.complete-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                completeMilestone(id);
+            });
+        });
+
+        document.querySelectorAll('.delay-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                reportDelay(id);
+            });
+        });
+
+    }, 0);
+
     renderProgress(list);
     generateAlerts(list);
+}
+
+    async function reportDelay(id) {
+
+    const reasonInput = document.getElementById(`reason-${id}`);
+    const delayReason = reasonInput ? reasonInput.value : "";
+
+    if (!delayReason.trim()) {
+        alert("必须填写延期原因");
+        return;
+    }
+
+    try {
+        const resp = await authFetch(`/api/milestones/${id}/delay`, {  // ✅ 修复点
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                delayReason: delayReason
+            })
+        });
+
+        if (!resp.ok) throw new Error("上报失败");
+
+        alert("延期已记录");
+
+        await loadMilestones();
+
+    } catch (e) {
+        console.error(e);
+        alert("失败：" + e.message);
+    }
 }
 
     async function setExpected(id) {
@@ -1826,23 +1995,49 @@ async function handleExportPdf() {
     async function loadMilestoneLogs(contractId) {
     try {
         const resp = await authFetch(`/api/milestones/${contractId}/logs`);
+
+        // ⭐ 不再 throw
+        if (!resp.ok) {
+            console.warn("日志接口失败:", resp.status);
+
+            document.getElementById("milestoneLogTable").innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align:center;color:#999;">
+                        暂无履约操作记录
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         const result = await resp.json();
 
-        const list = result.data || result || [];
+        let list = Array.isArray(result) ? result :
+                   Array.isArray(result.data) ? result.data : [];
 
         document.getElementById("milestoneLogTable").innerHTML =
-            list.map(l => `
-                <tr>
-                    <td>${l.operateTime}</td>
-                    <td>${l.milestoneName || l.milestoneId}</td>
-                    <td>${l.oldStatus} → ${l.newStatus}</td>
-                </tr>
-            `).join('');
+    list.map(l => `
+        <tr>
+            <td>${formatDateTime(l.operateTime)}</td>
+            <td>${l.milestoneName || '-'}</td>
+            <td>${getMilestoneLogStatusText(l.oldStatus)} → ${getMilestoneLogStatusText(l.newStatus)}</td>
+            <td>${l.operator || '-'}</td>
+        </tr>
+    `).join('');
 
     } catch (e) {
-        console.error(e);
+        console.error("日志加载异常:", e);
+
+        document.getElementById("milestoneLogTable").innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align:center;color:#999;">
+                    日志加载异常
+                </td>
+            </tr>
+        `;
     }
 }
+
     function getRiskLevel(item) {
     const now = new Date();
 
@@ -1867,19 +2062,12 @@ async function handleExportPdf() {
 
     async function completeMilestone(id) {
 
-    const btn = event.target;
-
-    if (btn.disabled) {
-        alert("当前无权限操作");
-        return;
-    }
-
     try {
         const resp = await authFetch(`/api/milestones/${id}/complete`, {
             method: 'POST'
         });
 
-        if (!resp.ok) throw new Error('更新履约节点失败');
+        if (!resp.ok) throw new Error('完成失败');
 
         await loadMilestones();
 

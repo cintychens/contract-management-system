@@ -24,4 +24,6 @@ public class ContractMilestoneLog {
     private String operator;
 
     private LocalDateTime operateTime;
+
+    private String milestoneName;
 }

@@ -44,4 +44,11 @@ public class ContractMilestone {
     // ⭐ 是否锁定（可用于禁止修改）
     @Column(nullable = false)
     private Boolean isLocked = false;
+
+    // ⭐ 延期原因
+    @Column(length = 255)
+    private String delayReason;
+
+    // ⭐ 是否已上报延期
+    private Boolean delayReported;
 }
