@@ -1713,29 +1713,84 @@ async function handleExportPdf() {
 }
 
     function generateAlerts(list) {
+
     const now = new Date();
+
     let html = "";
+    let total = 0;
+    let danger = 0;
+    let warning = 0;
 
     list.forEach(item => {
-        if (item.status === 'COMPLETED') return;
+
+        if (!item.expectedDate || item.status === 'COMPLETED') return;
 
         const due = new Date(item.expectedDate);
-        const diff = (due - now) / (1000*60*60*24);
+        const diff = Math.floor((due - now) / (1000 * 60 * 60 * 24));
 
+        let type = "";
+        let title = "";
+        let desc = "";
+        let tag = "";
+        let icon = "";
+
+        // ⭐ 已逾期
         if (diff < 0) {
-            html += `
-            <div class="alert-item danger">
-                ⚠ ${item.name} 已逾期 ${Math.abs(Math.floor(diff))} 天
-            </div>`;
-        } else if (diff <= 3) {
-            html += `
-            <div class="alert-item warning">
-                ⏰ ${item.name} 将在 ${Math.ceil(diff)} 天内到期
-            </div>`;
+            type = "danger";
+            danger++;
+            title = `${item.name} 已逾期`;
+            desc = `该节点已超过计划时间 ${Math.abs(diff)} 天，请立即处理`;
+            tag = "高风险";
+            icon = "fa-triangle-exclamation";
         }
+
+        // ⭐ 即将到期
+        else if (diff <= 3) {
+            type = "warning";
+            warning++;
+            title = `${item.name} 即将到期`;
+            desc = `该节点将在 ${diff} 天内到期，请提前处理`;
+            tag = "待处理";
+            icon = "fa-bell";
+        }
+
+        // ⭐ 正常不显示
+        else {
+            return;
+        }
+
+        total++;
+
+        html += `
+        <div class="alert-item ${type}">
+            <div class="alert-item-left">
+                <div class="alert-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="alert-content">
+                    <div class="alert-title">${title}</div>
+                    <div class="alert-desc">
+                        ${desc}<br/>
+                        预计时间：${formatDateTime(item.expectedDate)}
+                    </div>
+                    <div class="alert-meta">
+                        生成时间：${formatDateTime(new Date())}
+                    </div>
+                </div>
+            </div>
+            <div class="alert-tag ${type}-tag">${tag}</div>
+        </div>
+        `;
     });
 
-    document.getElementById("alertList").innerHTML = html;
+    // ⭐ 写入列表
+    document.getElementById("alertList").innerHTML =
+        html || `<div style="color:#999;">暂无预警</div>`;
+
+    // ⭐ 更新统计（关键）
+    document.querySelector(".alert-summary-value.warning").innerText = warning;
+    document.querySelector(".alert-summary-value.danger").innerText = danger;
+    document.querySelector(".alert-summary-value.normal").innerText = total;
 }
 
     function getRealStatus(item) {
