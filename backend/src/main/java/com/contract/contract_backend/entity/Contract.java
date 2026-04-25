@@ -129,4 +129,8 @@ public class Contract {
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public Long getContractId() {
+        return contractId;
+    }
 }

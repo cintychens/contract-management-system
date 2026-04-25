@@ -7,6 +7,7 @@ import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
 import com.contract.contract_backend.repository.ContractMilestoneRepository;
 import com.contract.contract_backend.dto.MilestoneAlertDTO;
+import com.contract.contract_backend.dto.AlertSummaryDTO;
 import com.contract.contract_backend.repository.ContractRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -284,5 +285,54 @@ public class ContractMilestoneService {
         }
 
         return result;
+    }
+
+    public AlertSummaryDTO getSummary() {
+
+        List<Contract> contracts = contractRepository.findAll();
+
+        AlertSummaryDTO dto = new AlertSummaryDTO();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Contract c : contracts) {
+
+            List<ContractMilestone> ms =
+                    repository.findByContractIdOrderBySortOrder(c.getContractId());
+
+            boolean allDone = ms.stream()
+                    .allMatch(m -> m.getActualDate() != null);
+
+            if (allDone) {
+                dto.setCompleted(dto.getCompleted() + 1);
+                continue;
+            }
+
+            boolean hasWarning = false;
+            boolean hasProcessing = false;
+
+            for (ContractMilestone m : ms) {
+
+                if (m.getActualDate() != null) continue;
+
+                if (m.getExpectedDate() == null) continue;
+
+                if (m.getExpectedDate().isBefore(now.plusDays(3))) {
+                    hasWarning = true;
+                }
+
+                hasProcessing = true;
+            }
+
+            if (hasWarning) {
+                dto.setWarning(dto.getWarning() + 1);
+            } else if (hasProcessing) {
+                dto.setProcessing(dto.getProcessing() + 1);
+            } else {
+                dto.setNormal(dto.getNormal() + 1);
+            }
+        }
+
+        return dto;
     }
 }

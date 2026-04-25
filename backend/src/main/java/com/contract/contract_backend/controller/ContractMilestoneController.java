@@ -7,6 +7,8 @@ import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
 import com.contract.contract_backend.repository.ContractMilestoneRepository;
 import com.contract.contract_backend.service.ContractMilestoneService;
+import com.contract.contract_backend.common.Result;
+
 import com.contract.contract_backend.dto.MilestoneAlertDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -115,6 +117,11 @@ public class ContractMilestoneController {
         }
 
         return logRepository.findByMilestoneIdInOrderByOperateTimeDesc(ids);
+    }
+
+    @GetMapping("/milestones/summary")
+    public Result getSummary() {
+        return Result.success(service.getSummary());
     }
 
     // =========================
