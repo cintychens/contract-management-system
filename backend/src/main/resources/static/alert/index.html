@@ -590,9 +590,16 @@
     }
 
     function handleCardClick(type) {
-        currentFilter = type;
-        renderAlertListByFilter(type);
-    }
+
+    currentFilter = type;
+
+    // ⭐先清空（防止旧数据残留）
+    const container = document.getElementById('alertListContainer');
+    container.innerHTML = '';
+
+    // ⭐再渲染
+    renderAlertListByFilter(type);
+}
 
     function formatDateTime(dt) {
         if (!dt) return '-';
@@ -690,28 +697,37 @@
         const contractMap = {};
 
         // ✅ 1. 所有合同都进来
-        allContracts.forEach(c => {
-    const id = String(c.id);   // ⭐ 统一成字符串
+        allContracts
+    .filter(c => {
+        const status = (c.status || c.contractStatus || '').toUpperCase();
 
-    contractMap[id] = {
-        contractId: c.id || c.contractId,
-        contractTitle: c.contractName || c.title || c.name || '未命名合同',
-        contractNo: c.contractNo || c.code || c.contractCode || '无编号',
-        critical: 0,
-        warning: 0,
-        total: 0,
-        status: normalizeStatus(c.status || c.contractStatus)
-    };
-});
+        // ⭐只保留你要的合同
+        return (
+            status === 'ACTIVE' ||
+            status === 'IN_PROGRESS' ||
+            status === 'COMPLETED'   // 是否要保留已完成你自己决定
+        );
+    })
+    .forEach(c => {
+        const id = String(c.id);
 
+        contractMap[id] = {
+            contractId: c.id || c.contractId,
+            contractTitle: c.contractName || c.title || c.name || '未命名合同',
+            contractNo: c.contractNo || c.code || c.contractCode || '无编号',
+            critical: 0,
+            warning: 0,
+            total: 0,
+            status: normalizeStatus(c.status || c.contractStatus)
+        };
+    });
 
         // ✅ 2. 再叠加预警
         alerts.forEach(a => {
-    const id = String(a.contractId);   // ⭐ 同样转字符串
-    const type = (a.type || '').toLowerCase();
+            const id = String(a.contractId);
+            const type = (a.type || '').toLowerCase();
 
     if (!contractMap[id]) {
-    // ⭐ 新建（避免丢数据）
     contractMap[id] = {
         contractId: a.contractId,
         contractTitle: a.contractTitle || '未知合同',
@@ -719,6 +735,7 @@
         critical: 0,
         warning: 0,
         total: 0,
+        status: 'IN_PROGRESS'
     };
 }
 
@@ -784,17 +801,13 @@ document.getElementById('completedCount').innerText =
     function renderAlertListByFilter(filter) {
 
     const container = document.getElementById('alertListContainer');
-    if (!contractList || contractList.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-circle"></i>
-                <p>暂无合同数据</p>
-            </div>`;
-        return;
-    }
 
-    let filtered = contractList;
+    // ✅ 先定义
+    let filtered = [];
 
+    // ======================
+    // ⭐ 分类逻辑
+    // ======================
     if (filter === 'critical') {
         filtered = contractList.filter(c => c.critical > 0);
     }
@@ -802,39 +815,68 @@ document.getElementById('completedCount').innerText =
         filtered = contractList.filter(c => c.warning > 0 && c.critical === 0);
     }
     else if (filter === 'processing') {
-    filtered = allContracts.filter(c => {
-        const status = (c.status || c.contractStatus || '').toUpperCase();
-        return status === 'ACTIVE' || status === 'IN_PROGRESS';
-    }).map(c => ({
-        contractId: c.id || c.contractId,
-        contractTitle: c.contractName || c.title || c.name || '未命名合同',
-        contractNo: c.contractNo || '无编号',
-        critical: 0,
-        warning: 0,
-        total: 0,
-        status: status
-    }));
-}
 
-else if (filter === 'completed') {
-    filtered = allContracts.filter(c => {
-        const status = (c.status || c.contractStatus || '').toUpperCase();
-        return status === 'COMPLETED' || status === 'FINISHED';
-    }).map(c => ({
-        contractId: c.id || c.contractId,
-        contractTitle: c.contractName || c.title || c.name || '未命名合同',
-        contractNo: c.contractNo || '无编号',
-        critical: 0,
-        warning: 0,
-        total: 0,
-        status: status
-    }));
-}
+        filtered = allContracts
+            .filter(c => {
+                const status = (c.status || c.contractStatus || '').toUpperCase();
+                return status === 'ACTIVE' || status === 'IN_PROGRESS';
+            })
+            .map(c => {
+
+                // ⭐ 找预警
+                const alert = contractList.find(a =>
+                    String(a.contractId) === String(c.id || c.contractId)
+                );
+
+                return {
+                    contractId: c.id || c.contractId,
+                    contractTitle: c.contractName || c.title || c.name || '未命名合同',
+                    contractNo: c.contractNo || '无编号',
+
+                    // ⭐ 保留预警
+                    critical: alert ? alert.critical : 0,
+                    warning: alert ? alert.warning : 0,
+                    total: alert ? alert.total : 0,
+
+                    status: (c.status || c.contractStatus || '').toUpperCase()
+                };
+            });
+    }
+    else if (filter === 'completed') {
+
+        filtered = allContracts
+            .filter(c => {
+                const status = (c.status || c.contractStatus || '').toUpperCase();
+                return status === 'COMPLETED' || status === 'FINISHED';
+            })
+            .map(c => {
+
+                const alert = contractList.find(a =>
+                    String(a.contractId) === String(c.id || c.contractId)
+                );
+
+                return {
+                    contractId: c.id || c.contractId,
+                    contractTitle: c.contractName || c.title || c.name || '未命名合同',
+                    contractNo: c.contractNo || '无编号',
+
+                    // ⭐ 修复：不能清零！
+                    critical: alert ? alert.critical : 0,
+                    warning: alert ? alert.warning : 0,
+                    total: alert ? alert.total : 0,
+
+                    status: (c.status || c.contractStatus || '').toUpperCase()
+                };
+            });
+    }
     else {
         filtered = contractList;
     }
 
-    if (!filtered.length) {
+    // ======================
+    // ⭐ 空状态（必须在最后）
+    // ======================
+    if (!filtered || filtered.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-check-circle"></i>
@@ -843,6 +885,9 @@ else if (filter === 'completed') {
         return;
     }
 
+    // ======================
+    // ⭐ 渲染
+    // ======================
     container.innerHTML = filtered.map(c => {
 
         const level =
@@ -853,10 +898,15 @@ else if (filter === 'completed') {
             c.critical > 0 ? 'fa-exclamation-triangle' :
             c.warning > 0 ? 'fa-clock' : 'fa-check-circle';
 
+        const statusTag =
+            c.critical > 0 ? '🔴 已逾期' :
+            c.warning > 0 ? '🟡 即将到期' :
+            '🟢 正常';
+
         const desc =
             c.total === 0
-                ? '暂无预警'
-                : `共有 ${c.total} 个预警（逾期 ${c.critical} / 即将到期 ${c.warning}）`;
+                ? `状态：${statusTag}`
+                : `${statusTag} ｜共有 ${c.total} 个预警（逾期 ${c.critical} / 即将到期 ${c.warning}）`;
 
         return `
         <div class="alert-item ${level}">
