@@ -1138,51 +1138,63 @@
 }
 
     /* ===== 页面初始化 ===== */
-
     document.addEventListener('DOMContentLoaded', function () {
-        loadUserInfo();
-        loadContracts();
-        loadGlobalAlerts();
+    loadUserInfo();
+    loadContracts();
+    loadGlobalAlerts();
 
-        const keywordInput = document.getElementById('keywordInput');
-        const statusFilter = document.getElementById('statusFilter');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
+    const keywordInput = document.getElementById('keywordInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
-        let timer = null;
-        keywordInput.addEventListener('input', () => {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                state.keyword = keywordInput.value.trim();
-                state.page = 1;
-                loadContracts();
-            }, 350);
-        });
-
-        statusFilter.addEventListener('change', () => {
-            state.status = statusFilter.value;
+    let timer = null;
+    keywordInput.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            state.keyword = keywordInput.value.trim();
             state.page = 1;
             loadContracts();
-        });
-
-        prevBtn.onclick = () => {
-            if (state.page > 1) {
-                state.page--;
-                loadContracts();
-            }
-        };
-
-        nextBtn.onclick = () => {
-            state.page++;
-            loadContracts();
-        };
-
-        window.onclick = function (event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.classList.remove('active');
-            }
-        };
+        }, 350);
     });
+
+    statusFilter.addEventListener('change', () => {
+        state.status = statusFilter.value;
+        state.page = 1;
+        loadContracts();
+    });
+
+    prevBtn.onclick = () => {
+        if (state.page > 1) {
+            state.page--;
+            loadContracts();
+        }
+    };
+
+    nextBtn.onclick = () => {
+        state.page++;
+        loadContracts();
+    };
+
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    };
+
+    // ⭐⭐⭐⭐ 在这里加（核心！！）
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('openSmart') === 'true') {
+        // 延迟一点，确保DOM加载完成
+        setTimeout(() => {
+            if (typeof openSmartModal === 'function') {
+                openSmartModal();
+            } else {
+                console.error('openSmartModal 未定义');
+            }
+        }, 300);
+    }
+});
 </script>
 
 </body>

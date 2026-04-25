@@ -679,7 +679,7 @@
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="stat-info">
-                    <h3>即将到期</h3>
+                    <h3>预警提醒</h3>
                     <div class="stat-number" id="statExpiringContracts">--</div>
                     <div class="stat-trend" id="statExpiringHint" style="display:none;"></div>
                 </div>
@@ -730,10 +730,13 @@
                     <h3><i class="fas fa-bolt" style="margin-right: 8px; color: #2d6da0;"></i>快速操作</h3>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
-                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
-                         onclick="window.location.href='/contract/upload.html'">
-                        <i class="fas fa-file-upload" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
-                        <div style="font-weight: 600; color: #1a4b75;">上传合同</div>
+                    <div style="background: #fff4f4; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="goAlertPage()">
+
+                        <i class="fas fa-bell" style="font-size: 32px; color: #dc3545; margin-bottom: 10px;"></i>
+
+                        <div style="font-weight: 600; color: #b91c1c;">预警提醒</div>
+
                     </div>
                     <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
                          onclick="window.location.href='/contract/index.html'">
@@ -745,40 +748,11 @@
                         <i class="fas fa-search" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
                         <div style="font-weight: 600; color: #1a4b75;">合同查询</div>
                     </div>
-                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;">
-                        <i class="fas fa-file-pdf" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
-                        <div style="font-weight: 600; color: #1a4b75;">生成报表</div>
+                    <div style="background: #f0f7ff; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer;"
+                         onclick="goSmartReport()">
+                        <i class="fas fa-robot" style="font-size: 32px; color: #2d6da0; margin-bottom: 10px;"></i>
+                        <div style="font-weight: 600; color: #1a4b75;">智能生成</div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="recent-contracts">
-            <div class="tasks-header" style="margin-bottom: 20px;">
-                <h3><i class="fas fa-history" style="margin-right: 8px; color: #2d6da0;"></i>最近合同</h3>
-                <a href="/contract/index.html" class="view-all" id="recentViewAll" style="display:none;">
-                    查看全部 <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>合同编号</th>
-                        <th>合同名称</th>
-                        <th>合作方</th>
-                        <th>签署日期</th>
-                        <th>到期日期</th>
-                        <th>金额(万元)</th>
-                        <th>状态</th>
-                        <th>操作</th>
-                    </tr>
-                    </thead>
-                    <tbody id="recentContractTbody"></tbody>
-                </table>
-                <div id="recentContractEmptyHint" style="padding: 20px 0; text-align: center; color: #6b7b8f;">
-                    暂无最近合同数据
                 </div>
             </div>
         </div>
@@ -789,6 +763,7 @@
     let trendChartInstance = null;
     let statusChartInstance = null;
     let dashboardContracts = [];
+    let dashboardAlerts = [];
 
     function authFetch(url, options = {}) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
@@ -830,6 +805,16 @@ document.getElementById('userRole').textContent =
             console.error('加载用户信息失败:', e);
             window.location.href = '/auth/login.html';
         }
+    }
+
+    function goSmartReport() {
+    // ⭐ 只负责跳转
+    window.location.href = '/contract/index.html?openSmart=true';
+}
+
+    function goAlertPage() {
+        // ⭐ 直接跳预警中心
+        window.location.href = '/alert/index.html?type=all';
     }
 
     function escapeHtml(str) {
@@ -981,7 +966,6 @@ document.getElementById('userRole').textContent =
         dashboardContracts = data.records || [];
 
         renderStats(dashboardContracts);
-        renderRecentContracts(dashboardContracts);
         renderStatusChart(dashboardContracts);
         renderTrendChart(dashboardContracts);
         renderTasks(dashboardContracts);
@@ -999,64 +983,45 @@ document.getElementById('userRole').textContent =
     }
 }
 
+    async function loadDashboardAlerts() {
+    try {
+        // ⭐ 必须和预警中心使用同一个接口
+        const resp = await authFetch('/api/milestones/alerts');
+        if (!resp.ok) throw new Error('获取预警失败');
+
+        const result = await resp.json();
+
+        // ⭐ 兼容两种返回格式
+        dashboardAlerts = Array.isArray(result)
+            ? result
+            : (result.data || []);
+
+        console.log("仪表盘预警数据:", dashboardAlerts);
+
+        renderAlertStat();
+    } catch (e) {
+        console.error('加载预警失败:', e);
+        dashboardAlerts = [];
+        renderAlertStat();
+    }
+}
+
     function renderStats(contracts) {
         const total = contracts.length;
         const active = contracts.filter(c => c.status === 'ACTIVE').length;
         const completed = contracts.filter(c => c.status === 'COMPLETED').length;
-        const expiring = contracts.filter(c => isExpiringSoon(c)).length;
 
         document.getElementById('statTotalContracts').textContent = total;
         document.getElementById('statActiveContracts').textContent = active;
         document.getElementById('statCompletedContracts').textContent = completed;
-        document.getElementById('statExpiringContracts').textContent = expiring;
+
     }
 
-    function renderRecentContracts(contracts) {
-        const tbody = document.getElementById('recentContractTbody');
-        const emptyHint = document.getElementById('recentContractEmptyHint');
-        const viewAll = document.getElementById('recentViewAll');
-
-        if (!tbody) return;
-
-        if (!contracts || contracts.length === 0) {
-            tbody.innerHTML = '';
-            if (emptyHint) emptyHint.style.display = 'block';
-            if (viewAll) viewAll.style.display = 'none';
-            return;
-        }
-
-        const sorted = [...contracts].sort((a, b) => {
-            const t1 = new Date(b.createdAt || 0).getTime();
-            const t2 = new Date(a.createdAt || 0).getTime();
-            return t1 - t2;
-        });
-
-        const recent = sorted.slice(0, 5);
-
-        tbody.innerHTML = recent.map(contract => `
-            <tr>
-                <td>${escapeHtml(contract.contractNo || '-')}</td>
-                <td>${escapeHtml(contract.title || '-')}</td>
-                <td>${escapeHtml(getPartnerName(contract))}</td>
-                <td>${formatDate(contract.signDate || contract.createdAt)}</td>
-                <td>${formatDate(contract.expireDate)}</td>
-                <td>${escapeHtml(getAmount(contract))}</td>
-                <td>
-                    <span class="status-badge ${getStatusClass(contract.status)}">
-                        ${escapeHtml(getStatusText(contract.status))}
-                    </span>
-                </td>
-                <td>
-                    <button class="action-btn" title="查看合同" onclick="viewContract(${contract.contractId})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        if (emptyHint) emptyHint.style.display = 'none';
-        if (viewAll) viewAll.style.display = 'inline-block';
+    function renderAlertStat() {
+        const count = dashboardAlerts.length;
+        document.getElementById('statExpiringContracts').textContent = count;
     }
+
 
     function renderStatusChart(contracts) {
         if (!statusChartInstance) return;
@@ -1198,6 +1163,7 @@ document.getElementById('userRole').textContent =
     initCharts();
 
     await loadDashboardContracts();
+    await loadDashboardAlerts();
 
     const trendPeriod = document.getElementById('trendPeriod');
     if (trendPeriod) {
