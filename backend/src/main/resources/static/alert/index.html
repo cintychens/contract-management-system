@@ -728,8 +728,8 @@
     contractMap[id].total++;
 });
 
-// ✅ 3. 最终列表（包含所有合同）
-contractList = Object.values(contractMap);
+// ✅ 3. 最终列表
+contractList = Object.values(contractMap).filter(c => c.total > 0);
 
 
         // =========================
