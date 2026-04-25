@@ -526,29 +526,37 @@
 
         <!-- 统计卡片 -->
         <div class="alert-stats-grid" id="statsGrid">
-            <div class="stat-card">
+
+            <!-- 高风险 -->
+            <div class="stat-card" onclick="handleCardClick('critical')">
                 <div class="stat-icon critical"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="stat-number critical" id="criticalCount">0</div>
                 <div class="stat-label">高风险逾期</div>
                 <div style="font-size:12px; color:#dc3545; margin-top:6px;">已超过截止时间</div>
             </div>
-            <div class="stat-card">
+
+            <!-- 即将到期 -->
+            <div class="stat-card" onclick="handleCardClick('warning')">
                 <div class="stat-icon warning"><i class="fas fa-clock"></i></div>
                 <div class="stat-number warning" id="warningCount">0</div>
                 <div class="stat-label">即将到期</div>
                 <div style="font-size:12px; color:#f59e0b; margin-top:6px;">3天内到期</div>
             </div>
-            <div class="stat-card" onclick="filterByType('processing')">
+
+            <!-- 进行中 -->
+            <div class="stat-card" onclick="handleCardClick('processing')">
                 <div class="stat-icon info"><i class="fas fa-spinner"></i></div>
                 <div class="stat-number info" id="processingCount">0</div>
                 <div class="stat-label">进行中</div>
             </div>
 
-            <div class="stat-card" onclick="filterByType('completed')">
+            <!-- 已完成 -->
+            <div class="stat-card" onclick="handleCardClick('completed')">
                 <div class="stat-icon success"><i class="fas fa-check"></i></div>
                 <div class="stat-number success" id="completedCount">0</div>
                 <div class="stat-label">已完成</div>
             </div>
+
         </div>
 
         <!-- 预警列表区域 -->
@@ -579,6 +587,11 @@
             if (m === '>') return '&gt;';
             return m;
         });
+    }
+
+    function handleCardClick(type) {
+        currentFilter = type;
+        renderAlertListByFilter(type);
     }
 
     function formatDateTime(dt) {
@@ -637,6 +650,7 @@
     let currentFilter = 'all';
     let allAlertsCache = [];   // 存储原始预警列表
     let contractList = []
+    let allContracts = [];
 
     async function fetchAndRenderAlerts() {
     try {
@@ -648,7 +662,7 @@
         const contractResult = await contractResp.json();
 
         // ✅ 1. 先拿全部合同
-        const allContracts = contractResult?.data?.records || [];
+        allContracts = contractResult?.data?.records || [];
 
         // ✅ 2. 再筛选履约中的合同
         const contracts = allContracts.filter(c => {
@@ -671,129 +685,178 @@
         console.log("alerts:", alerts);
 
         // =========================
-        // ⭐ 3. 合同 + 预警 合并（保持不变）
+        // ⭐ 3. 用 alerts 生成 contractList（关键）
         // =========================
         const contractMap = {};
 
-        alerts.forEach(a => {
+        // ✅ 1. 所有合同都进来
+        allContracts.forEach(c => {
+    const id = String(c.id);   // ⭐ 统一成字符串
 
-    // ⭐ 用 alerts 里的数据做唯一来源
-    if (!contractMap[a.contractId]) {
-        contractMap[a.contractId] = {
-            contractId: a.contractId,
-            contractTitle: a.contractTitle || '未命名合同',
-            contractNo: a.contractNo || '无编号',
-            critical: 0,
-            warning: 0,
-            total: 0
-        };
-    }
-
-    const type = (a.type || '').toLowerCase();
-
-    if (type === 'critical') contractMap[a.contractId].critical++;
-    else if (type === 'warning') contractMap[a.contractId].warning++;
-
-    contractMap[a.contractId].total++;
+    contractMap[id] = {
+        contractId: c.id,
+        contractTitle: c.contractName || c.title || c.name || '未命名合同',
+        contractNo: c.contractNo || c.code || c.contractCode || '无编号',
+        critical: 0,
+        warning: 0,
+        total: 0,
+        status: normalizeStatus(c.status || c.contractStatus)
+    };
 });
 
-        alerts.forEach(a => {
 
+        // ✅ 2. 再叠加预警
+        alerts.forEach(a => {
+    const id = String(a.contractId);   // ⭐ 同样转字符串
     const type = (a.type || '').toLowerCase();
 
-    if (!contractMap[a.contractId]) return;
+    if (!contractMap[id]) {
+    // ⭐ 新建（避免丢数据）
+    contractMap[id] = {
+        contractId: a.contractId,
+        contractTitle: a.contractTitle || '未知合同',
+        contractNo: a.contractNo || '无编号',
+        critical: 0,
+        warning: 0,
+        total: 0,
+    };
+}
 
-    if (type === 'critical') contractMap[a.contractId].critical++;
-    else if (type === 'warning') contractMap[a.contractId].warning++;
+    if (type === 'critical') contractMap[id].critical++;
+    else if (type === 'warning') contractMap[id].warning++;
 
-    contractMap[a.contractId].total++;
+    contractMap[id].total++;
 });
 
-        contractList = Object.values(contractMap);
+// ✅ 3. 最终列表（包含所有合同）
+contractList = Object.values(contractMap);
+
 
         // =========================
-        // ⭐ 4. 统计（保持不变）
-        // =========================
-        const criticalList = alerts.filter(a =>
-    (a.type || '').toLowerCase() === 'critical'
-);
+// ⭐ 4. 统计（统一标准）
+// =========================
 
-const warningList = alerts.filter(a =>
-    (a.type || '').toLowerCase() === 'warning'
-);
+// 高风险（逾期）
+document.getElementById('criticalCount').innerText =
+    contractList.filter(c => c.critical > 0).length;
 
-        document.getElementById('criticalCount').innerText = criticalList.length;
-        document.getElementById('warningCount').innerText = warningList.length;
-        document.getElementById('processingCount').innerText = contracts.length;
+// 即将到期
+document.getElementById('warningCount').innerText =
+    contractList.filter(c => c.warning > 0 && c.critical === 0).length;
+
+// 进行中（用合同数据）
+document.getElementById('processingCount').innerText =
+    allContracts.filter(c => {
+        const status = (c.status || c.contractStatus || '').toUpperCase();
+        return status === 'ACTIVE' || status === 'IN_PROGRESS';
+    }).length;
+
+// 已完成（用合同数据）
+document.getElementById('completedCount').innerText =
+    allContracts.filter(c => {
+        const status = (c.status || c.contractStatus || '').toUpperCase();
+        return status === 'COMPLETED' || status === 'FINISHED';
+    }).length;
 
         // =========================
         // ⭐ 6. 渲染
         // =========================
         renderAlertListByFilter('all');
 
+
+
     } catch (error) {
         console.error('❌ 预警加载失败:', error);
     }
+}
+    function normalizeStatus(status) {
+    if (!status) return '';
+
+    const s = String(status).toUpperCase();
+
+    if (s.includes('ACTIVE') || s.includes('IN_PROGRESS')) return 'IN_PROGRESS';
+    if (s.includes('COMPLETED') || s.includes('FINISHED')) return 'COMPLETED';
+
+    return s;
 }
 
     // 根据filter渲染预警列表
     function renderAlertListByFilter(filter) {
 
     const container = document.getElementById('alertListContainer');
-
-    // =========================
-    // ⭐ 1. 过滤逻辑（关键修复）
-    // =========================
-    let filtered = contractList;
-
-    if (filter === 'critical') {
-        filtered = contractList.filter(c => c.critical > 0);
-    } else if (filter === 'warning') {
-        filtered = contractList.filter(c => c.warning > 0 && c.critical === 0);
-    } else if (filter === 'completed') {
-           filtered = contractList.filter(c => c.total === 0);
-    }else {
-        // ⭐ “全部预警”一定要显示全部合同
-        filtered = contractList;
-    }
-
-    // =========================
-    // ⭐ 2. 空状态（只针对筛选）
-    // =========================
-    if (!filtered.length && filter !== 'all') {
-
-        let text = '暂无预警';
-
-        if (filter === 'critical') text = '暂无逾期合同';
-        if (filter === 'warning') text = '暂无即将到期合同';
-
+    if (!contractList || contractList.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <i class="fas fa-check-circle"></i>
-                <p>${text}</p>
+                <i class="fas fa-exclamation-circle"></i>
+                <p>暂无合同数据</p>
             </div>`;
         return;
     }
 
-    // =========================
-    // ⭐ 3. 渲染
-    // =========================
+    let filtered = contractList;
+
+    if (filter === 'critical') {
+        filtered = contractList.filter(c => c.critical > 0);
+    }
+    else if (filter === 'warning') {
+        filtered = contractList.filter(c => c.warning > 0 && c.critical === 0);
+    }
+    else if (filter === 'processing') {
+    filtered = allContracts.filter(c => {
+        const status = (c.status || c.contractStatus || '').toUpperCase();
+        return status === 'ACTIVE' || status === 'IN_PROGRESS';
+    }).map(c => ({
+        contractId: c.id,
+        contractTitle: c.contractName || c.title || c.name || '未命名合同',
+        contractNo: c.contractNo || '无编号',
+        critical: 0,
+        warning: 0,
+        total: 0,
+        status: status
+    }));
+}
+
+else if (filter === 'completed') {
+    filtered = allContracts.filter(c => {
+        const status = (c.status || c.contractStatus || '').toUpperCase();
+        return status === 'COMPLETED' || status === 'FINISHED';
+    }).map(c => ({
+        contractId: c.id,
+        contractTitle: c.contractName || c.title || c.name || '未命名合同',
+        contractNo: c.contractNo || '无编号',
+        critical: 0,
+        warning: 0,
+        total: 0,
+        status: status
+    }));
+}
+    else {
+        filtered = contractList;
+    }
+
+    if (!filtered.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <p>暂无数据</p>
+            </div>`;
+        return;
+    }
+
     container.innerHTML = filtered.map(c => {
 
-        // 风险等级
         const level =
             c.critical > 0 ? 'critical' :
             c.warning > 0 ? 'warning' : 'info';
 
-        // 图标
         const icon =
             c.critical > 0 ? 'fa-exclamation-triangle' :
             c.warning > 0 ? 'fa-clock' : 'fa-check-circle';
 
-        // 描述
-        const desc = c.total === 0
-            ? '暂无预警'
-            : `共有 ${c.total} 个预警（逾期 ${c.critical} / 即将到期 ${c.warning}）`;
+        const desc =
+            c.total === 0
+                ? '暂无预警'
+                : `共有 ${c.total} 个预警（逾期 ${c.critical} / 即将到期 ${c.warning}）`;
 
         return `
         <div class="alert-item ${level}">
@@ -811,9 +874,7 @@ const warningList = alerts.filter(a =>
                         </span>
                     </div>
 
-                    <div class="alert-desc">
-                        ${desc}
-                    </div>
+                    <div class="alert-desc">${desc}</div>
                 </div>
             </div>
 
