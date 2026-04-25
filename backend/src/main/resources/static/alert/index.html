@@ -557,11 +557,6 @@
                 <div class="section-title">
                     <i class="fas fa-list-ul"></i> 合同履约预警明细
                 </div>
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-filter="all">全部预警</button>
-                    <button class="filter-tab" data-filter="critical">高风险逾期</button>
-                    <button class="filter-tab" data-filter="warning">即将到期</button>
-                </div>
             </div>
             <div id="alertListContainer" class="alert-list">
                 <!-- 动态渲染预警列表 -->
@@ -652,8 +647,14 @@
         const contractResp = await authFetch('/api/contracts');
         const contractResult = await contractResp.json();
 
-        // ✅ 关键：从 Result.data.records 取
-        const contracts = contractResult?.data?.records || [];
+        // ✅ 1. 先拿全部合同
+        const allContracts = contractResult?.data?.records || [];
+
+        // ✅ 2. 再筛选履约中的合同
+        const contracts = allContracts.filter(c => {
+            const status = c.status || c.contractStatus;
+            return status === 'ACTIVE' || status === 'IN_PROGRESS';
+        });
 
         // =========================
         // ⭐ 2. 获取预警（保持不变）
@@ -674,16 +675,27 @@
         // =========================
         const contractMap = {};
 
-        contracts.forEach(c => {
-            contractMap[c.id] = {
-                contractId: c.id,
-                contractTitle: c.contractName || c.title || c.name || '未命名合同',
-                contractNo: c.contractNo || c.code || c.contractCode || '无编号',
-                critical: 0,
-                warning: 0,
-                total: 0
-            };
-        });
+        alerts.forEach(a => {
+
+    // ⭐ 用 alerts 里的数据做唯一来源
+    if (!contractMap[a.contractId]) {
+        contractMap[a.contractId] = {
+            contractId: a.contractId,
+            contractTitle: a.contractTitle || '未命名合同',
+            contractNo: a.contractNo || '无编号',
+            critical: 0,
+            warning: 0,
+            total: 0
+        };
+    }
+
+    const type = (a.type || '').toLowerCase();
+
+    if (type === 'critical') contractMap[a.contractId].critical++;
+    else if (type === 'warning') contractMap[a.contractId].warning++;
+
+    contractMap[a.contractId].total++;
+});
 
         alerts.forEach(a => {
 
@@ -712,11 +724,12 @@ const warningList = alerts.filter(a =>
 
         document.getElementById('criticalCount').innerText = criticalList.length;
         document.getElementById('warningCount').innerText = warningList.length;
+        document.getElementById('processingCount').innerText = contracts.length;
 
         // =========================
         // ⭐ 6. 渲染
         // =========================
-        renderAlertListByFilter(currentFilter);
+        renderAlertListByFilter('all');
 
     } catch (error) {
         console.error('❌ 预警加载失败:', error);
