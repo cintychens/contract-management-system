@@ -968,32 +968,36 @@ document.getElementById('userRole').textContent =
     }
 
     async function loadDashboardContracts() {
-        try {
-            const resp = await authFetch('/api/contracts?page=1&size=20');
-            if (!resp.ok) throw new Error('获取合同列表失败');
+    try {
+        const resp = await authFetch('/api/contracts?page=1&size=20');
+        if (!resp.ok) throw new Error('获取合同列表失败');
 
-            const result = await resp.json();
-            if (result.code !== 200) {
-                throw new Error(result.message || '获取合同列表失败');
-            }
-
-            const data = result.data || {};
-            dashboardContracts = data.records || [];
-
-            renderStats(dashboardContracts);
-            renderRecentContracts(dashboardContracts);
-            renderStatusChart(dashboardContracts);
-            renderTrendChart(dashboardContracts);
-            renderTasks(dashboardContracts);
-        } catch (e) {
-            console.error('加载仪表盘合同数据失败:', e);
-            renderStats([]);
-            renderRecentContracts([]);
-            renderStatusChart([]);
-            renderTrendChart([]);
-            renderTasks([]);
+        const result = await resp.json();
+        if (result.code !== 200) {
+            throw new Error(result.message || '获取合同列表失败');
         }
+
+        const data = result.data || {};
+        dashboardContracts = data.records || [];
+
+        renderStats(dashboardContracts);
+        renderRecentContracts(dashboardContracts);
+        renderStatusChart(dashboardContracts);
+        renderTrendChart(dashboardContracts);
+        renderTasks(dashboardContracts);
+
+    } catch (e) {
+        console.error('加载仪表盘合同数据失败:', e);
+
+        dashboardContracts = [];
+
+        renderStats([]);
+        renderRecentContracts([]);
+        renderStatusChart([]);
+        renderTrendChart([]);
+        renderTasks([]);
     }
+}
 
     function renderStats(contracts) {
         const total = contracts.length;
@@ -1069,27 +1073,39 @@ document.getElementById('userRole').textContent =
     }
 
     function renderTrendChart(contracts) {
-        if (!trendChartInstance) return;
 
-        const period = Number(document.getElementById('trendPeriod')?.value || 30);
-        const today = new Date();
-        const labels = [];
-        const values = [];
+    if (!trendChartInstance) return;
 
-        for (let i = period - 1; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(today.getDate() - i);
-            const key = d.toISOString().slice(0, 10);
-            labels.push(key.slice(5));
-            values.push(
-                contracts.filter(c => (c.createdAt || '').slice(0, 10) === key).length
-            );
-        }
+    const period = Number(document.getElementById('trendPeriod')?.value || 30);
 
-        trendChartInstance.data.labels = labels;
-        trendChartInstance.data.datasets[0].data = values;
-        trendChartInstance.update();
+    const today = new Date();
+
+    const labels = [];
+    const values = [];
+
+    // ⭐ 用同一个基准日期（关键）
+    for (let i = period - 1; i >= 0; i--) {
+        const d = new Date(today);   // ⭐ 这里改
+        d.setDate(today.getDate() - i);
+
+        const key = d.toISOString().slice(0, 10);
+
+        labels.push(key); // ⭐ 用完整日期（方便调试）
+
+        values.push(
+            contracts.filter(c =>
+                (c.createdAt || '').slice(0, 10) === key
+            ).length
+        );
     }
+
+    // ⭐ 强制替换（关键！！）
+    trendChartInstance.data.labels = [...labels];
+    trendChartInstance.data.datasets[0].data = [...values];
+
+    // ⭐ 强制刷新
+    trendChartInstance.update('none');
+}
 
     function renderTasks(contracts) {
         const taskList = document.getElementById('taskList');
@@ -1177,16 +1193,24 @@ document.getElementById('userRole').textContent =
         window.location.href = '/auth/login.html';
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        loadUserInfo();
-        initCharts();
-        loadDashboardContracts();
-        loadGlobalAlerts();
+    document.addEventListener('DOMContentLoaded', async function() {
+    loadUserInfo();
+    initCharts();
 
-        document.getElementById('trendPeriod').addEventListener('change', function() {
+    await loadDashboardContracts();
+
+    const trendPeriod = document.getElementById('trendPeriod');
+    if (trendPeriod) {
+        trendPeriod.addEventListener('change', function() {
+            console.log('切换天数:', this.value);
             renderTrendChart(dashboardContracts);
         });
-    });
+    }
+
+    if (typeof loadGlobalAlerts === 'function') {
+        loadGlobalAlerts();
+    }
+});
 </script>
 </body>
 </html>
