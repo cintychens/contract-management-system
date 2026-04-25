@@ -4,6 +4,8 @@ import com.contract.contract_backend.entity.Contract;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -11,15 +13,23 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
 
     boolean existsByContractNo(String contractNo);
 
-    // 添加根据ID查找合同的方法（Optional返回类型）
     Optional<Contract> findById(Long contractId);
 
-    // 添加根据合同编号查找合同的方法（Optional返回类型）
     Optional<Contract> findByContractNo(String contractNo);
 
-    Page<Contract> findByTitleContainingIgnoreCase(String title, Pageable pageable);
-
-    Page<Contract> findByStatus(String status, Pageable pageable);
-
-    Page<Contract> findByTitleContainingIgnoreCaseAndStatus(String title, String status, Pageable pageable);
+    // ⭐⭐ 核心：统一搜索（支持 keyword + status）
+    @Query("""
+        SELECT c FROM Contract c
+        WHERE
+            (:keyword IS NULL OR
+             LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(c.contractNo) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND
+            (:status IS NULL OR c.status = :status)
+    """)
+    Page<Contract> search(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            Pageable pageable
+    );
 }

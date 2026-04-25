@@ -325,38 +325,31 @@ public class ContractServiceImpl implements ContractService {
      */
     @Override
     public Map<String, Object> getContracts(int page, int size, String keyword, String status) {
-        Pageable pageable = PageRequest.of(
-                Math.max(page - 1, 0),
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
         Page<Contract> contractPage;
 
-        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
-        boolean hasStatus = status != null && !status.trim().isEmpty();
+        // ⭐ 关键：统一处理空值
+        String kw = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
+        String st = (status == null || status.trim().isEmpty()) ? null : status.trim();
 
-        if (hasKeyword && hasStatus) {
-            contractPage = contractRepository.findByTitleContainingIgnoreCaseAndStatus(
-                    keyword.trim(), status.trim(), pageable
-            );
-        } else if (hasKeyword) {
-            contractPage = contractRepository.findByTitleContainingIgnoreCase(
-                    keyword.trim(), pageable
-            );
-        } else if (hasStatus) {
-            contractPage = contractRepository.findByStatus(
-                    status.trim(), pageable
-            );
+        if (kw != null && st != null) {
+            contractPage = contractRepository.search(kw, st, pageable);
+        } else if (kw != null) {
+            contractPage = contractRepository.search(kw, null, pageable);
+        } else if (st != null) {
+            contractPage = contractRepository.search(null, st, pageable);
         } else {
             contractPage = contractRepository.findAll(pageable);
         }
 
         Map<String, Object> result = new HashMap<>();
+        result.put("records", contractPage.getContent());
         result.put("total", contractPage.getTotalElements());
         result.put("page", page);
         result.put("size", size);
-        result.put("records", contractPage.getContent());
+        result.put("totalPages", contractPage.getTotalPages());
 
         return result;
     }

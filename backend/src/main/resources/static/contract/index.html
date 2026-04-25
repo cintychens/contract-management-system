@@ -704,7 +704,8 @@
         page: 1,
         size: 10,
         keyword: '',
-        status: ''
+        status: '',
+        totalPages: 1
     };
 
     function authFetch(url, options = {}) {
@@ -909,6 +910,7 @@
             const page = data.page ?? state.page;
             const size = data.size ?? state.size;
             const totalPages = data.totalPages ?? Math.ceil(total / size);
+            state.totalPages = totalPages || 1;
 
             pageInfo.textContent = `第 ${page} / ${totalPages || 1} 页 · 共 ${total} 条`;
             prevBtn.disabled = page <= 1;
@@ -1141,7 +1143,6 @@
     document.addEventListener('DOMContentLoaded', function () {
     loadUserInfo();
     loadContracts();
-    loadGlobalAlerts();
 
     const keywordInput = document.getElementById('keywordInput');
     const statusFilter = document.getElementById('statusFilter');
@@ -1172,8 +1173,10 @@
     };
 
     nextBtn.onclick = () => {
+    if (state.page < state.totalPages) {
         state.page++;
         loadContracts();
+        }
     };
 
     window.onclick = function (event) {
@@ -1187,8 +1190,8 @@
     if (params.get('openSmart') === 'true') {
         // 延迟一点，确保DOM加载完成
         setTimeout(() => {
-            if (typeof openSmartModal === 'function') {
-                openSmartModal();
+            if (typeof openGenerateContractModal === 'function') {
+                openGenerateContractModal();
             } else {
                 console.error('openSmartModal 未定义');
             }
