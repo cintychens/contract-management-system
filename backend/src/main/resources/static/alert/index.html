@@ -694,7 +694,7 @@
     const id = String(c.id);   // ⭐ 统一成字符串
 
     contractMap[id] = {
-        contractId: c.id,
+        contractId: c.id || c.contractId,
         contractTitle: c.contractName || c.title || c.name || '未命名合同',
         contractNo: c.contractNo || c.code || c.contractCode || '无编号',
         critical: 0,
@@ -806,7 +806,7 @@ document.getElementById('completedCount').innerText =
         const status = (c.status || c.contractStatus || '').toUpperCase();
         return status === 'ACTIVE' || status === 'IN_PROGRESS';
     }).map(c => ({
-        contractId: c.id,
+        contractId: c.id || c.contractId,
         contractTitle: c.contractName || c.title || c.name || '未命名合同',
         contractNo: c.contractNo || '无编号',
         critical: 0,
@@ -821,7 +821,7 @@ else if (filter === 'completed') {
         const status = (c.status || c.contractStatus || '').toUpperCase();
         return status === 'COMPLETED' || status === 'FINISHED';
     }).map(c => ({
-        contractId: c.id,
+        contractId: c.id || c.contractId,
         contractTitle: c.contractName || c.title || c.name || '未命名合同',
         contractNo: c.contractNo || '无编号',
         critical: 0,
@@ -880,7 +880,7 @@ else if (filter === 'completed') {
 
             <div class="alert-action">
                 <button class="btn-sm btn-primary-sm"
-                    onclick="goContractDetail(${c.contractId})">
+                    onclick="goContractDetail('${c.contractId || c.id}')">
                     查看详情
                 </button>
             </div>
@@ -890,6 +890,12 @@ else if (filter === 'completed') {
 }
 
     function goContractDetail(contractId) {
+
+    if (!contractId || contractId === 'undefined') {
+        alert("合同ID异常");
+        return;
+    }
+
     window.location.href = `/contract/detail.html?id=${contractId}`;
 }
 
