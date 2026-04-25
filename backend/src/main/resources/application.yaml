@@ -35,6 +35,9 @@ spring:
       max-file-size: 20MB
       max-request-size: 25MB
 
+deepseek:
+  api-key: sk-JxpU7cIT6zvSUMv09kgUPk5VACSbi59aLCsst0RdOsXJOsS7
+
 app:
   jwt:
     secret: "change-me-to-a-long-random-string-change-me-1234567890"

@@ -694,6 +694,7 @@
         <div class="modal-actions sticky-actions">
             <button class="btn-outline" onclick="closeModal('generateContractModal')">取消</button>
             <button class="btn-outline" onclick="handleGenerateContract()">生成草稿</button>
+            <button onclick="aiGenerateInModal()">AI生成</button>
             <button class="btn-primary" onclick="saveGeneratedContract()">保存合同</button>
         </div>
     </div>
@@ -1091,6 +1092,47 @@
             alert('生成失败：' + e.message);
         }
     }
+
+    async function aiGenerateInModal() {
+
+    try {
+
+        // ⭐ 1. 获取模板类型
+        const templateSelect = document.getElementById('generateTemplateSelect');
+        const selectedOption = templateSelect.options[templateSelect.selectedIndex];
+
+        const templateType = selectedOption?.dataset.contractType || "合同";
+
+        // ⭐ 2. 获取“当前草稿内容”（重点！！！）
+        const content = document.getElementById('generatePreview').value;
+
+        if (!content) {
+            alert("请先点击【生成草稿】再使用AI");
+            return;
+        }
+
+        // ⭐ 3. 调后端
+        const res = await authFetch('/api/ai/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                templateType: templateType,
+                content: content
+            })
+        });
+
+        const text = await res.text();
+
+        // ⭐ 4. 覆盖预览
+        document.getElementById('generatePreview').value = text;
+
+        alert("AI优化完成");
+
+    } catch (e) {
+        console.error(e);
+        alert("AI生成失败");
+    }
+}
 
     async function saveGeneratedContract() {
     try {
