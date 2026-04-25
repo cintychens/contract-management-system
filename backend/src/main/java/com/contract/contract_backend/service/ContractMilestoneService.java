@@ -70,13 +70,6 @@ public class ContractMilestoneService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (m.getExpectedDate() != null &&
-                LocalDateTime.now().isAfter(m.getExpectedDate()) &&
-                (m.getDelayReason() == null || m.getDelayReason().isEmpty())) {
-
-            throw new RuntimeException("请先填写延期原因，再调整预计时间");
-        }
-
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
@@ -244,17 +237,30 @@ public class ContractMilestoneService {
 
         for (ContractMilestone m : list) {
 
-            if (m.getActualDate() != null) continue;
-            if (m.getExpectedDate() == null) continue;
+            // 已完成，不进入预警
+            if (m.getActualDate() != null) {
+                continue;
+            }
 
-            long diff = Duration.between(now, m.getExpectedDate()).toDays();
+            // 没有预计完成时间，不进入预警
+            if (m.getExpectedDate() == null) {
+                continue;
+            }
+
+            long diffDays = Duration.between(now, m.getExpectedDate()).toDays();
 
             String type;
-            if (diff < 0) {
+
+// 已逾期：用精确时间判断，不要用 diffDays < 0
+            if (m.getExpectedDate().isBefore(now)) {
                 type = "critical";
-            } else if (diff <= 3) {
+            }
+// 3天内到期
+            else if (m.getExpectedDate().isBefore(now.plusDays(3))) {
                 type = "warning";
-            } else {
+            }
+// 正常
+            else {
                 continue;
             }
 
@@ -265,10 +271,9 @@ public class ContractMilestoneService {
             dto.setExpectedDate(m.getExpectedDate());
             dto.setResponsibleRole(m.getResponsibleRole());
             dto.setType(type);
-            dto.setDiffDays(diff);
+            dto.setDiffDays(diffDays);
             dto.setDelayReason(m.getDelayReason());
 
-            // 查合同信息（你已有 ContractRepository）
             Contract c = contractRepository.findById(m.getContractId()).orElse(null);
             if (c != null) {
                 dto.setContractTitle(c.getTitle());

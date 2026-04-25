@@ -674,21 +674,29 @@
         });
 
         alerts.forEach(a => {
-            if (!contractMap[a.contractId]) return;
 
-            if (a.type === 'critical') contractMap[a.contractId].critical++;
-            if (a.type === 'warning') contractMap[a.contractId].warning++;
+    const type = (a.type || '').toLowerCase();
 
-            contractMap[a.contractId].total++;
-        });
+    if (!contractMap[a.contractId]) return;
+
+    if (type === 'critical') contractMap[a.contractId].critical++;
+    else if (type === 'warning') contractMap[a.contractId].warning++;
+
+    contractMap[a.contractId].total++;
+});
 
         contractList = Object.values(contractMap);
 
         // =========================
         // ⭐ 4. 统计（保持不变）
         // =========================
-        const criticalList = alerts.filter(a => a.type === 'critical');
-        const warningList = alerts.filter(a => a.type === 'warning');
+        const criticalList = alerts.filter(a =>
+    (a.type || '').toLowerCase() === 'critical'
+);
+
+const warningList = alerts.filter(a =>
+    (a.type || '').toLowerCase() === 'warning'
+);
 
         document.getElementById('criticalCount').innerText = criticalList.length;
         document.getElementById('warningCount').innerText = warningList.length;
@@ -834,6 +842,7 @@
         loadUserInfo();
         bindFilterEvents();
         await fetchAndRenderAlerts();
+        window.refreshAlerts = fetchAndRenderAlerts;
         // 可选：每隔60秒自动刷新一次预警数据
         setInterval(() => {
             fetchAndRenderAlerts().catch(e => console.warn('自动刷新预警失败', e));

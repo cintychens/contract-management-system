@@ -2056,14 +2056,12 @@ function renderMilestones(list) {
     const selected = new Date(val);
     const now = new Date();
 
-    // ⭐ 获取页面上的延期原因输入框
     const textarea = document.getElementById(`reason-${id}`);
     const reason = textarea ? textarea.value.trim() : "";
 
-    // ⭐⭐⭐ 情况1：选择的是“过去时间”（逾期）
+    // ⭐ 情况1：过去时间 → 自动走延期
     if (selected < now) {
 
-        // ❗没有填写原因 → 提示填写
         if (!reason) {
             if (textarea) {
                 textarea.style.display = 'block';
@@ -2075,9 +2073,12 @@ function renderMilestones(list) {
             return;
         }
 
-        // ✅ 已填写原因 → 自动提交延期
         try {
             await reportDelayWithReason(id, reason);
+
+            // ⭐⭐ 新增：刷新预警中心
+            window.refreshAlerts && window.refreshAlerts();
+
             return;
         } catch (e) {
             console.error(e);
@@ -2086,7 +2087,7 @@ function renderMilestones(list) {
         }
     }
 
-    // ⭐⭐⭐ 情况2：正常时间（未来时间）
+    // ⭐ 情况2：未来时间
     try {
         const iso = val.replace(" ", "T") + ":00";
 
@@ -2107,13 +2108,18 @@ function renderMilestones(list) {
 
         await loadMilestones();
 
+        // ⭐⭐ 新增：刷新预警中心
+        window.refreshAlerts && window.refreshAlerts();
+
     } catch (e) {
         console.error(e);
         alert("设置失败：" + e.message);
     }
 }
 
-    async function reportDelayWithReason(id, reason) {
+
+
+async function reportDelayWithReason(id, reason) {
 
     const resp = await authFetch(`/api/milestones/${id}/delay`, {
         method: 'POST',
@@ -2130,6 +2136,9 @@ function renderMilestones(list) {
     }
 
     await loadMilestones();
+
+    // ⭐⭐ 新增：刷新预警中心
+    window.refreshAlerts && window.refreshAlerts();
 }
 
     async function loadMilestoneLogs(contractId) {
