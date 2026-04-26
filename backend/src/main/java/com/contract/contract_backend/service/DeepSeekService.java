@@ -53,6 +53,27 @@ public class DeepSeekService {
         return vars;
     }
 
+    private String extractFinalContract(String aiOutput) {
+
+        if (aiOutput == null) return "";
+
+        String startFlag = "---参考优化合同---";
+        int start = aiOutput.indexOf(startFlag);
+
+        if (start == -1) {
+            return aiOutput; // 兜底
+        }
+
+        String sub = aiOutput.substring(start + startFlag.length());
+
+        int end = sub.indexOf("---修改摘要---");
+        if (end != -1) {
+            sub = sub.substring(0, end);
+        }
+
+        return sub.trim();
+    }
+
     // =============================
     // 未填写字段
     // =============================
@@ -517,8 +538,10 @@ public class DeepSeekService {
             // ⭐ 恢复变量
             result = restoreVars(result);
 
-            Map<String, String> parsed = splitResult(result);
-            String finalContract = replaceVariables(parsed.get("contract"), fields);
+            String finalContract = extractFinalContract(result);
+
+            // 再做变量替换
+            finalContract = replaceVariables(finalContract, fields);
 
             String html = highlightUnfilled(finalContract, unfilledVars)
                     .replace("\n", "<br>");
@@ -528,7 +551,7 @@ public class DeepSeekService {
                     "highlightHtml", html,
                     "suggestion", blocked
                             ? "⚠ 当前信息较少，AI已做基础格式优化，建议补充关键信息"
-                            : parsed.get("suggestion"),
+                            : "AI已完成合同优化",
                     "unfilledFields", unfilledVars
             );
 
