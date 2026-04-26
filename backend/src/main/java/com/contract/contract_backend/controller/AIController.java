@@ -14,10 +14,39 @@ public class AIController {
     private final DeepSeekService deepSeekService;
 
     @PostMapping("/generate")
-    public String generate(@RequestBody Map<String, Object> data) {
+    public Map<String, Object> generate(@RequestBody Map<String, Object> data) {
 
-        String templateType = (String) data.get("templateType");
+        try {
+            String templateType = (String) data.get("templateType");
 
-        return deepSeekService.generateWithTemplate(data, templateType);
+            if (templateType == null || templateType.isBlank()) {
+                return Map.of(
+                        "success", false,
+                        "message", "templateType不能为空"
+                );
+            }
+
+            Map<String, Object> result =
+                    deepSeekService.generateWithTemplate(data, templateType);
+
+            if (result.containsKey("error")) {
+                return Map.of(
+                        "success", false,
+                        "message", result.get("error")
+                );
+            }
+
+            return Map.of(
+                    "success", true,
+                    "data", result
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Map.of(
+                    "success", false,
+                    "message", "AI处理失败：" + e.getMessage()
+            );
+        }
     }
 }

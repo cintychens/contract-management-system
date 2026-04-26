@@ -122,6 +122,22 @@
             background: #f5f9ff;
         }
 
+        .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e3ecf5;
+    border-top: 4px solid #2d6da0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -526,6 +542,30 @@
     </style>
 </head>
 <body>
+
+<div id="aiLoadingMask" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:99999;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:white;
+        padding:30px 40px;
+        border-radius:16px;
+        text-align:center;
+        box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    ">
+        <div class="spinner"></div>
+        <div style="margin-top:12px; font-size:16px; color:#1a4b75;">
+            AI正在优化合同，请稍候...
+        </div>
+    </div>
+</div>
+
 <div class="dashboard-container">
     <aside class="sidebar">
         <div class="sidebar-header">
@@ -688,13 +728,25 @@
 
         <div class="form-group">
             <label>生成预览</label>
-            <textarea id="generatePreview" rows="14"></textarea>
+            <div id="generatePreview"
+                 style="
+        border:1px solid #ccc;
+        padding:16px;
+        min-height:300px;
+        background:#fff;
+        white-space:pre-wrap;
+        line-height:1.8;
+        font-family:'Microsoft YaHei';
+     ">
+            </div>
         </div>
 
         <div class="modal-actions sticky-actions">
             <button class="btn-outline" onclick="closeModal('generateContractModal')">取消</button>
             <button class="btn-outline" onclick="handleGenerateContract()">生成草稿</button>
-            <button onclick="aiGenerateInModal()">AI生成</button>
+            <button class="btn-primary" onclick="aiGenerateInModal()">
+                AI生成
+            </button>
             <button class="btn-primary" onclick="saveGeneratedContract()">保存合同</button>
         </div>
     </div>
@@ -720,6 +772,12 @@
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.add('active');
     }
+
+    function replaceVars(template, data) {
+    return template.replace(/\$\{(\w+)}/g, (_, key) => {
+        return data[key] || '${' + key + '}';
+    });
+}
 
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
@@ -849,7 +907,77 @@
 
     };
 
-    return map[key] || key;
+    return map[key] || smartTranslate(key);
+
+}
+
+    function smartTranslate(key) {
+
+    // ⭐⭐⭐ 1. 精确匹配（最高优先级）
+    const fullDict = {
+        "party_a": "甲方",
+        "party_b": "乙方",
+        "goods_name": "货物名称",
+        "sign_日期": "签署日期",
+        "金额_upper": "金额（大写）"
+    };
+
+    if (fullDict[key]) {
+        return fullDict[key];
+    }
+
+    // ⭐ 2. 统一格式
+    let result = key.replace(/_/g, ' ');
+    result = result.replace(/([A-Z])/g, ' $1');
+    result = result.toLowerCase();
+
+    // ⭐ 3. 单词翻译
+    const dict = {
+        // 基础
+        party: '方',
+        goods: '货物',
+        name: '名称',
+        quantity: '数量',
+
+        // 物流
+        cargo: '货物',
+        weight: '重量',
+        package: '包装',
+        type: '类型',
+        transport: '运输',
+        mode: '方式',
+
+        // 时间/金额
+        delivery: '发货',
+        arrival: '到达',
+        amount: '金额',
+        upper: '大写',
+        date: '日期',
+        sign: '签署',
+
+        // 地点
+        origin: '起运地',
+        destination: '目的地'
+    };
+
+    Object.keys(dict).forEach(k => {
+        result = result.replace(new RegExp(k, 'g'), dict[k]);
+    });
+
+    // ⭐⭐⭐ 4. 组合优化（必须放这里）
+    result = result
+        .replace('方 a', '甲方')
+        .replace('方 b', '乙方')
+        .replace('发货 日期', '发货日期')
+        .replace('到达 日期', '到达日期')
+        .replace('签署 日期', '签署日期')
+        .replace('金额 大写', '金额')
+        .replace('金额 upper', '金额')
+        .replace('货物 重量', '货物重量')
+        .replace('包装 类型', '包装类型')
+        .replace('运输 方式', '运输方式');
+
+    return result.trim();
 }
 
     function loadUserInfo() {
@@ -960,6 +1088,14 @@
         window.location.href = '/auth/login.html';
     }
 
+    function showLoading() {
+    document.getElementById('aiLoadingMask').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('aiLoadingMask').style.display = 'none';
+}
+
     /* ===== 智能生成合同 ===== */
 
     async function openGenerateContractModal() {
@@ -990,7 +1126,7 @@
         `;
 
         if (fieldsBox) fieldsBox.innerHTML = '';
-        if (preview) preview.value = '';
+        if (preview) preview.innerHTML = '';
 
         select.onchange = async function () {
             await loadGenerateVariables(this.value);
@@ -1069,8 +1205,11 @@
             const payload = { templateId: Number(templateId), title };
 
             document.querySelectorAll('.generate-field').forEach(input => {
-                payload[input.dataset.key] = input.value.trim();
-            });
+    let key = input.dataset.key;
+    key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+
+    payload[key] = input.value.trim();
+});
 
             const resp = await authFetch('/api/contracts/generate-draft', {
                 method: 'POST',
@@ -1084,8 +1223,18 @@
                 throw new Error(result.message || '生成失败');
             }
 
-            document.getElementById('generatePreview').value =
-                result.data?.draftContent || result.draftContent || '';
+            const template = result.data?.draftContent || result.draftContent || '';
+
+const data = {};
+document.querySelectorAll('.generate-field').forEach(input => {
+    let key = input.dataset.key;
+    key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    data[key] = input.value.trim();
+});
+
+const finalText = replaceVars(template, data);
+
+document.getElementById('generatePreview').innerText = finalText;
 
             alert('生成成功');
         } catch (e) {
@@ -1096,41 +1245,53 @@
     async function aiGenerateInModal() {
 
     try {
+        showLoading(); // ⭐⭐⭐ 开始加载
 
-        // ⭐ 1. 获取模板类型
         const templateSelect = document.getElementById('generateTemplateSelect');
         const selectedOption = templateSelect.options[templateSelect.selectedIndex];
-
         const templateType = selectedOption?.dataset.contractType || "合同";
 
-        // ⭐ 2. 获取“当前草稿内容”（重点！！！）
-        const content = document.getElementById('generatePreview').value;
+        const content = document.getElementById('generatePreview').innerText;
 
         if (!content) {
+            hideLoading();
             alert("请先点击【生成草稿】再使用AI");
             return;
         }
 
-        // ⭐ 3. 调后端
+        const fields = {};
+        document.querySelectorAll('.generate-field').forEach(input => {
+            let key = input.dataset.key;
+            key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+            fields[key] = input.value.trim();
+        });
+
         const res = await authFetch('/api/ai/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                templateType: templateType,
-                content: content
+                templateType,
+                content,
+                fields
             })
         });
 
-        const text = await res.text();
+        const result = await res.json();
 
-        // ⭐ 4. 覆盖预览
-        document.getElementById('generatePreview').value = text;
+        if (!result.success) {
+            throw new Error(result.message || "AI生成失败");
+        }
+
+        document.getElementById('generatePreview').innerHTML =
+            result.data.highlightHtml;
 
         alert("AI优化完成");
 
     } catch (e) {
         console.error(e);
-        alert("AI生成失败");
+        alert("AI生成失败：" + e.message);
+    } finally {
+        hideLoading(); // ⭐⭐⭐ 无论成功失败都关闭
     }
 }
 
@@ -1141,12 +1302,12 @@
         const selectedOption = templateSelect.options[templateSelect.selectedIndex];
 
         const title = document.getElementById('generateContractTitle').value.trim();
-        const draftContent = document.getElementById('generatePreview').value.trim();
+        const content = document.getElementById('generatePreview').innerText;
         const contractType = selectedOption?.dataset.contractType || '';
 
         if (!templateId) return alert('请选择模板');
         if (!title) return alert('请输入标题');
-        if (!draftContent) return alert('请先生成草稿');
+        if (!content) return alert('请先生成草稿');
         if (!contractType) return alert('未获取到合同类型，请重新选择模板');
 
         const payload = {
@@ -1157,9 +1318,11 @@
         };
 
         document.querySelectorAll('.generate-field').forEach(input => {
-            payload[input.dataset.key] = input.value.trim();
-        });
+    let key = input.dataset.key;
+    key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 
+    payload[key] = input.value.trim();
+});
         const resp = await authFetch('/api/contracts/confirm-generated', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
