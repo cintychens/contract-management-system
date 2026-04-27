@@ -74,6 +74,102 @@ public class DeepSeekService {
         return sub.trim();
     }
 
+    public static class DiffUtil {
+
+        public static String diff(String oldText, String newText) {
+
+            StringBuilder result = new StringBuilder();
+
+            String[] oldArr = oldText.split("\n");
+            String[] newArr = newText.split("\n");
+
+            int max = Math.max(oldArr.length, newArr.length);
+
+            for (int i = 0; i < max; i++) {
+
+                String oldLine = i < oldArr.length ? oldArr[i] : "";
+                String newLine = i < newArr.length ? newArr[i] : "";
+
+                if (oldLine.equals(newLine)) {
+                    result.append("<div>").append(escape(oldLine)).append("</div>");
+                } else {
+                    result.append("<div>");
+                    result.append(diffLine(oldLine, newLine));
+                    result.append("</div>");
+                }
+            }
+
+            return result.toString();
+        }
+
+        private static String diffLine(String oldLine, String newLine) {
+
+            int m = oldLine.length();
+            int n = newLine.length();
+
+            int[][] dp = new int[m + 1][n + 1];
+
+            // ⭐ 构建LCS表
+            for (int i = m - 1; i >= 0; i--) {
+                for (int j = n - 1; j >= 0; j--) {
+                    if (oldLine.charAt(i) == newLine.charAt(j)) {
+                        dp[i][j] = dp[i + 1][j + 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+                    }
+                }
+            }
+
+            // ⭐ 回溯生成diff
+            StringBuilder sb = new StringBuilder();
+
+            int i = 0, j = 0;
+
+            while (i < m && j < n) {
+
+                if (oldLine.charAt(i) == newLine.charAt(j)) {
+                    sb.append(escape(String.valueOf(oldLine.charAt(i))));
+                    i++;
+                    j++;
+                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+                    // 删除
+                    sb.append("<span style='background:#ffecec;color:red;'>")
+                            .append(escape(String.valueOf(oldLine.charAt(i))))
+                            .append("</span>");
+                    i++;
+                } else {
+                    // 新增
+                    sb.append("<span style='background:#eaffea;color:green;'>")
+                            .append(escape(String.valueOf(newLine.charAt(j))))
+                            .append("</span>");
+                    j++;
+                }
+            }
+
+            // 剩余删除
+            while (i < m) {
+                sb.append("<span style='background:#ffecec;color:red;'>")
+                        .append(escape(String.valueOf(oldLine.charAt(i))))
+                        .append("</span>");
+                i++;
+            }
+
+            // 剩余新增
+            while (j < n) {
+                sb.append("<span style='background:#eaffea;color:green;'>")
+                        .append(escape(String.valueOf(newLine.charAt(j))))
+                        .append("</span>");
+                j++;
+            }
+
+            return sb.toString();
+        }
+
+        private static String escape(String s) {
+            return s.replace("<", "&lt;").replace(">", "&gt;");
+        }
+    }
+
     // =============================
     // 未填写字段
     // =============================
@@ -306,7 +402,7 @@ public class DeepSeekService {
 ==============================
 【严格禁止】
 1. 不得删除、修改、增加原合同的任何文字、编号、标点
-2. 不得修改任何已填写内容（金额、日期、人名、公司名）
+2. 不得修改任何用户填写的内容（金额、数量、日期、人名、公司名等等）
 3. 所有占位符 ${xxx} 原样保留
 4. 不得编造任何事实、数据、金额、比例、赔偿上限
 5. 不得输出“建议协商”“咨询律师”等空话
@@ -323,9 +419,9 @@ public class DeepSeekService {
 ==============================
 【责任条款严谨性判断】
 检查责任条款是否包含以下三要素：
-① 触发条件  
-② 法律后果  
-③ 赔偿范围  
+① 触发条件
+② 法律后果
+③ 赔偿范围
 
 缺失任一 → 在建议中标注并提供补充样板
 
@@ -347,11 +443,11 @@ public class DeepSeekService {
 【法律规范表达要求】
 在生成“建议修改”和“参考优化合同”时：
 
-1. 可使用法律依据表达：
+1. 可使用真是的法律依据表达：
    - “根据《中华人民共和国民法典》相关规定”
    - “依据国家相关法律法规”
 
-2. 不得编造具体法条编号（如第XXX条）
+2. 不得编造具体法条编号（如第XXX条），但可以引用
 
 3. 条款必须符合正式法律合同写法，避免口语化
 
@@ -392,7 +488,7 @@ public class DeepSeekService {
 ==============================
 【条款长度与结构要求】
 
-1. 每个条款不得为单句描述，必须为多句结构（至少两句话）
+1. 每个条款不得为单句描述，必须为多句结构（至少四句话）
 2. 优先采用“总则 + 细化说明”的结构表达
 3. 应避免口语化或说明性语句，必须符合正式法律文本风格
 
@@ -442,6 +538,26 @@ public class DeepSeekService {
 - 未体现法律逻辑结构
 
 不得直接输出不合格条款。
+
+【格式要求（必须执行）】
+1. 必须严格保留合同原有换行结构
+2. 每个条款必须单独一行
+3. 不得将多行文本压缩为一段
+4. 不得删除换行符
+5. 输出必须为标准合同排版（带换行）
+
+==============================
+【高亮标注规则（重要修改）】 ⭐⭐⭐优化
+在“参考优化合同”中：
+
+1. 新增条款 → 绿色
+2. 修改条款 → 红色
+3. 未修改内容保持原样
+
+❗重要约束：
+- 不得为了标注而修改数据
+- 不得改变字段值（参考字段保护规则）
+- 仅对“必要法律优化”进行修改
 
 ==============================
 【缺失条款落地与一致性规则（必须执行）】
@@ -493,12 +609,26 @@ public class DeepSeekService {
 5. 不得新增无关条款
 6. 未修改部分保持原样
 7. 表达符合正式法律合同语言
+8. 不得修改所有输入的字段内容，所有输入的字段值必须完全一致
 
 （输出完整优化后的合同文本）
 
 ---修改摘要---
-有风险需处理 / 无风险  
+有风险需处理 / 无风险 
 说明：[一句话总结主要问题]
+
+==============================
+【最终一致性校验（必须执行）】
+
+在输出前必须检查：
+
+1. 是否输出了完整合同？若是 → 重新生成
+2. 是否修改了任何字段值？若是 → 重新生成
+3. 是否包含未修改的内容？若是 → 删除，仅保留差异
+4. 若用户输入的任意数字段发生变化 → 整体作废并重新生成
+5. 必须逐行复制原合同字段内容，仅在条款描述中插入新增句子
+仅允许输出“修改内容”
+==============================
 
 ==============================
 请处理以下合同：
@@ -545,10 +675,12 @@ public class DeepSeekService {
 
             String html = highlightUnfilled(finalContract, unfilledVars)
                     .replace("\n", "<br>");
+            String diffHtml = DiffUtil.diff(content, finalContract);
 
             return Map.of(
                     "contract", finalContract,
                     "highlightHtml", html,
+                    "diffHtml", diffHtml,
                     "suggestion", blocked
                             ? "⚠ 当前信息较少，AI已做基础格式优化，建议补充关键信息"
                             : "AI已完成合同优化",

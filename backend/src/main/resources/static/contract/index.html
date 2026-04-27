@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>合同管理 · 智能物流合同管理系统</title>
@@ -712,6 +713,7 @@
             <span class="close-modal" onclick="closeModal('generateContractModal')">&times;</span>
         </div>
 
+        <!-- 选择模板 -->
         <div class="form-group">
             <label>选择模板</label>
             <select id="generateTemplateSelect">
@@ -719,34 +721,60 @@
             </select>
         </div>
 
+        <!-- 标题 -->
         <div class="form-group">
             <label>合同标题</label>
             <input type="text" id="generateContractTitle" placeholder="请输入合同标题">
         </div>
 
+        <!-- 动态字段 -->
         <div id="generateFieldsContainer" class="generate-fields-container"></div>
 
+        <!-- ⭐⭐⭐ 新：合同对比区域 -->
         <div class="form-group">
-            <label>生成预览</label>
-            <div id="generatePreview"
-                 style="
-        border:1px solid #ccc;
-        padding:16px;
-        min-height:300px;
-        background:#fff;
-        white-space:pre-wrap;
-        line-height:1.8;
-        font-family:'Microsoft YaHei';
-     ">
+            <label>合同对比展示</label>
+
+            <div style="display:flex; gap:16px;">
+
+                <!-- 原合同 -->
+                <div style="flex:1;">
+                    <div style="font-weight:bold;margin-bottom:6px;">原合同</div>
+                    <pre id="originalContractBox"
+                         style="
+                            border:1px solid #ccc;
+                            padding:12px;
+                            min-height:220px;
+                            background:#f9f9f9;
+                            white-space:pre-wrap;
+                            line-height:1.6;
+                         "></pre>
+                </div>
+
+                <!-- AI合同 -->
+                <div style="flex:1;">
+                    <div style="font-weight:bold;margin-bottom:6px;">AI优化合同</div>
+                    <pre id="aiContractBox"
+                         style="
+                            border:1px solid #ccc;
+                            padding:12px;
+                            min-height:220px;
+                            background:#eef7ff;
+                            white-space:pre-wrap;
+                            line-height:1.6;
+                         "></pre>
+                </div>
+
             </div>
         </div>
 
+        <!-- ⭐⭐⭐ 隐藏预览（用于保存AI合同） -->
+        <div id="generatePreview" style="display:none;"></div>
+
+        <!-- 按钮 -->
         <div class="modal-actions sticky-actions">
             <button class="btn-outline" onclick="closeModal('generateContractModal')">取消</button>
             <button class="btn-outline" onclick="handleGenerateContract()">生成草稿</button>
-            <button class="btn-primary" onclick="aiGenerateInModal()">
-                AI生成
-            </button>
+            <button class="btn-primary" onclick="aiGenerateInModal()">AI生成</button>
             <button class="btn-primary" onclick="saveGeneratedContract()">保存合同</button>
         </div>
     </div>
@@ -1234,6 +1262,9 @@ document.querySelectorAll('.generate-field').forEach(input => {
 
 const finalText = replaceVars(template, data);
 
+window.originalContract = finalText;
+document.getElementById('originalContractBox').innerText = finalText;
+
 document.getElementById('generatePreview').innerText = finalText;
 
             alert('生成成功');
@@ -1243,9 +1274,8 @@ document.getElementById('generatePreview').innerText = finalText;
     }
 
     async function aiGenerateInModal() {
-
     try {
-        showLoading(); // ⭐⭐⭐ 开始加载
+        showLoading();
 
         const templateSelect = document.getElementById('generateTemplateSelect');
         const selectedOption = templateSelect.options[templateSelect.selectedIndex];
@@ -1282,8 +1312,48 @@ document.getElementById('generatePreview').innerText = finalText;
             throw new Error(result.message || "AI生成失败");
         }
 
-        document.getElementById('generatePreview').innerHTML =
-            result.data.highlightHtml;
+        // ⭐ DOM
+        const aiBox = document.getElementById('aiContractBox');
+        const originBox = document.getElementById('originalContractBox');
+
+        // ⭐ 数据
+        const rawText = result.data.contract || result.data.aiContract || "";
+        const aiText = stripHtml(rawText);
+        const original = window.originalContract || "";
+
+        let html = "";
+
+        // ⭐⭐⭐ 核心 diff（只标局部，不整段染色）
+        if (original && aiText) {
+
+            const diff = Diff.diffWords(original, aiText);
+
+            diff.forEach(part => {
+                if (part.added) {
+                    html += `<span style="background:#c6f6d5;">${part.value}</span>`;
+                } else if (part.removed) {
+                    html += `<span style="background:#fecaca;text-decoration:line-through;">${part.value}</span>`;
+                } else {
+                    html += part.value;
+                }
+            });
+
+        } else {
+            html = aiText;
+        }
+
+        // ⭐⭐⭐⭐⭐ 关键：渲染（你之前缺的）
+        if (aiBox) {
+            aiBox.innerHTML = html.replace(/\n/g, "<br>");
+        }
+
+        // ⭐ 原合同
+        if (originBox) {
+            originBox.innerText = original;
+        }
+
+        // ⭐ 保存用（纯文本）
+        document.getElementById('generatePreview').innerText = aiText;
 
         alert("AI优化完成");
 
@@ -1291,56 +1361,7 @@ document.getElementById('generatePreview').innerText = finalText;
         console.error(e);
         alert("AI生成失败：" + e.message);
     } finally {
-        hideLoading(); // ⭐⭐⭐ 无论成功失败都关闭
-    }
-}
-
-    async function saveGeneratedContract() {
-    try {
-        const templateSelect = document.getElementById('generateTemplateSelect');
-        const templateId = templateSelect.value;
-        const selectedOption = templateSelect.options[templateSelect.selectedIndex];
-
-        const title = document.getElementById('generateContractTitle').value.trim();
-        const content = document.getElementById('generatePreview').innerText;
-        const contractType = selectedOption?.dataset.contractType || '';
-
-        if (!templateId) return alert('请选择模板');
-        if (!title) return alert('请输入标题');
-        if (!content) return alert('请先生成草稿');
-        if (!contractType) return alert('未获取到合同类型，请重新选择模板');
-
-        const payload = {
-            templateId: Number(templateId),
-            title,
-            contractType,
-            draftContent: content
-        };
-
-        document.querySelectorAll('.generate-field').forEach(input => {
-    let key = input.dataset.key;
-    key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-
-    payload[key] = input.value.trim();
-});
-        const resp = await authFetch('/api/contracts/confirm-generated', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await resp.json();
-
-        if (!resp.ok || (result.code && result.code !== 200)) {
-            throw new Error(result.message || '保存失败');
-        }
-
-        alert('保存成功');
-        closeModal('generateContractModal');
-        loadContracts();
-    } catch (e) {
-        console.error(e);
-        alert('保存失败：' + (e.message || e));
+        hideLoading();
     }
 }
 
@@ -1390,6 +1411,7 @@ document.getElementById('generatePreview').innerText = finalText;
         }
     };
 
+
     // ⭐⭐⭐⭐ 在这里加（核心！！）
     const params = new URLSearchParams(window.location.search);
     if (params.get('openSmart') === 'true') {
@@ -1403,6 +1425,63 @@ document.getElementById('generatePreview').innerText = finalText;
         }, 300);
     }
 });
+
+    function stripHtml(html) {
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    return div.innerText;
+}
+
+async function saveGeneratedContract() {
+    try {
+        const templateSelect = document.getElementById('generateTemplateSelect');
+        const templateId = templateSelect.value;
+        const selectedOption = templateSelect.options[templateSelect.selectedIndex];
+
+        const title = document.getElementById('generateContractTitle').value.trim();
+        const content = document.getElementById('generatePreview').innerText;
+        const contractType = selectedOption?.dataset.contractType || '';
+
+        if (!templateId) return alert('请选择模板');
+        if (!title) return alert('请输入标题');
+        if (!content) return alert('请先生成草稿');
+        if (!contractType) return alert('未获取到合同类型');
+
+        const payload = {
+            templateId: Number(templateId),
+            title,
+            contractType,
+            draftContent: content
+        };
+
+        document.querySelectorAll('.generate-field').forEach(input => {
+            let key = input.dataset.key;
+            key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+            payload[key] = input.value.trim();
+        });
+
+        const resp = await authFetch('/api/contracts/confirm-generated', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await resp.json();
+
+        if (!resp.ok || (result.code && result.code !== 200)) {
+            throw new Error(result.message || '保存失败');
+        }
+
+        alert('保存成功');
+        closeModal('generateContractModal');
+        loadContracts();
+
+    } catch (e) {
+        console.error(e);
+        alert('保存失败：' + (e.message || e));
+    }
+}
+
 </script>
 
 </body>
