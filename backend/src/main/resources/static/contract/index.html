@@ -1318,44 +1318,64 @@ document.getElementById('generatePreview').innerText = finalText;
 
         // ⭐ 数据
         const rawText = result.data.contract || result.data.aiContract || "";
-        const aiText = stripHtml(rawText);
-        const original = window.originalContract || "";
 
-        let html = "";
+// ⭐ 1. 提取AI纯文本（用于保存，保留结构）
+const aiPlainText = rawText
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
 
-        // ⭐⭐⭐ 核心 diff（只标局部，不整段染色）
-        if (original && aiText) {
+// ⭐ 2. diff用文本（做结构对齐）
+const originalRaw = window.originalContract || "";
 
-            const diff = Diff.diffWords(original, aiText);
+const original = normalizeText(originalRaw);
+const aiTextForDiff = normalizeText(aiPlainText);
 
-            diff.forEach(part => {
-                if (part.added) {
-                    html += `<span style="background:#c6f6d5;">${part.value}</span>`;
-                } else if (part.removed) {
-                    html += `<span style="background:#fecaca;text-decoration:line-through;">${part.value}</span>`;
-                } else {
-                    html += part.value;
-                }
-            });
+let html = "";
 
+// ⭐⭐⭐ 核心 diff（优化版）
+if (original && aiPlainText) {
+
+    const diff = Diff.diffLines(original, aiTextForDiff, {
+        ignoreWhitespace: true
+    });
+
+    diff.forEach(part => {
+        const val = part.value.replace(/\n/g, "<br>");
+
+        if (part.added) {
+            html += `<span style="background:#c6f6d5;">${val}</span>`;
+        } else if (part.removed) {
+            html += `<span style="background:#fecaca;text-decoration:line-through;">${val}</span>`;
         } else {
-            html = aiText;
+            html += val;
         }
+    });
 
-        // ⭐⭐⭐⭐⭐ 关键：渲染（你之前缺的）
-        if (aiBox) {
-            aiBox.innerHTML = html.replace(/\n/g, "<br>");
-        }
+} else {
+    html = aiPlainText.replace(/\n/g, "<br>");
+}
 
-        // ⭐ 原合同
-        if (originBox) {
-            originBox.innerText = original;
-        }
+// ⭐ 渲染AI合同（带高亮）
+if (aiBox) {
+    aiBox.innerHTML = html;
+}
 
-        // ⭐ 保存用（纯文本）
-        document.getElementById('generatePreview').innerText = aiText;
+// ⭐ 原合同（保持原结构）
+if (originBox) {
+    originBox.innerText = originalRaw;
+}
 
-        alert("AI优化完成");
+// ⭐⭐⭐⭐⭐ 关键修复（保存用）
+window.aiPlainText = aiPlainText;
+
+// ⭐ 仍然保留 preview（可选）
+document.getElementById('generatePreview').innerText = aiPlainText;
+
+alert("AI优化完成");
 
     } catch (e) {
         console.error(e);
@@ -1426,6 +1446,14 @@ document.getElementById('generatePreview').innerText = finalText;
     }
 });
 
+    function normalizeText(text) {
+    return String(text || "")
+        .replace(/\r/g, "")
+        .replace(/\n{2,}/g, "\n")
+        .replace(/([。；])(?=[^\n])/g, "$1\n")
+        .trim();
+}
+
     function stripHtml(html) {
     const div = document.createElement("div");
     div.innerHTML = html;
@@ -1439,7 +1467,7 @@ async function saveGeneratedContract() {
         const selectedOption = templateSelect.options[templateSelect.selectedIndex];
 
         const title = document.getElementById('generateContractTitle').value.trim();
-        const content = document.getElementById('generatePreview').innerText;
+        const content = window.aiPlainText || "";
         const contractType = selectedOption?.dataset.contractType || '';
 
         if (!templateId) return alert('请选择模板');
