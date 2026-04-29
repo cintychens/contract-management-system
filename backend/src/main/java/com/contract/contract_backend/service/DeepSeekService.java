@@ -33,6 +33,23 @@ public class DeepSeekService {
         return content.replaceAll("__VAR_(\\w+)__", "\\${$1}");
     }
 
+    private String normalizeEmptyFields(String text) {
+
+        if (text == null) return "";
+
+        // 1️⃣ 把 ${xxx} → 【待确认】
+        text = text.replaceAll("\\$\\{.*?}", "【待确认】");
+
+        // 2️⃣ 把空字段补成【待确认】
+        // 例如：发货日期： → 发货日期：【待确认】
+        text = text.replaceAll("：\\s*(?=\\n|$)", "：【待确认】");
+
+        // 3️⃣ 把 --- 或 ___ 这种占位也变成【待确认】
+        text = text.replaceAll("：[-_\\s]+(?=\\n|$)", "：【待确认】");
+
+        return text;
+    }
+
     // =============================
     // 提取变量
     // =============================
@@ -74,6 +91,26 @@ public class DeepSeekService {
         return sub.trim();
     }
 
+    private static boolean isFieldLine(String line) {
+
+        if (line == null) return false;
+
+        line = line.trim();
+
+        // ① 包含冒号（字段）
+        if (!line.contains("：")) return false;
+
+        // ② 很短（字段特征）
+        if (line.length() <= 20) return true;
+
+        // ③ 包含数字或变量
+        if (line.matches(".*\\d+.*")) return true;
+        if (line.contains("${")) return true;
+        if (line.contains("【待确认】")) return true;
+
+        return false;
+    }
+
     public static class DiffUtil {
 
         public static String diff(String oldText, String newText) {
@@ -90,12 +127,22 @@ public class DeepSeekService {
                 String oldLine = i < oldArr.length ? oldArr[i] : "";
                 String newLine = i < newArr.length ? newArr[i] : "";
 
+                // ⭐⭐⭐ 关键：字段行直接跳过 diff
+                if (isFieldLine(oldLine) || isFieldLine(newLine)) {
+                    result.append("<div>")
+                            .append(escape(newLine))
+                            .append("</div>");
+                    continue;
+                }
+
                 if (oldLine.equals(newLine)) {
-                    result.append("<div>").append(escape(oldLine)).append("</div>");
+                    result.append("<div>")
+                            .append(escape(oldLine))
+                            .append("</div>");
                 } else {
-                    result.append("<div>");
-                    result.append(diffLine(oldLine, newLine));
-                    result.append("</div>");
+                    result.append("<div>")
+                            .append(diffLine(oldLine, newLine))
+                            .append("</div>");
                 }
             }
 
@@ -374,6 +421,8 @@ public class DeepSeekService {
             // ⭐⭐⭐ 再做替换
             content = mergeFieldsIntoContent(content, fields);
 
+            content = normalizeEmptyFields(content);
+
             if (content == null || content.isBlank()) {
                 return Map.of("error", "合同内容不能为空");
             }
@@ -407,6 +456,23 @@ public class DeepSeekService {
 4. 不得编造任何事实、数据、金额、比例、赔偿上限
 5. 不得输出“建议协商”“咨询律师”等空话
 6. 不得使用“全部损失”“一切损失”“所有损失”等绝对化表述
+
+==============================
+【占位符与待确认字段保护规则（必须执行）】
+
+以下内容必须原样保留，不得删除、替换、补全、解释、拆分：
+
+1. 所有 ${xxx} 占位符
+2. 所有【待确认】字段
+3. 所有用户已经填写的字段值
+
+特别要求：
+- 如果原文为：1. 起运地：${origin}
+  输出中必须仍然包含：1. 起运地：${origin}
+- 不得变成：1. 起运地：
+- 不得新增一个空的“1. 起运地：”
+- 不得将 ${origin}、${destination}、${transportMode} 替换为空字符串
+- 不得生成重复编号条款
 
 ==============================
 【缺失条款判断（仅限以下5类）】
@@ -547,7 +613,7 @@ public class DeepSeekService {
 5. 输出必须为标准合同排版（带换行）
 
 ==============================
-【高亮标注规则（重要修改）】 ⭐⭐⭐优化
+【高亮标注规则（重要修改）】
 在“参考优化合同”中：
 
 1. 新增条款 → 绿色
@@ -618,6 +684,46 @@ public class DeepSeekService {
 说明：[一句话总结主要问题]
 
 ==============================
+【禁止生成空字段规则】
+
+若原合同中某一行包含字段值、【待确认】或 ${xxx} 占位符，则该行在输出中必须完整保留。
+
+禁止出现以下情况：
+1. 原文有字段值，输出变为空
+2. 原文有 ${xxx}，输出删除 ${xxx}
+3. 原文有【待确认】，输出删除【待确认】
+4. 同一个编号重复出现两次
+5. 为了补充法律内容而新增空字段行
+
+错误示例：
+原文：1. 起运地：${origin}
+错误：1. 起运地：
+
+正确示例：
+1. 起运地：${origin}
+
+==============================
+【字段行禁止追加规则（强制）】
+
+以下类型的行属于“字段行”，必须严格保持原样，不得进行任何追加或修改：
+
+1. 含有 ${xxx} 的行（如：发货日期：${deliveryDate}）
+2. 含有【待确认】的行
+3. 含有简单值的行（如：数量：45）
+4. 所有“字段定义类行”（格式：xxx：value）
+
+对于上述行：
+
+❌ 禁止：
+- 在末尾追加任何说明
+- 拼接重复字段（如：发货日期：...发货日期：）
+- 将字段扩展为句子
+- 改变字段结构
+
+✔ 必须：
+- 完全逐字复制该行
+
+==============================
 【最终一致性校验（必须执行）】
 
 在输出前必须检查：
@@ -627,7 +733,7 @@ public class DeepSeekService {
 3. 是否包含未修改的内容？若是 → 删除，仅保留差异
 4. 若用户输入的任意数字段发生变化 → 整体作废并重新生成
 5. 必须逐行复制原合同字段内容，仅在条款描述中插入新增句子
-仅允许输出“修改内容”
+
 ==============================
 
 ==============================
@@ -666,23 +772,33 @@ public class DeepSeekService {
                     .asText();
 
             // ⭐ 恢复变量
+            // ⭐ 恢复变量
             result = restoreVars(result);
 
-            String finalContract = extractFinalContract(result);
+// ⭐⭐⭐ 1. 拆分AI结构
+            Map<String, String> sections = splitAISections(result);
 
-            // 再做变量替换
-            finalContract = replaceVariables(finalContract, fields);
+            String risk = sections.get("risk");
+            String missing = sections.get("missing");
+            String suggestion = sections.get("suggestion");
+            String contract = sections.get("contract");
 
-            String html = highlightUnfilled(finalContract, unfilledVars)
+// ⭐⭐⭐ 2. 替换变量（只对合同）
+            contract = replaceVariables(contract, fields);
+
+// ⭐⭐⭐ 3. 高亮（只对合同）
+            String html = highlightUnfilled(contract, unfilledVars)
                     .replace("\n", "<br>");
-            String diffHtml = DiffUtil.diff(content, finalContract);
 
+// ⭐⭐⭐ 4. 返回（重点！！！）
             return Map.of(
-                    "contract", finalContract,
+                    "risk", risk,
+                    "missing", missing,
+                    "suggestion", suggestion,
+                    "contract", contract,
                     "highlightHtml", html,
-                    "diffHtml", diffHtml,
-                    "suggestion", blocked
-                            ? "⚠ 当前信息较少，AI已做基础格式优化，建议补充关键信息"
+                    "suggestionMsg", blocked
+                            ? "⚠ 当前信息较少，建议补充字段"
                             : "AI已完成合同优化",
                     "unfilledFields", unfilledVars
             );
@@ -691,5 +807,81 @@ public class DeepSeekService {
             e.printStackTrace();
             return Map.of("error", "AI失败：" + e.getMessage());
         }
+    }
+
+    private Map<String, String> splitAISections(String text) {
+
+        if (text == null) {
+            text = "";
+        }
+
+        // ⭐ 兼容 AI 可能输出的中文标题格式
+        text = text.replace("【风险标注】", "---风险标注---")
+                .replace("【缺失条款】", "---缺失条款---")
+                .replace("【建议修改】", "---建议修改---")
+                .replace("【参考优化合同】", "---参考优化合同---")
+                .replace("【优化合同】", "---参考优化合同---")
+                .replace("【修改摘要】", "---修改摘要---");
+
+        String risk = safeExtract(text, "---风险标注---", "---缺失条款---");
+        String missing = safeExtract(text, "---缺失条款---", "---建议修改---");
+        String suggestion = safeExtract(text, "---建议修改---", "---参考优化合同---");
+
+        // ⭐ 合同部分截到“修改摘要”之前，避免摘要混进合同
+        String contract = safeExtract(text, "---参考优化合同---", "---修改摘要---");
+
+        return Map.of(
+                "risk", risk,
+                "missing", missing,
+                "suggestion", suggestion,
+                "contract", contract
+        );
+    }
+
+    private String safeExtract(String text, String start, String end) {
+        if (text == null || !text.contains(start)) {
+            return "";
+        }
+
+        String sub = text.split(Pattern.quote(start), 2)[1];
+
+        if (end != null && sub.contains(end)) {
+            sub = sub.split(Pattern.quote(end), 2)[0];
+        }
+
+        return sub.trim();
+    }
+
+    private Map<String, String> splitContract(String text) {
+
+        if (text == null) {
+            return Map.of("base", "", "aiPart", "");
+        }
+
+        String[] lines = text.split("\n");
+
+        StringBuilder base = new StringBuilder();
+        StringBuilder aiPart = new StringBuilder();
+
+        boolean aiStarted = false;
+
+        for (String line : lines) {
+
+            // ⭐ 判断是否进入“条款区”（不是字段行）
+            if (!aiStarted && !isFieldLine(line)) {
+                aiStarted = true;
+            }
+
+            if (aiStarted) {
+                aiPart.append(line).append("\n");
+            } else {
+                base.append(line).append("\n");
+            }
+        }
+
+        return Map.of(
+                "base", base.toString(),
+                "aiPart", aiPart.toString()
+        );
     }
 }

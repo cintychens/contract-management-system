@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>合同管理 · 智能物流合同管理系统</title>
@@ -1289,6 +1288,7 @@ document.getElementById('generatePreview').innerText = finalText;
             return;
         }
 
+        // ⭐ 收集字段
         const fields = {};
         document.querySelectorAll('.generate-field').forEach(input => {
             let key = input.dataset.key;
@@ -1296,6 +1296,7 @@ document.getElementById('generatePreview').innerText = finalText;
             fields[key] = input.value.trim();
         });
 
+        // ⭐ 调用后端
         const res = await authFetch('/api/ai/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1316,66 +1317,48 @@ document.getElementById('generatePreview').innerText = finalText;
         const aiBox = document.getElementById('aiContractBox');
         const originBox = document.getElementById('originalContractBox');
 
-        // ⭐ 数据
-        const rawText = result.data.contract || result.data.aiContract || "";
+        // ⭐ 数据（新结构）
+        const risk = result.data.risk || "";
+        const missing = result.data.missing || "";
+        const suggestion = result.data.suggestion || "";
+        const contract = result.data.contract || "";
 
-// ⭐ 1. 提取AI纯文本（用于保存，保留结构）
-const aiPlainText = rawText
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
+        // ⭐ 原合同
+        const originalRaw = window.originalContract || "";
 
-// ⭐ 2. diff用文本（做结构对齐）
-const originalRaw = window.originalContract || "";
+        // ⭐⭐⭐ 渲染 AI 内容（核心改动）
+        if (aiBox) {
+            aiBox.innerHTML = `
+                <div style="color:#dc2626;font-weight:bold;">【风险标注】</div>
+                <div>${risk.replace(/\n/g, "<br>") || "暂无风险标注"}</div>
 
-const original = normalizeText(originalRaw);
-const aiTextForDiff = normalizeText(aiPlainText);
+                <br>
 
-let html = "";
+                <div style="color:#f59e0b;font-weight:bold;">【缺失条款】</div>
+                <div>${missing.replace(/\n/g, "<br>") || "暂无缺失条款"}</div>
 
-// ⭐⭐⭐ 核心 diff（优化版）
-if (original && aiPlainText) {
+                <br>
 
-    const diff = Diff.diffLines(original, aiTextForDiff, {
-        ignoreWhitespace: true
-    });
+                <div style="color:#2563eb;font-weight:bold;">【修改建议】</div>
+                <div>${suggestion.replace(/\n/g, "<br>") || "暂无修改建议"}</div>
 
-    diff.forEach(part => {
-        const val = part.value.replace(/\n/g, "<br>");
+                <br>
 
-        if (part.added) {
-            html += `<span style="background:#c6f6d5;">${val}</span>`;
-        } else if (part.removed) {
-            html += `<span style="background:#fecaca;text-decoration:line-through;">${val}</span>`;
-        } else {
-            html += val;
+                <div style="color:#16a34a;font-weight:bold;">【优化合同】</div>
+                <div>${contract.replace(/\n/g, "<br>") || "暂无优化合同"}</div>
+            `;
         }
-    });
 
-} else {
-    html = aiPlainText.replace(/\n/g, "<br>");
-}
+        // ⭐ 原合同展示
+        if (originBox) {
+            originBox.innerText = originalRaw;
+        }
 
-// ⭐ 渲染AI合同（带高亮）
-if (aiBox) {
-    aiBox.innerHTML = html;
-}
+        // ⭐⭐⭐ 保存用（只保存优化后的合同）
+        window.aiPlainText = contract;
+        document.getElementById('generatePreview').innerText = contract;
 
-// ⭐ 原合同（保持原结构）
-if (originBox) {
-    originBox.innerText = originalRaw;
-}
-
-// ⭐⭐⭐⭐⭐ 关键修复（保存用）
-window.aiPlainText = aiPlainText;
-
-// ⭐ 仍然保留 preview（可选）
-document.getElementById('generatePreview').innerText = aiPlainText;
-
-alert("AI优化完成");
+        alert("AI优化完成");
 
     } catch (e) {
         console.error(e);
