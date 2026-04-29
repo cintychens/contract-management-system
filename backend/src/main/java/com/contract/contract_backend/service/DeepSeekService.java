@@ -429,6 +429,17 @@ public class DeepSeekService {
 
             // ⭐ 未填字段
             Set<String> unfilledVars = findUnfilledVars(content);
+            // ⭐ 把未填写字段拼成提示文本（交给AI用）
+            String missingFieldTip = "";
+
+            if (!unfilledVars.isEmpty()) {
+                List<String> fieldNames = extractFieldNames(content);
+
+                if (!fieldNames.isEmpty()) {
+                    missingFieldTip = "⚠ 以下字段尚未填写：" + String.join("、", fieldNames) + "。\n" +
+                            "请在【风险标注】中识别为高风险，并说明可能带来的法律风险。";
+                }
+            }
 
             boolean blocked = shouldBlockOptimization(content);
 
@@ -473,6 +484,46 @@ public class DeepSeekService {
 - 不得新增一个空的“1. 起运地：”
 - 不得将 ${origin}、${destination}、${transportMode} 替换为空字符串
 - 不得生成重复编号条款
+
+==============================
+【字段逐行扫描规则（必须执行）】
+
+在进行风险分析前，必须执行以下步骤：
+
+一、逐行扫描合同（强制）
+必须逐行检查合同中的每一条字段行（格式：xxx：value）
+
+二、识别未填写字段（必须执行）
+若某一行满足以下任一情况：
+
+1. 包含 ${xxx}
+2. 包含【待确认】
+3. 冒号后为空（如：发货日期：）
+
+则该行必须判定为“未填写字段”
+
+三、强制输出要求（必须执行）
+
+1. 每一个未填写字段，必须在【风险标注】中单独列出
+2. 风险等级必须为：高
+3. 必须使用原始字段完整文本作为“位置”
+
+四、禁止行为（强制）
+
+❌ 禁止：
+- 仅分析条款，不分析字段
+- 跳过字段检测
+- 只分析一部分字段
+- 将多个字段合并为一条风险
+
+✔ 必须：
+- 所有未填写字段全部输出
+- 每个字段对应一条风险
+
+五、补充强制校验（重要）
+
+若合同中存在未填写字段，但【风险标注】未列出全部字段，
+则视为不合格输出，必须重新生成
 
 ==============================
 【缺失条款判断（仅限以下5类）】
