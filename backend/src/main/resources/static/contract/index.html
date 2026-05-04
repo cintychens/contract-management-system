@@ -1038,7 +1038,7 @@
                     <td>${contract.contractId ?? '-'}</td>
                     <td>${escapeHtml(contract.contractNo || '-')}</td>
                     <td>${escapeHtml(contract.title || '-')}</td>
-                    <td>${escapeHtml(getContractTypeText(contract.contractType))}</td>
+                    <td>${escapeHtml(contract.contractTypeName || getContractTypeText(contract.contractType))}</td>
                     <td>
                         <span class="status-badge ${getStatusClass(contract.status)}">
                             ${escapeHtml(getStatusText(contract.status))}

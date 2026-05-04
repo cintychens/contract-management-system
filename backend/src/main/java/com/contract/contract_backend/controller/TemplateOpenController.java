@@ -44,21 +44,39 @@ public class TemplateOpenController {
 
         String content = template.getContent();
 
-        // ⭐ 使用 LinkedHashMap 保证顺序
+        // ⭐ 保证顺序 + 去重
         Map<String, String> fieldMap = new LinkedHashMap<>();
 
-        // ⭐⭐⭐ 核心正则（支持 1. / 中文：${}）
-        Pattern pattern = Pattern.compile("(?:\\d+\\.\\s*)?([^:\\n：]{2,})[：:]\\s*\\$\\{([a-zA-Z0-9_]+)}");
-        Matcher matcher = pattern.matcher(content);
+        // =========================
+        // ① 优先解析：有中文标签的字段
+        // =========================
+        Pattern labelPattern = Pattern.compile(
+                "(?:\\d+\\.\\s*)?([^:\\n：]{2,})[：:]\\s*\\$\\{([a-zA-Z0-9_]+)}"
+        );
+        Matcher m1 = labelPattern.matcher(content);
 
-        while (matcher.find()) {
-            String label = matcher.group(1).trim();
-            String key = matcher.group(2).trim();
-
+        while (m1.find()) {
+            String label = m1.group(1).trim();
+            String key = m1.group(2).trim();
             fieldMap.put(key, label);
         }
 
-        // ⭐ 返回给前端（带中文）
+        // =========================
+        // ② 补充解析：所有 ${xxx}
+        // =========================
+        Pattern varPattern = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher m2 = varPattern.matcher(content);
+
+        while (m2.find()) {
+            String key = m2.group(1).trim();
+
+            // 如果前面没解析到 → 用key兜底
+            fieldMap.putIfAbsent(key, key);
+        }
+
+        // =========================
+        // ③ 返回
+        // =========================
         return fieldMap.entrySet().stream()
                 .map(e -> Map.<String, Object>of(
                         "fieldKey", e.getKey(),

@@ -330,7 +330,6 @@ public class ContractServiceImpl implements ContractService {
 
         Page<Contract> contractPage;
 
-        // ⭐ 关键：统一处理空值
         String kw = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
         String st = (status == null || status.trim().isEmpty()) ? null : status.trim();
 
@@ -344,8 +343,53 @@ public class ContractServiceImpl implements ContractService {
             contractPage = contractRepository.findAll(pageable);
         }
 
+        // ⭐⭐⭐ 核心修改：转换数据
+        List<Map<String, Object>> records = contractPage.getContent().stream().map(contract -> {
+
+            String type = contract.getContractType();
+
+            String typeName;
+
+            switch (type) {
+                case "transport_a":
+                    typeName = "运输合同A类";
+                    break;
+                case "transport_b":
+                    typeName = "运输合同B类";
+                    break;
+                case "transport_c":
+                    typeName = "运输合同C类";
+                    break;
+
+                case "warehouse_a":
+                    typeName = "仓储合同A类";
+                    break;
+                case "warehouse_b":
+                    typeName = "仓储合同B类";
+                    break;
+                case "warehouse_c":
+                    typeName = "仓储合同C类";
+                    break;
+
+                default:
+                    typeName = type;
+                    break;
+            }
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("contractId", contract.getContractId());
+            map.put("contractNo", contract.getContractNo());
+            map.put("title", contract.getTitle());
+            map.put("contractType", type);
+            map.put("contractTypeName", typeName); // ⭐⭐⭐ 关键
+            map.put("status", contract.getStatus());
+            map.put("createdAt", contract.getCreatedAt());
+
+            return map;
+        }).toList();
+
         Map<String, Object> result = new HashMap<>();
-        result.put("records", contractPage.getContent());
+        result.put("records", records); // ⭐ 改这里
         result.put("total", contractPage.getTotalElements());
         result.put("page", page);
         result.put("size", size);
