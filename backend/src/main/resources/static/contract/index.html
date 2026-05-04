@@ -804,24 +804,11 @@
     return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
 
-function replaceVars(template, data) {
-
-    // ⭐ 1. 处理 ${xxx}
-    template = template.replace(/\$\{(\w+)}/g, (_, key) => {
-        return data[key] || '';
-    });
-
-    // ⭐ 2. 处理 {{xxx}}（你的重点）
-    template = template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-
-        // contact_person → contactPerson
-        const camelKey = toCamel(key);
-
-        return data[camelKey] || data[key] || '';
-    });
-
-    return template;
-}
+    function replaceVars(template, data) {
+        return template.replace(/\$\{(\w+)}/g, (_, key) => {
+            return data[key] || `【${key}】`;  // ⭐ 不再变空
+        });
+    }
 
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
@@ -886,80 +873,24 @@ function replaceVars(template, data) {
 }
 
     function getVariableLabel(key) {
-    const map = {
+    return key; // 不再强行翻译
+}
 
-        // ========= 通用字段 =========
-        title: '合同标题',
-        partyA: '甲方',
-        partyB: '乙方',
-        amount: '合同金额',
-        signDate: '签署日期',
-        effectiveDate: '生效日期',
-        expireDate: '到期日期',
-        serviceContent: '服务内容',
-        paymentTerms: '付款条款',
-        breachLiability: '违约责任',
-        extraRequirements: '补充要求',
-        servicePeriod: '服务期限',
-        penaltyRate: '违约金比例',
-        contactPerson: '联系人',
-        contactPhone: '联系电话',
-        cargoValue: '货物价值',
-        transportMode: '运输方式',
-        paymentMethod: '付款方式',
-        paymentTerm: '付款期限',
-        timeLimitHours: '运输时效',
+    function extractFieldLabels(template) {
+    const map = {};
 
-        // ========= 仓储类 =========
-        cargoName: '货物名称',
-        cargoCategory: '货物类别',
-        cargoQuantity: '货物数量',
-        specialRequirement: '特殊要求',
-        warehouseAddress: '仓储地址',
-        inboundDate: '入库日期',
-        outboundDate: '出库日期',
-        storagePeriod: '仓储期限',
-        paymentMethod: '付款方式',
-        paymentTerm: '付款期限',
-        disputeCourt: '争议法院',
+    // ⭐⭐⭐ 更宽松版本（核心改动）
+    const regex = /(?:\d+\.\s*)?([^:\n：]{2,})[：:]\s*\$\{(\w+)\}/g;
 
-        // ========= 供应链协议 =========
-        serviceScope: '服务范围',
-        serviceArea: '合作区域',
-        origin: '起运地',
-        destination: '目的地',
-        reconciliationCycle: '对账周期',
+    let match;
+    while ((match = regex.exec(template)) !== null) {
+        let label = match[1].trim();
+        const key = match[2].trim();
 
-        // ========= 配送类 =========
-        originWarehouse: '起运仓库',
-        deliveryArea: '配送区域',
-        deliveryAddress: '配送地址',
-        deliveryMode: '配送方式',
-        deliveryTimeRequirement: '时效要求',
-        singleWeightLimit: '单件重量限制',
-        singleVolumeLimit: '单件体积限制',
-        claimPeriod: '投诉索赔期限',
-        pickupTimeLimit: '提货时限',
-        storageFeeStandard: '保管费标准',
-        deliveryTimeStandard: '配送时效',
-        insuranceOption: '保险方式',
+        map[key] = label;
+    }
 
-        // ========= 外包类 =========
-        partyAAddress: '甲方地址',
-        partyALegalPerson: '甲方法定代表人',
-        partyAPhone: '甲方联系电话',
-        partyBAddress: '乙方地址',
-        partyBLegalPerson: '乙方法定代表人',
-        partyBPhone: '乙方联系电话',
-        serviceStandard: '服务标准',
-        feeStructure: '费用构成',
-        paymentDate: '付款日期',
-        exceptionHandling: '异常处理机制'
-
-    };
-
-    return map[key] || smartTranslate(key);
-
+    return map;
 }
 
     function smartTranslate(key) {
@@ -1196,6 +1127,7 @@ function hideLoading() {
         return;
     }
 
+    // ⭐ 需要用 textarea 的字段（按需保留/扩展）
     const textareaFields = new Set([
         'serviceScope',
         'serviceStandard',
@@ -1208,22 +1140,28 @@ function hideLoading() {
     ]);
 
     try {
-        const resp = await authFetch(`/api/templates/${templateId}/variables`);
+        // ⭐ 从后端获取字段（已包含中文 fieldName）
+        const resp = await authFetch(`/api/templates/${templateId}/fields`);
         if (!resp.ok) throw new Error(await resp.text());
 
         const result = await resp.json();
-        const vars = result.variables || [];
+        // 兼容 {data: [...]} 或直接 [...]
+        const vars = Array.isArray(result) ? result : (result.data || []);
 
         if (!vars.length) {
-            box.innerHTML = '<div style="color:#6b7b8f;">该模板暂无变量字段</div>';
+            box.innerHTML = '<div style="color:#6b7b8f;">模板中没有变量字段</div>';
             return;
         }
 
         box.innerHTML = vars.map(v => {
-            const label = escapeHtml(getVariableLabel(v));
-            const key = escapeHtml(v);
+            const rawKey = v.fieldKey || '';
+            // 统一 key：snake_case → camelCase（可选）
+            const key = rawKey.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 
-            if (textareaFields.has(v)) {
+            // ⭐⭐⭐ 核心：直接用后端返回的中文
+            const label = escapeHtml(v.fieldName || key);
+
+            if (textareaFields.has(key)) {
                 return `
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>${label}</label>
@@ -1239,6 +1177,7 @@ function hideLoading() {
                 </div>
             `;
         }).join('');
+
     } catch (e) {
         console.error(e);
         box.innerHTML = `<div style="color:#dc3545;">字段加载失败：${escapeHtml(e.message || e)}</div>`;
@@ -1290,11 +1229,32 @@ document.getElementById('originalContractBox').innerText = finalText;
 
 document.getElementById('generatePreview').innerText = finalText;
 
+
+
             alert('生成成功');
         } catch (e) {
             alert('生成失败：' + e.message);
         }
     }
+
+    function bindAutoUpdate(template) {
+    document.querySelectorAll('.generate-field').forEach(input => {
+        input.addEventListener('input', () => {
+
+            const data = {};
+            document.querySelectorAll('.generate-field').forEach(el => {
+                let key = el.dataset.key;
+                key = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+                data[key] = el.value.trim();
+            });
+
+            const text = replaceVars(template, data);
+
+            document.getElementById('generatePreview').innerText = text;
+            document.getElementById('originalContractBox').innerText = text;
+        });
+    });
+}
 
     async function aiGenerateInModal() {
     try {

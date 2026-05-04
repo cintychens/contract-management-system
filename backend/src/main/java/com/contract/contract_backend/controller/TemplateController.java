@@ -107,4 +107,6 @@ public class TemplateController {
         templateService.deleteTemplate(id);
         return "OK";
     }
+
+
 }
