@@ -162,8 +162,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        contentArea.innerHTML = renderDashboard();
-        loadDashboardData();
+        contentArea.innerHTML = renderUserManagement();
+        initUsersPage();
 
         const templateFileInput = document.getElementById("templateFile");
         if (templateFileInput) {

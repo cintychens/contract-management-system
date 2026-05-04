@@ -26,10 +26,29 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("用户名已存在");
         }
 
+        // ⭐ 允许角色列表
+        String role = req.getRoleCode();
+
+        if (role == null || role.isBlank()) {
+            role = "USER";
+        } else {
+            role = role.toUpperCase();
+
+            // ⭐ 安全限制（防止乱传）
+            if (!role.equals("BUSINESS") &&
+                    !role.equals("LEGAL") &&
+                    !role.equals("FINANCE") &&
+                    !role.equals("APPROVER") &&
+                    !role.equals("USER")) {
+
+                role = "USER";
+            }
+        }
+
         User user = User.builder()
                 .username(req.getUsername())
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
-                .roleCode("USER")
+                .roleCode(role)   // ✅ 用前端传的
                 .status("ENABLED")
                 .build();
 

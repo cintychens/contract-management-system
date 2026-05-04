@@ -567,13 +567,15 @@
             <label><i class="fas fa-user-tag"></i>角色</label>
             <div class="input-field">
                 <i class="fas fa-user-tag"></i>
-                <select id="role" disabled>
-                    <option value="user" selected>普通用户 (默认)</option>
-                    <option value="admin" disabled>系统管理员 (不可选)</option>
+                <select id="role">
+                    <option value="BUSINESS">业务人员</option>
+                    <option value="LEGAL">法务人员</option>
+                    <option value="FINANCE">财务人员</option>
+                    <option value="APPROVER">审批人员</option>
                 </select>
             </div>
             <div class="field-hint">
-                <i class="fas fa-info-circle"></i> 注册后自动分配普通用户权限，管理员账号由系统预置
+                <i class="fas fa-info-circle"></i> 请选择注册角色，管理员账号由系统预置
             </div>
         </div>
 
@@ -788,7 +790,7 @@
     });
 
     // ========== 注册处理 ==========
-async function handleRegister(event) {
+    async function handleRegister(event) {
   event.preventDefault();
   hideAlert();
 
@@ -796,6 +798,7 @@ async function handleRegister(event) {
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
   const phone = document.getElementById('phone').value.trim();
+  const roleCode = document.getElementById('role').value; // ⭐ 新增
   const agreeTerms = document.getElementById('agreeTerms').checked;
 
   // 账号校验
@@ -845,7 +848,8 @@ async function handleRegister(event) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username,
-        password
+        password,
+        roleCode  // ⭐ 关键：传给后端
       })
     });
 

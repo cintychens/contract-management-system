@@ -13,9 +13,16 @@ public class RegisterRequest {
     @Size(min = 6, max = 64, message = "密码长度需在6~64之间")
     private String password;
 
+    // ⭐⭐⭐ 新增这一行
+    private String roleCode;
+
+    // ===== getter =====
     public String getUsername() { return username; }
     public String getPassword() { return password; }
+    public String getRoleCode() { return roleCode; }   // ⭐ 新增
 
+    // ===== setter =====
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
+    public void setRoleCode(String roleCode) { this.roleCode = roleCode; } // ⭐ 新增
 }
