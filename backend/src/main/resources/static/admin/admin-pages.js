@@ -461,10 +461,10 @@ function renderTemplateManagement() {
             <option value="transport_A">运输合同A类</option>
             <option value="transport_B">运输合同B类</option>
             <option value="transport_C">运输合同C类</option>
-            <option value="warehouse">仓储合同</option>
+            <option value="warehouse_A">仓储合同A类</option>
+            <option value="warehouse_B">仓储合同B类</option>
+            <option value="warehouse_C">仓储合同C类</option>
             <option value="supply">供应链协议</option>
-            <option value="distribution">配送服务合同</option>
-                <option value="outsourcing">物流外包合同</option>
           </select>
 
           <select id="templateStatusFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
@@ -698,10 +698,10 @@ function getContractTypeText(type) {
         transport_a: "运输合同A类",
         transport_b: "运输合同B类",
         transport_c: "运输合同C类",
-        warehouse: "仓储合同",
-        supply: "供应链协议",
-        distribution: "配送服务合同",
-        outsourcing: "物流外包合同"
+        warehouse_a: "仓储合同A类",
+        warehouse_b: "仓储合同B类",
+        warehouse_c: "仓储合同C类",
+        supply: "供应链协议"
     };
     return map[type] || type || "-";
 }

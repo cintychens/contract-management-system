@@ -249,8 +249,10 @@ public class TemplateServiceImpl implements TemplateService {
         String s = contractType == null ? "" : contractType.trim().toLowerCase();
 
         if (!s.startsWith("transport")
-                && !"warehouse".equals(s)
-                && !"supply".equals(s)) {
+                && !s.startsWith("warehouse")
+                && !"supply".equals(s)
+                && !"distribution".equals(s)
+                && !"outsourcing".equals(s)) {
             throw new IllegalArgumentException("合同类型不合法");
         }
 
