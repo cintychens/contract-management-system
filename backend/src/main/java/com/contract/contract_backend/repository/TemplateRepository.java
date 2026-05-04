@@ -18,24 +18,30 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
 
     Page<Template> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
+    // ❌ 原来的（保留）
     Page<Template> findByContractType(String contractType, Pageable pageable);
+
+    // ✅ 新增（核心！！！）
+    Page<Template> findByContractTypeStartingWith(String contractType, Pageable pageable);
 
     Page<Template> findByStatus(String status, Pageable pageable);
 
     Page<Template> findByNameContainingIgnoreCaseAndContractType(String name, String contractType, Pageable pageable);
 
+    // ✅ 新增（核心！！！）
+    Page<Template> findByNameContainingIgnoreCaseAndContractTypeStartingWith(String name, String contractType, Pageable pageable);
+
     Page<Template> findByNameContainingIgnoreCaseAndStatus(String name, String status, Pageable pageable);
 
     Page<Template> findByContractTypeAndStatus(String contractType, String status, Pageable pageable);
 
-    Page<Template> findByNameContainingIgnoreCaseAndContractTypeAndStatus(
+    // ✅ 新增（核心！！！）
+    Page<Template> findByContractTypeStartingWithAndStatus(String contractType, String status, Pageable pageable);
+
+    // ✅ 新增（核心！！！）
+    Page<Template> findByNameContainingIgnoreCaseAndContractTypeStartingWithAndStatus(
             String name, String contractType, String status, Pageable pageable
     );
 
-    /**
-     * 普通用户加载“智能生成合同”模板下拉框时使用
-     * 只查询已启用模板
-     */
     List<Template> findByStatusIgnoreCase(String status);
-
 }

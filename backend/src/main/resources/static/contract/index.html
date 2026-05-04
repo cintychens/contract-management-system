@@ -752,7 +752,7 @@
                 <!-- AI合同 -->
                 <div style="flex:1;">
                     <div style="font-weight:bold;margin-bottom:6px;">AI优化合同</div>
-                    <pre id="aiContractBox"
+                    <div id="aiContractBox"
                          style="
                             border:1px solid #ccc;
                             padding:12px;
@@ -760,7 +760,7 @@
                             background:#eef7ff;
                             white-space:pre-wrap;
                             line-height:1.6;
-                         "></pre>
+                         "></div>
                 </div>
 
             </div>
@@ -800,10 +800,27 @@
         if (modal) modal.classList.add('active');
     }
 
-    function replaceVars(template, data) {
-    return template.replace(/\$\{(\w+)}/g, (_, key) => {
-        return data[key] || '${' + key + '}';
+    function toCamel(str) {
+    return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+function replaceVars(template, data) {
+
+    // ⭐ 1. 处理 ${xxx}
+    template = template.replace(/\$\{(\w+)}/g, (_, key) => {
+        return data[key] || '';
     });
+
+    // ⭐ 2. 处理 {{xxx}}（你的重点）
+    template = template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+
+        // contact_person → contactPerson
+        const camelKey = toCamel(key);
+
+        return data[camelKey] || data[key] || '';
+    });
+
+    return template;
 }
 
     function closeModal(modalId) {
@@ -885,6 +902,13 @@
         extraRequirements: '补充要求',
         servicePeriod: '服务期限',
         penaltyRate: '违约金比例',
+        contactPerson: '联系人',
+        contactPhone: '联系电话',
+        cargoValue: '货物价值',
+        transportMode: '运输方式',
+        paymentMethod: '付款方式',
+        paymentTerm: '付款期限',
+        timeLimitHours: '运输时效',
 
         // ========= 仓储类 =========
         cargoName: '货物名称',
@@ -1345,7 +1369,9 @@ document.getElementById('generatePreview').innerText = finalText;
                 <br>
 
                 <div style="color:#16a34a;font-weight:bold;">【优化合同】</div>
-                <div>${contract.replace(/\n/g, "<br>") || "暂无优化合同"}</div>
+                <div id="optimizedContract">
+    ${renderEditableContract(contract)}
+</div>
             `;
         }
 
@@ -1366,6 +1392,79 @@ document.getElementById('generatePreview').innerText = finalText;
     } finally {
         hideLoading();
     }
+}
+
+    function getFilledContract() {
+    const box = document.getElementById("optimizedContract");
+    if (!box) return "";
+
+    const clone = box.cloneNode(true);
+
+    // 替换 input 为值
+    clone.querySelectorAll("input.contract-input").forEach(input => {
+        const value = input.value.trim() || "【未填写】";
+        input.replaceWith(document.createTextNode(value));
+    });
+
+    return clone.innerHTML
+        .replace(/<br\s*\/?>/gi, "\n")   // 保留换行
+        .replace(/<\/div>/gi, "\n")
+        .replace(/<[^>]+>/g, "")        // 去HTML
+        .replace(/\n{2,}/g, "\n")       // 去多余空行
+        .trim();
+}
+
+    function renderEditableContract(text) {
+
+    if (!text) return "";
+
+    // ⭐ 1. 统一换行
+    text = text.replace(/\r\n/g, "\n");
+
+    // ⭐ 2. 修复“合同名称 + 合同类型”粘在一行
+    text = text.replace(/^(.+?)(物流运输合同|仓储服务合同|运输合同)/, "$1\n$2");
+
+    // ⭐ 3. 标题后换行
+    text = text.replace(/(合同)/, "$1\n");
+
+    // ⭐ 4. 甲乙方换行
+    text = text
+        .replace(/(甲方.*?)(乙方)/, "$1\n$2")
+        .replace(/(乙方.*?)(根据)/, "$1\n$2");
+
+    // ⭐ 5. 条款结构换行
+    text = text
+        .replace(/([一二三四五六七八九十]+、)/g, "\n$1")
+        .replace(/(\d+\.)/g, "\n$1");
+
+    // ⭐⭐ 工具函数：snake_case → camelCase
+    function toCamel(str) {
+        return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    }
+
+    // ⭐ 6. 先处理变量（避免 <br> 破坏 input）
+    // ${xxx}
+    text = text.replace(/\$\{(.*?)\}/g, (match, key) => {
+        return `<input class="contract-input" data-key="${key}" placeholder="${key}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+    });
+
+    // ⭐ 新增：{{xxx}} 支持
+    text = text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
+
+        const camelKey = toCamel(key); // contact_person → contactPerson
+
+        return `<input class="contract-input" data-key="${camelKey}" placeholder="${camelKey}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+    });
+
+    // ⭐ 7. 【待确认】 → 输入框
+    text = text.replace(/【待确认】/g, () => {
+        return `<input class="contract-input" placeholder="请填写" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+    });
+
+    // ⭐ 8. 最后再换行（必须最后做）
+    text = text.replace(/\n/g, "<br>");
+
+    return text;
 }
 
     /* ===== 页面初始化 ===== */
@@ -1450,7 +1549,7 @@ async function saveGeneratedContract() {
         const selectedOption = templateSelect.options[templateSelect.selectedIndex];
 
         const title = document.getElementById('generateContractTitle').value.trim();
-        const content = window.aiPlainText || "";
+        const content = getFilledContract();
         const contractType = selectedOption?.dataset.contractType || '';
 
         if (!templateId) return alert('请选择模板');

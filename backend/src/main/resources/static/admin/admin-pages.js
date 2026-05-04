@@ -458,7 +458,9 @@ function renderTemplateManagement() {
 
           <select id="templateTypeFilter" style="padding: 10px 14px; border-radius: 30px; border: 1px solid #ffd700;">
             <option value="ALL">全部类型</option>
-            <option value="transport">运输合同</option>
+            <option value="transport_A">运输合同A类</option>
+            <option value="transport_B">运输合同B类</option>
+            <option value="transport_C">运输合同C类</option>
             <option value="warehouse">仓储合同</option>
             <option value="supply">供应链协议</option>
             <option value="distribution">配送服务合同</option>
@@ -693,7 +695,9 @@ function formatBytes(bytes) {
 
 function getContractTypeText(type) {
     const map = {
-        transport: "运输合同",
+        transport_a: "运输合同A类",
+        transport_b: "运输合同B类",
+        transport_c: "运输合同C类",
         warehouse: "仓储合同",
         supply: "供应链协议",
         distribution: "配送服务合同",
@@ -1424,7 +1428,9 @@ function renderContractUploadPanel() {
           <label for="contractUploadType">合同类型</label>
           <select id="contractUploadType">
             <option value="">请选择合同类型</option>
-            <option value="transport">运输合同</option>
+            <option value="transport_A">运输合同A类</option>
+            <option value="transport_B">运输合同B类</option>
+            <option value="transport_C">运输合同C类</option>
             <option value="warehouse">仓储合同</option>
             <option value="supply">供应链协议</option>
             <option value="distribution">配送服务合同</option>

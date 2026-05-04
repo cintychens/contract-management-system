@@ -48,7 +48,7 @@ public class TemplateServiceImpl implements TemplateService {
         );
 
         String kw = keyword == null ? "" : keyword.trim();
-        String ct = contractType == null ? "" : contractType.trim();
+        String ct = contractType == null ? "" : contractType.trim().toLowerCase();
         String st = status == null ? "" : status.trim().toUpperCase();
 
         boolean hasKw = !kw.isEmpty();
@@ -57,20 +57,36 @@ public class TemplateServiceImpl implements TemplateService {
 
         Page<Template> p;
 
+        // ⭐⭐⭐ 核心修改：contractType 用 startsWith 查询 ⭐⭐⭐
+
         if (hasKw && hasCt && hasSt) {
-            p = templateRepository.findByNameContainingIgnoreCaseAndContractTypeAndStatus(kw, ct, st, pageable);
+            p = templateRepository
+                    .findByNameContainingIgnoreCaseAndContractTypeStartingWithAndStatus(kw, ct, st, pageable);
+
         } else if (hasKw && hasCt) {
-            p = templateRepository.findByNameContainingIgnoreCaseAndContractType(kw, ct, pageable);
+            p = templateRepository
+                    .findByNameContainingIgnoreCaseAndContractTypeStartingWith(kw, ct, pageable);
+
         } else if (hasKw && hasSt) {
-            p = templateRepository.findByNameContainingIgnoreCaseAndStatus(kw, st, pageable);
+            p = templateRepository
+                    .findByNameContainingIgnoreCaseAndStatus(kw, st, pageable);
+
         } else if (hasCt && hasSt) {
-            p = templateRepository.findByContractTypeAndStatus(ct, st, pageable);
+            p = templateRepository
+                    .findByContractTypeStartingWithAndStatus(ct, st, pageable);
+
         } else if (hasKw) {
-            p = templateRepository.findByNameContainingIgnoreCase(kw, pageable);
+            p = templateRepository
+                    .findByNameContainingIgnoreCase(kw, pageable);
+
         } else if (hasCt) {
-            p = templateRepository.findByContractType(ct, pageable);
+            p = templateRepository
+                    .findByContractTypeStartingWith(ct, pageable);
+
         } else if (hasSt) {
-            p = templateRepository.findByStatus(st, pageable);
+            p = templateRepository
+                    .findByStatus(st, pageable);
+
         } else {
             p = templateRepository.findAll(pageable);
         }
@@ -231,13 +247,13 @@ public class TemplateServiceImpl implements TemplateService {
 
     private String normalizeContractType(String contractType) {
         String s = contractType == null ? "" : contractType.trim().toLowerCase();
-        if (!"transport".equals(s)
+
+        if (!s.startsWith("transport")
                 && !"warehouse".equals(s)
-                && !"supply".equals(s)
-                && !"distribution".equals(s)
-                && !"outsourcing".equals(s)) {
+                && !"supply".equals(s)) {
             throw new IllegalArgumentException("合同类型不合法");
         }
+
         return s;
     }
 
@@ -259,7 +275,19 @@ public class TemplateServiceImpl implements TemplateService {
 
         for (String fieldKey : fieldKeys) {
             TemplateField field = templateFieldRepository.findByFieldKey(fieldKey)
-                    .orElseThrow(() -> new IllegalArgumentException("模板中存在未定义字段: " + fieldKey));
+                    .orElseGet(() -> {
+                        // ⭐ 自动创建字段
+                        TemplateField newField = new TemplateField();
+
+                        newField.setFieldKey(fieldKey);
+                        newField.setFieldName(fieldKey);
+                        newField.setFieldType("text");
+                        newField.setRequiredFlag(false);
+                        newField.setSortOrder(999);
+                        newField.setStatus("ENABLED");
+
+                        return templateFieldRepository.save(newField);
+                    });
 
             TemplateFieldBind bind = TemplateFieldBind.builder()
                     .templateId(template.getTemplateId())
