@@ -54,4 +54,8 @@ public class ContractMilestone {
 
     private LocalDateTime delayTime;
 
+    private String responsibility; // 责任方
+    private String handleAction;   // 处理方式
+    private String legalOpinion;
+
 }

@@ -44,6 +44,45 @@ public class ContractMilestoneController {
         return service.list(contractId);
     }
 
+    @PostMapping("/{id}/accept")
+    public Result accept(@PathVariable Long id, @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");   // PASSED / FAILED
+        String reason = body.get("reason");
+
+        String role = getCurrentUserRole();
+        String username = getCurrentUsername();
+
+        service.accept(id, status, reason, role, username);
+
+        return Result.success("验收处理成功");
+    }
+
+    @PostMapping("/{id}/legal")
+    public Result legal(@PathVariable Long id, @RequestBody Map<String, String> body) {
+
+        String result = body.get("result");
+        String reason = body.get("reason");             // ⭐新增
+        String responsibility = body.get("responsibility"); // ⭐新增
+        String action = body.get("action");             // ⭐新增
+
+        String role = getCurrentUserRole();
+
+        String username = getCurrentUsername();  // ⭐你已有的话
+
+        service.legalProcess(id, result, role, reason, responsibility, action, username);
+
+        return Result.success("法务处理完成");
+    }
+
+    @PostMapping("/contracts/{id}/terminate")
+    public Result terminate(@PathVariable Long id) {
+
+        service.terminateContract(id);
+
+        return Result.success("合同已终止");
+    }
+
     // =========================
     // 完成节点
     // =========================

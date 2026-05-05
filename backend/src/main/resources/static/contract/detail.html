@@ -1928,6 +1928,11 @@ async function handleExportPdf() {
     function getRealStatus(item) {
     const now = new Date();
 
+    if (item.status === 'REWORK') return 'REWORK';
+
+    // ⭐ 失败状态优先判断
+    if (item.status === 'FAILED') return 'FAILED';
+
     if (item.actualDate) return 'COMPLETED';
 
     if (item.expectedDate) {
@@ -1939,15 +1944,16 @@ async function handleExportPdf() {
 }
 
     function renderMilestones(list) {
+
     const container = document.getElementById("performanceTimeline");
-    const now = new Date();
+    const role = getCurrentUserRole();
 
     let html = "";
 
     list.forEach((item, index) => {
 
-        let due = item.expectedDate ? new Date(item.expectedDate) : null;
-        let realStatus = getRealStatus(item);
+        const prev = list[index - 1];
+        const realStatus = getRealStatus(item);
         const risk = getRiskLevel(item);
 
         // ⭐ 样式
@@ -1972,32 +1978,43 @@ async function handleExportPdf() {
                 statusText = '按时完成';
                 color = '#28a745';
             }
-        } else if (item.delayReason) {
-            statusText = '已上报延期';
-            color = '#f59e0b';
-        } else if (risk === 'OVERDUE') {
+        }
+        else if (item.status === 'REWORK') {
+    statusText = '整改中（业务处理中）';
+    color = '#1890ff';
+}
+else if (item.status === 'FAILED' && item.responsibleRole === 'LEGAL') {
+    statusText = '验收不通过（待法务处理）';
+    color = '#dc3545';
+}
+else if (item.status === 'FAILED' && item.responsibleRole === 'BUSINESS') {
+    statusText = '整改中（业务处理中）';
+    color = '#1890ff';
+}
+else if (item.delayReason) {
+    statusText = '已上报延期';
+    color = '#f59e0b';
+}
+
+        else if (risk === 'OVERDUE') {
             statusText = '已逾期';
             color = '#dc3545';
-        } else if (risk === 'WARNING') {
+        }
+        else if (risk === 'WARNING') {
             statusText = '即将逾期';
             color = '#f39c12';
-        } else {
+        }
+        else {
             statusText = '正常';
             color = '#2d6da0';
         }
 
-        // ⭐ 权限控制
-        const role = getCurrentUserRole();
-        let prev = list[index - 1];
-
-        let canOperate =
+        // ⭐ 是否可操作
+        const canOperate =
             ['ACTIVE', 'IN_PROGRESS'].includes(currentContract?.status) &&
-            realStatus !== 'COMPLETED' &&
+            !['COMPLETED', 'FAILED'].includes(realStatus) &&
             (role === item.responsibleRole || role === 'ADMIN') &&
             (!prev || getRealStatus(prev) === 'COMPLETED');
-
-        const isOverdue =
-            item.expectedDate && new Date(item.expectedDate) < now;
 
         html += `
         <div class="${className}">
@@ -2007,135 +2024,116 @@ async function handleExportPdf() {
 
                 <div class="timeline-title">${item.name}</div>
 
+                <!-- ⭐ 验收（业务） -->
+                ${item.name === '验收'
+                    && role === 'BUSINESS'
+                    && prev
+                    && getRealStatus(prev) === 'COMPLETED'
+                    && !['COMPLETED', 'FAILED'].includes(item.status)
+                    ? `
+                    <div style="margin-top:10px;">
+                        <button onclick="acceptPass(${item.id})"
+                            style="background:#28a745;color:white;">✅ 验收通过</button>
+
+                        <button onclick="acceptFail(${item.id})"
+                            style="background:#dc3545;color:white;margin-left:6px;">❌ 验收不通过</button>
+                    </div>
+                    ` : ''}
+
+                <!-- ⭐⭐⭐ 法务处理（重点改这里） -->
+                ${item.status === 'FAILED'
+   && role === 'LEGAL'
+   && role === item.responsibleRole
+? `
+                   <div style="margin-top:10px;">
+
+                        <textarea id="legal-reason-${item.id}"
+                            placeholder="问题说明（例如：运输破损）"
+                            style="width:100%;margin-bottom:6px;"></textarea>
+
+                        <select id="legal-resp-${item.id}" style="margin-bottom:6px;">
+                            <option value="乙方">责任方：乙方</option>
+                            <option value="甲方">责任方：甲方</option>
+                        </select>
+
+                        <select id="legal-action-${item.id}" style="margin-bottom:6px;">
+                            <option value="REWORK">重新发货</option>
+                            <option value="COMPENSATE">赔偿后继续</option>
+                            <option value="TERMINATE">终止合同</option>
+                        </select>
+
+                        <button onclick="legalContinue(${item.id})"
+                            style="background:#1890ff;color:white;">要求整改</button>
+
+                        <button onclick="legalTerminate(${item.id})"
+                            style="background:#dc3545;color:white;margin-left:6px;">终止合同</button>
+
+                    </div>
+                ` : ''}
+
                 <div>负责人：${getRoleText(item.responsibleRole)}</div>
 
-                <!-- ⭐ 预计时间（关键修复） -->
-                <div>
-                    预计时间：
-                    ${
-                        item.name === '发货'
-                            ? formatDateTime(
-                                window.contractFields?.shipDate ||
-                                window.contractFields?.["发货时间"] ||
-                                item.expectedDate
-                              )
-                            : item.name === '到货'
-                            ? formatDateTime(
-                                window.contractFields?.deliveryDate ||
-                                window.contractFields?.["交付时间"] ||
-                                item.expectedDate
-                              )
-                            : formatDateTime(item.expectedDate)
-                    }
-                </div>
-
+                <div>预计时间：${formatDateTime(item.expectedDate)}</div>
                 <div>实际时间：${formatDateTime(item.actualDate)}</div>
 
-                ${
-                    item.delayReason
-                        ? `<div style="color:#dc3545;">延期原因：${escapeHtml(item.delayReason)}</div>`
-                        : ''
-                }
+                <!-- ⭐⭐⭐ 法务结果展示 -->
+                ${item.legalOpinion
+                    ? `<div style="color:#dc3545;">法务意见：${item.legalOpinion}</div>`
+                    : ''}
 
-                ${
-                    item.delayTime
-                        ? `<div>延期时间：${formatDateTime(item.delayTime)}</div>`
-                        : ''
-                }
+                ${item.responsibility
+                    ? `<div>责任方：${item.responsibility}</div>`
+                    : ''}
+
+                ${item.handleAction
+                    ? `<div>处理方式：${
+                        item.handleAction === 'REWORK' ? '重新发货' :
+                        item.handleAction === 'COMPENSATE' ? '赔偿后继续' :
+                        item.handleAction === 'TERMINATE' ? '终止合同' : '-'
+                    }</div>`
+                    : ''}
+
+                ${item.delayTime
+                    ? `<div>处理时间：${formatDateTime(item.delayTime)}</div>`
+                    : ''}
 
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
                 </div>
 
-                <!-- 🚚 发货节点物流 -->
-                ${item.name === '发货' ? `
-                    ${
-                        item.actualDate
-                            ? `
-                            <div class="transport-line">
+                <!-- ⭐ 操作区 -->
+                ${realStatus === 'COMPLETED'
+                    ? '✔'
+                    : canOperate
+                        ? `
+                        <div class="action-row">
 
-                                <div class="point start">
-                                    📍 ${window.contractFields?.origin || '未知起点'}
-                                </div>
+                            <div class="time-row">
+                                <input type="datetime-local" id="expected-${item.id}" />
+                                <button onclick="setExpected(${item.id})">设置时间</button>
+                            </div>
 
-                                <div class="line">
-                                    <div class="progress" style="width:${getTransportPercent(list)}%"></div>
+                            <textarea id="reason-${item.id}" placeholder="延期原因"></textarea>
 
-                                    <div class="truck"
-                                        style="left: calc(${getTransportPercent(list)}% - 10px);">
-                                        🚚
-                                    </div>
-                                </div>
+                            <div class="btn-row">
 
-                                <div class="point end">
-                                    📍 ${window.contractFields?.destination || '未知终点'}
-                                </div>
+                                ${item.name !== '验收' ? `
+                                    <button class="delay-btn" data-id="${item.id}">
+                                        上报延期
+                                    </button>
+                                ` : ''}
+
+                                ${item.status !== 'FAILED' ? `
+                                    <button class="complete-btn" data-id="${item.id}">
+                                        最终完成
+                                    </button>
+                                ` : ''}
 
                             </div>
 
-                            <!-- ⭐ 运输状态（已移到下面） -->
-                            <div class="transport-status" style="margin-top:6px;">
-                                🚚 ${getTransportStatus(list)}
-                            </div>
-                            `
-                            : `
-                            <div style="margin-top:10px;color:#999;">
-                                发货后显示物流信息
-                            </div>
-                            `
-                    }
-                ` : ''}
-
-                <!-- 📦 到货节点 -->
-                ${item.name === '到货' ? `
-                    ${
-                        item.actualDate
-                            ? `
-                            <div style="margin-top:10px;padding:10px;background:#e8f8f0;border-radius:10px;">
-                                <div>📦 起点：${window.contractFields?.origin || '-'}</div>
-                                <div>📦 终点：${window.contractFields?.destination || '-'}</div>
-                                <div style="margin-top:6px;">
-                                    ✅ 状态：<span style="color:#28a745;">已完成</span>
-                                </div>
-                            </div>
-                            `
-                            : ''
-                    }
-                ` : ''}
-
-                ${
-                    realStatus === 'COMPLETED'
-                        ? '✔'
-                        : `
-                        ${
-                            canOperate
-                                ? `
-                                <div class="action-row">
-
-    <div class="time-row">
-        <input type="datetime-local" id="expected-${item.id}" />
-        <button onclick="setExpected(${item.id})">
-            设置预计时间
-        </button>
-    </div>
-
-    <textarea id="reason-${item.id}" placeholder="延期原因"></textarea>
-
-    <div class="btn-row">
-        <button class="delay-btn" data-id="${item.id}">
-            上报延期
-        </button>
-
-        <button class="complete-btn" data-id="${item.id}">
-            最终完成
-        </button>
-    </div>
-
-</div>
-                                `
-                                : ''
-                        }
+                        </div>
                         `
+                        : ''
                 }
 
             </div>
@@ -2173,11 +2171,30 @@ async function handleExportPdf() {
     const send = list.find(x => x.name === '发货');
     const arrive = list.find(x => x.name === '到货');
 
+    const startStr =
+        window.contractFields?.shipDate ||
+        window.contractFields?.["发货时间"];
+
+    const endStr =
+        window.contractFields?.deliveryDate ||
+        window.contractFields?.["交付时间"];
+
+    // 没发货 → 0%
     if (!send || !send.actualDate) return 0;
 
+    // 已到达 → 100%
     if (arrive && arrive.actualDate) return 100;
 
-    return 60; // 运输中（你可以调成动画）
+    if (!startStr || !endStr) return 0;
+
+    const start = new Date(startStr).getTime();
+    const end = new Date(endStr).getTime();
+    const now = Date.now();
+
+    if (now <= start) return 0;
+    if (now >= end) return 100;
+
+    return Math.floor(((now - start) / (end - start)) * 100);
 }
 
     function getTransportStatus(list) {
@@ -2186,12 +2203,12 @@ async function handleExportPdf() {
     const arrive = list.find(x => x.name === '到货');
 
     const start =
-    window.contractFields?.shipDate ||
-    window.contractFields?.["发货时间"];
+        window.contractFields?.shipDate ||
+        window.contractFields?.["发货时间"];
 
-const end =
-    window.contractFields?.deliveryDate ||
-    window.contractFields?.["交付时间"];
+    const end =
+        window.contractFields?.deliveryDate ||
+        window.contractFields?.["交付时间"];
 
     // 未发货
     if (!send || !send.actualDate) {
@@ -2203,16 +2220,138 @@ const end =
         return "已到达（运输完成）";
     }
 
-    // 运输中（带时间）
+    // ⭐ 保留你原来的展示
     return `运输中（预计：${formatDate(start)} → ${formatDate(end)}）`;
 }
 
-    function formatDate(str) {
-    if (!str) return '-';
+    function formatDate(value) {
+    if (!value) return '-';
 
-    const d = new Date(str);
+    try {
+        const d = new Date(value);
+        return (d.getMonth() + 1) + '-' + d.getDate();
+    } catch {
+        return value;
+    }
+}
 
-    return `${d.getMonth()+1}-${d.getDate()}`;
+    async function acceptPass(id) {
+    await authFetch(`/api/milestones/${id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "PASSED" })
+    });
+    loadMilestones();
+}
+
+async function acceptFail(id) {
+
+    const reason = prompt("请输入不通过原因");
+
+    if (!reason) {
+        alert("必须填写原因");
+        return;
+    }
+
+    const resp = await authFetch(`/api/milestones/${id}/accept`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            status: "FAILED",
+            reason: reason
+        })
+    });
+
+    const result = await resp.json();
+
+    if (result.code === 200) {
+        alert("已标记为验收不通过");
+        await loadMilestones();
+    } else {
+        alert(result.message);
+    }
+}
+
+    async function legalContinue(id) {
+
+    const reason = document.getElementById(`legal-reason-${id}`)?.value.trim();
+    const responsibility = document.getElementById(`legal-resp-${id}`)?.value;
+    const action = document.getElementById(`legal-action-${id}`)?.value;
+
+    // ⭐ 校验
+    if (!reason) {
+        alert("请填写处理说明");
+        return;
+    }
+
+    try {
+
+        const resp = await authFetch(`/api/milestones/${id}/legal`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                result: "CONTINUE",
+                reason: reason,
+                responsibility: responsibility,
+                action: action
+            })
+        });
+
+        if (!resp.ok) {
+            const msg = await resp.text();
+            throw new Error(msg);
+        }
+
+        const result = await resp.json();
+
+        if (result.code === 200) {
+
+            // ⭐⭐⭐ 关键：重新加载数据（不要用 location.reload）
+            await loadMilestones();
+
+            // ⭐ 刷新预警（如果你有）
+            if (window.refreshAlerts) {
+                window.refreshAlerts();
+            }
+
+            alert("已下发整改要求");
+
+        } else {
+            alert(result.message || "操作失败");
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert("提交失败：" + e.message);
+    }
+}
+
+    async function legalTerminate(id) {
+
+    if (!confirm("确定终止合同吗？")) return;
+
+    const resp = await authFetch(`/api/milestones/${id}/legal`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            result: "TERMINATE"
+        })
+    });
+
+    const result = await resp.json();
+
+    if (result.code === 200) {
+        alert("合同已终止");
+        await loadMilestones();
+    } else {
+        alert(result.message);
+    }
 }
 
     async function reportDelay(id, delayReason) {
@@ -2263,35 +2402,24 @@ const end =
     const textarea = document.getElementById(`reason-${id}`);
     const reason = textarea ? textarea.value.trim() : "";
 
-    // ⭐ 情况1：过去时间 → 自动走延期
+    // ⭐⭐⭐ 修复点：过去时间不自动延期！！
     if (selected < now) {
 
         if (!reason) {
             if (textarea) {
                 textarea.style.display = 'block';
                 textarea.focus();
-                alert("该时间已逾期，请先填写延期原因，再点击【上报延期】");
-            } else {
-                alert("请填写延期原因");
             }
+            alert("该时间已逾期，请填写延期原因后点击【上报延期】按钮");
             return;
         }
 
-        try {
-            await reportDelayWithReason(id, reason);
-
-            // ⭐⭐ 新增：刷新预警中心
-            window.refreshAlerts && window.refreshAlerts();
-
-            return;
-        } catch (e) {
-            console.error(e);
-            alert("延期提交失败：" + e.message);
-            return;
-        }
+        // ❗❗关键：这里只提示，不自动调用延期接口
+        alert("请点击【上报延期】按钮提交延期");
+        return;
     }
 
-    // ⭐ 情况2：未来时间
+    // ⭐ 正常设置预计时间
     try {
         const iso = val.replace(" ", "T") + ":00";
 
@@ -2312,7 +2440,7 @@ const end =
 
         await loadMilestones();
 
-        // ⭐⭐ 新增：刷新预警中心
+        // ⭐ 刷新预警
         window.refreshAlerts && window.refreshAlerts();
 
     } catch (e) {
@@ -2320,8 +2448,6 @@ const end =
         alert("设置失败：" + e.message);
     }
 }
-
-
 
 async function reportDelayWithReason(id, reason) {
 

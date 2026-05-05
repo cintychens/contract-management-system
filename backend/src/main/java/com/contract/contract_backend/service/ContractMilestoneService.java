@@ -119,7 +119,7 @@ public class ContractMilestoneService {
         ContractMilestone m3 = new ContractMilestone();
         m3.setContractId(contractId);
         m3.setName("验收");
-        m3.setResponsibleRole("LEGAL");
+        m3.setResponsibleRole("BUSINESS");
         m3.setSortOrder(3);
         m3.setStatus("PENDING");
 
@@ -335,4 +335,125 @@ public class ContractMilestoneService {
 
         return dto;
     }
+
+    public void accept(Long id, String status, String reason, String role, String username) {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+
+        // ⭐ 权限：必须是当前负责人
+        if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
+            throw new RuntimeException("无权限操作");
+        }
+
+        if (!"验收".equals(m.getName())) {
+            throw new RuntimeException("当前节点不是验收节点");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // ✅ 验收通过（业务完成）
+        if ("PASSED".equals(status)) {
+
+            m.setStatus("COMPLETED");
+            m.setActualDate(now);
+
+        }
+        // ❌ 验收失败（转交法务）
+        else if ("FAILED".equals(status)) {
+
+            if (reason == null || reason.isBlank()) {
+                throw new RuntimeException("验收不通过必须填写原因");
+            }
+
+            m.setStatus("FAILED");
+            m.setDelayReason(reason);
+            m.setDelayTime(now);
+
+            // ⭐⭐⭐ 核心：切换负责人！！
+            m.setResponsibleRole("LEGAL");
+        }
+        else {
+            throw new RuntimeException("未知验收状态");
+        }
+
+        repository.save(m);
+
+        // 日志
+        ContractMilestoneLog log = new ContractMilestoneLog();
+        log.setMilestoneId(id);
+        log.setOldStatus("验收");
+        log.setNewStatus(status);
+        log.setMilestoneName(m.getName());
+        log.setOperator(username);
+        log.setOperatorRole(role);
+        log.setOperateTime(now);
+        log.setRemark(reason);
+        logRepository.save(log);
+    }
+
+    public void legalProcess(Long id, String result, String role,
+                             String reason, String responsibility, String action,
+                             String username)   {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+
+        if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
+            throw new RuntimeException("无权限操作");
+        }
+
+        if (!"FAILED".equals(m.getStatus())) {
+            throw new RuntimeException("当前不是验收失败状态");
+        }
+
+        if ("CONTINUE".equals(result)) {
+
+            // ⭐ 推荐：不改状态
+            m.setStatus("REWORK");
+            m.setResponsibleRole("BUSINESS");
+
+            m.setDelayReason(reason);
+            m.setResponsibility(responsibility);
+            m.setHandleAction(action);
+
+            m.setActualDate(null);
+        }
+        else {
+
+            Contract contract = contractRepository.findById(m.getContractId())
+                    .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+            contract.setStatus(ContractStatus.TERMINATED);
+            contractRepository.save(contract);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // ⭐⭐⭐ 在这里加日志（重点）
+        ContractMilestoneLog log = new ContractMilestoneLog();
+        log.setMilestoneId(id);
+        log.setOldStatus(m.getStatus());
+        log.setNewStatus("REWORK");
+        log.setMilestoneName(m.getName());
+        log.setOperator(username);
+        log.setOperatorRole(role);
+        log.setOperateTime(now);
+        log.setRemark("法务处理：" + reason + " / " + action);
+
+        logRepository.save(log);
+
+        // ⭐⭐⭐ 核心：必须保存
+        repository.save(m);
+    }
+
+    public void terminateContract(Long contractId) {
+
+        Contract contract = contractRepository.findById(contractId)
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+        contract.setStatus(ContractStatus.TERMINATED);
+        contractRepository.save(contract);
+    }
+
 }
