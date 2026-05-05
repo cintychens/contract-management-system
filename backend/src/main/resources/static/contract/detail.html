@@ -1683,6 +1683,7 @@ async function handleExportPdf() {
         const contract = result.data || {};
         currentContract = contract;
         currentContractTitle = contract.title || "合同文件";
+        window.contractFields = contract.fields || {};
 
         console.log("contract =", contract);
 
@@ -2011,16 +2012,21 @@ else if (item.delayReason) {
 
         // ⭐ 是否可操作
         const canOperate =
-            ['ACTIVE', 'IN_PROGRESS'].includes(currentContract?.status) &&
-            !['COMPLETED', 'FAILED'].includes(realStatus) &&
-            (role === item.responsibleRole || role === 'ADMIN') &&
-            (!prev || getRealStatus(prev) === 'COMPLETED');
+    ['ACTIVE', 'IN_PROGRESS', 'REWORK'].includes(currentContract?.status) &&
+    (
+        realStatus !== 'COMPLETED' ||
+        item.status === 'REWORK' ||
+        item.status === 'PENDING'   // ⭐ 新增
+    ) &&
+    (role === item.responsibleRole || role === 'ADMIN') &&
+    (!prev || getRealStatus(prev) === 'COMPLETED');
 
         html += `
         <div class="${className}">
             <div class="timeline-dot"></div>
 
             <div class="timeline-content">
+            ${item.name === '发货' ? renderTransportUI(list) : ''}
 
                 <div class="timeline-title">${item.name}</div>
 
@@ -2117,6 +2123,12 @@ else if (item.delayReason) {
 
                             <div class="btn-row">
 
+                                ${item.status === 'REWORK' && item.name === '发货' ? `
+    <button onclick="restartTransport(${item.id})"
+        style="background:#1890ff;color:white;">
+        🔁 重新发货
+    </button>
+` : ''}
                                 ${item.name !== '验收' ? `
                                     <button class="delay-btn" data-id="${item.id}">
                                         上报延期
@@ -2168,8 +2180,11 @@ else if (item.delayReason) {
 
     function getTransportPercent(list) {
 
-    const send = list.find(x => x.name === '发货');
-    const arrive = list.find(x => x.name === '到货');
+    const sendList = list.filter(x => x.name === '发货');
+    const arriveList = list.filter(x => x.name === '到货');
+
+    const send = sendList[sendList.length - 1];   // ⭐ 最新发货
+    const arrive = arriveList[arriveList.length - 1]; // ⭐ 最新到货
 
     const startStr =
         window.contractFields?.shipDate ||
@@ -2179,28 +2194,90 @@ else if (item.delayReason) {
         window.contractFields?.deliveryDate ||
         window.contractFields?.["交付时间"];
 
-    // 没发货 → 0%
+    // ❗没有发货
     if (!send || !send.actualDate) return 0;
 
-    // 已到达 → 100%
+    // ❗已到达（优先最高）
     if (arrive && arrive.actualDate) return 100;
 
+    // ❗时间不存在
     if (!startStr || !endStr) return 0;
 
     const start = new Date(startStr).getTime();
     const end = new Date(endStr).getTime();
     const now = Date.now();
 
+    // ❗还没到发货时间
     if (now <= start) return 0;
-    if (now >= end) return 100;
 
-    return Math.floor(((now - start) / (end - start)) * 100);
+    // ❗已经超过预计时间但没完成 → 不给100%
+    if (now >= end) return 90;
+
+    // ⭐ 正常进度计算
+    const percent = ((now - start) / (end - start)) * 100;
+
+    return Math.floor(Math.max(0, Math.min(percent, 100)));
+}
+
+    function renderTransportUI(list) {
+
+    const percent = getTransportPercent(list);
+    const status = getTransportStatus(list);
+
+    const origin =
+        window.contractFields?.origin ||
+        window.contractFields?.["起运地"] ||
+        "发货";
+
+    const destination =
+        window.contractFields?.destination ||
+        window.contractFields?.["目的地"] ||
+        "到货";
+
+    return `
+        <div style="margin-top:12px; padding:10px; background:#f6f8fa; border-radius:6px;">
+
+            <!-- 起点终点 -->
+            <div style="display:flex; justify-content:space-between; font-size:13px; color:#666;">
+                <span>${origin}</span>
+                <span>${destination}</span>
+            </div>
+
+            <!-- 进度条 -->
+            <div style="position:relative; height:6px; background:#e5e7eb; margin:8px 0; border-radius:4px;">
+                <div style="
+                    width:${percent}%;
+                    height:100%;
+                    background:#1890ff;
+                    border-radius:4px;
+                "></div>
+
+                <!-- 小车 -->
+                <div style="
+                    position:absolute;
+                    top:-6px;
+                    left:calc(${percent}% - 10px);
+                ">
+                    🚚
+                </div>
+            </div>
+
+            <!-- 状态 -->
+            <div style="font-size:13px; color:#1890ff;">
+                ${status}
+            </div>
+
+        </div>
+    `;
 }
 
     function getTransportStatus(list) {
 
-    const send = list.find(x => x.name === '发货');
-    const arrive = list.find(x => x.name === '到货');
+    const sendList = list.filter(x => x.name === '发货');
+    const arriveList = list.filter(x => x.name === '到货');
+
+    const send = sendList[sendList.length - 1];
+    const arrive = arriveList[arriveList.length - 1];
 
     const start =
         window.contractFields?.shipDate ||
@@ -2210,17 +2287,37 @@ else if (item.delayReason) {
         window.contractFields?.deliveryDate ||
         window.contractFields?.["交付时间"];
 
-    // 未发货
+    const now = Date.now();
+
+    // ⭐ 1. REWORK 优先判断（必须放前面）
+    const hasRework = list.some(x => x.status === 'REWORK');
+    if (hasRework && (!send || !send.actualDate)) {
+        return "整改中（等待重新发货）";
+    }
+
+    // ⭐ 2. 未发货
     if (!send || !send.actualDate) {
         return "未发货";
     }
 
-    // 已到达
+    // ⭐ 3. 已完成（必须点击到货）
     if (arrive && arrive.actualDate) {
         return "已到达（运输完成）";
     }
 
-    // ⭐ 保留你原来的展示
+    // ⭐ 4. 时间缺失
+    if (!start || !end) {
+        return "运输中";
+    }
+
+    const endTime = new Date(end).getTime();
+
+    // ⭐ 5. 延误
+    if (now > endTime) {
+        return "运输延误（未完成）";
+    }
+
+    // ⭐ 6. 正常运输
     return `运输中（预计：${formatDate(start)} → ${formatDate(end)}）`;
 }
 
@@ -2233,6 +2330,17 @@ else if (item.delayReason) {
     } catch {
         return value;
     }
+}
+
+    async function restartTransport(id) {
+
+    await authFetch(`/api/milestones/${id}/complete`, {
+        method: "POST"
+    });
+
+    await loadMilestones();
+
+    alert("已重新发货");
 }
 
     async function acceptPass(id) {

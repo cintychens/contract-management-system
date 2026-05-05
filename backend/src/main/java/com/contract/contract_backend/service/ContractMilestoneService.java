@@ -394,22 +394,29 @@ public class ContractMilestoneService {
 
     public void legalProcess(Long id, String result, String role,
                              String reason, String responsibility, String action,
-                             String username)   {
+                             String username) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
 
+        // 权限校验
         if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
             throw new RuntimeException("无权限操作");
         }
 
+        // 只允许在验收失败时进入法务处理
         if (!"FAILED".equals(m.getStatus())) {
             throw new RuntimeException("当前不是验收失败状态");
         }
 
+        // ⭐ 记录旧状态（必须在修改前拿）
+        String oldStatus = m.getStatus();
+
+        LocalDateTime now = LocalDateTime.now();
+
         if ("CONTINUE".equals(result)) {
 
-            // ⭐ 推荐：不改状态
+            // ========= 1. 验收节点进入整改 =========
             m.setStatus("REWORK");
             m.setResponsibleRole("BUSINESS");
 
@@ -417,33 +424,62 @@ public class ContractMilestoneService {
             m.setResponsibility(responsibility);
             m.setHandleAction(action);
 
-            m.setActualDate(null);
-        }
-        else {
+            m.setActualDate(null);     // 允许再次验收
+            m.setExpectedDate(null);   // ⭐ 建议清空，重新填写时间
 
+            // ========= 2. ⭐⭐⭐ 重置运输节点（核心！！！）=========
+            List<ContractMilestone> list =
+                    repository.findByContractIdOrderBySortOrder(m.getContractId());
+
+            for (ContractMilestone node : list) {
+
+                if ("发货".equals(node.getName()) || "到货".equals(node.getName())) {
+
+                    node.setActualDate(null);     // 清空完成时间
+                    node.setExpectedDate(null);   // 清空预计时间
+                    node.setStatus("PENDING");    // 回到未开始
+
+                    repository.save(node);
+                }
+            }
+
+            // ========= 3. 写日志（FAILED → REWORK）=========
+            ContractMilestoneLog log = new ContractMilestoneLog();
+            log.setMilestoneId(id);
+            log.setOldStatus(oldStatus);   // ⭐ 用修改前的
+            log.setNewStatus("REWORK");
+            log.setMilestoneName(m.getName());
+            log.setOperator(username);
+            log.setOperatorRole(role);
+            log.setOperateTime(now);
+            log.setRemark("法务处理：" + reason + " / " + action);
+
+            logRepository.save(log);
+
+        } else {
+
+            // ========= 终止合同 =========
             Contract contract = contractRepository.findById(m.getContractId())
                     .orElseThrow(() -> new RuntimeException("合同不存在"));
 
             contract.setStatus(ContractStatus.TERMINATED);
             contractRepository.save(contract);
+
+            // ========= 终止日志 =========
+            ContractMilestoneLog log = new ContractMilestoneLog();
+            log.setMilestoneId(id);
+            log.setOldStatus(oldStatus);
+            log.setNewStatus("TERMINATED");
+            log.setMilestoneName(m.getName());
+            log.setOperator(username);
+            log.setOperatorRole(role);
+            log.setOperateTime(now);
+            log.setRemark("法务终止合同：" + reason);
+
+            logRepository.save(log);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        // ⭐⭐⭐ 在这里加日志（重点）
-        ContractMilestoneLog log = new ContractMilestoneLog();
-        log.setMilestoneId(id);
-        log.setOldStatus(m.getStatus());
-        log.setNewStatus("REWORK");
-        log.setMilestoneName(m.getName());
-        log.setOperator(username);
-        log.setOperatorRole(role);
-        log.setOperateTime(now);
-        log.setRemark("法务处理：" + reason + " / " + action);
-
-        logRepository.save(log);
-
-        // ⭐⭐⭐ 核心：必须保存
+        // ⭐ 最后统一保存验收节点
         repository.save(m);
     }
 
