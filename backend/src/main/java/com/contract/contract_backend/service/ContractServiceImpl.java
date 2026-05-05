@@ -50,6 +50,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -133,8 +137,6 @@ public class ContractServiceImpl implements ContractService {
         contract.setCurrentVersionId(version.getVersionId());
         contractRepository.save(contract);
 
-        contractParseService.parseContract(contract.getContractId());
-
         return ContractUploadResponse.builder()
                 .contractId(contract.getContractId())
                 .contractNo(contract.getContractNo())
@@ -198,31 +200,30 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public ContractGenerateDto.ConfirmResp confirmGeneratedContract(ContractGenerateDto.ConfirmReq req) {
-        // ⭐ 权限控制（放在方法最前面）
-        String role = getCurrentUserRole();
 
+        // ⭐ 权限
+        String role = getCurrentUserRole();
         if (!RoleCode.BUSINESS.equals(role) && !RoleCode.ADMIN.equals(role)) {
             throw new RuntimeException("无权限创建合同");
         }
-        if (req == null) {
-            throw new IllegalArgumentException("请求不能为空");
-        }
-        if (req.getTitle() == null || req.getTitle().isBlank()) {
+
+        // ⭐ 参数校验
+        if (req == null) throw new IllegalArgumentException("请求不能为空");
+        if (req.getTitle() == null || req.getTitle().isBlank())
             throw new IllegalArgumentException("合同标题不能为空");
-        }
-        if (req.getContractType() == null || req.getContractType().isBlank()) {
+        if (req.getContractType() == null || req.getContractType().isBlank())
             throw new IllegalArgumentException("合同类型不能为空");
-        }
-        if (req.getDraftContent() == null || req.getDraftContent().isBlank()) {
+        if (req.getDraftContent() == null || req.getDraftContent().isBlank())
             throw new IllegalArgumentException("合同草案不能为空");
-        }
 
         String contractNo = generateUniqueContractNo();
 
+        // ⭐ 创建合同
         Contract contract = Contract.builder()
                 .contractNo(contractNo)
                 .title(req.getTitle().trim())
                 .contractType(req.getContractType().trim())
+                .templateId(req.getTemplateId())
                 .status(ContractStatus.DRAFT)
                 .createdBy(1L)
                 .createdAt(LocalDateTime.now())
@@ -232,13 +233,29 @@ public class ContractServiceImpl implements ContractService {
                 .build();
 
         contract = contractRepository.save(contract);
-        milestoneService.initMilestones(
-                contract.getContractId(),
-                LocalDate.now()
-        );
+
+        milestoneService.initMilestones(contract.getContractId(), LocalDate.now());
 
         String content = req.getDraftContent().trim();
 
+// ⭐⭐⭐ 用用户填写的字段替换模板变量
+        Map<String, Object> inputFields = req.getFields();
+
+        if (inputFields != null) {
+            for (Map.Entry<String, Object> entry : inputFields.entrySet()) {
+
+                String key = entry.getKey();
+                String value = entry.getValue() == null ? "" : entry.getValue().toString();
+
+                if (!value.isBlank()) {
+                    content = content.replace("${" + key + "}", value);
+
+                    content = content.replaceAll("_{2,}", "【待确认】");
+                }
+            }
+        }
+
+        // ⭐ 版本
         ContractVersion version = ContractVersion.builder()
                 .contractId(contract.getContractId())
                 .versionNo(1)
@@ -259,65 +276,136 @@ public class ContractServiceImpl implements ContractService {
         contract.setContent(content);
         contractRepository.save(contract);
 
-        contractFieldRepository.deleteByContractId(contract.getContractId());
+        // =========================
+        // ⭐⭐⭐ 核心：字段处理
+        // =========================
 
-        saveManualField(contract.getContractId(), "party_a", "甲方名称", req.getPartyA());
-        saveManualField(contract.getContractId(), "party_b", "乙方名称", req.getPartyB());
-        saveManualField(contract.getContractId(), "amount", "合同金额", req.getAmount());
-        saveManualField(contract.getContractId(), "sign_date", "签署日期", req.getSignDate());
-        saveManualField(contract.getContractId(), "effective_date", "生效日期", req.getEffectiveDate());
-        saveManualField(contract.getContractId(), "expire_date", "到期日期", req.getExpireDate());
-        saveManualField(contract.getContractId(), "service_content", "服务内容", req.getServiceContent());
-        saveManualField(contract.getContractId(), "payment_terms", "付款方式", req.getPaymentTerms());
-        saveManualField(contract.getContractId(), "breach_liability", "违约责任", req.getBreachLiability());
-        saveManualField(contract.getContractId(), "cargo_name", "货物名称", req.getCargoName());
-        saveManualField(contract.getContractId(), "cargo_category", "货物类别", req.getCargoCategory());
-        saveManualField(contract.getContractId(), "cargo_quantity", "货物数量", req.getCargoQuantity());
-        saveManualField(contract.getContractId(), "special_requirement", "特殊要求", req.getSpecialRequirement());
-        saveManualField(contract.getContractId(), "warehouse_address", "仓储地址", req.getWarehouseAddress());
-        saveManualField(contract.getContractId(), "inbound_date", "入库日期", req.getInboundDate());
-        saveManualField(contract.getContractId(), "outbound_date", "出库日期", req.getOutboundDate());
-        saveManualField(contract.getContractId(), "storage_period", "仓储期限", req.getStoragePeriod());
-        saveManualField(contract.getContractId(), "payment_method", "付款方式", req.getPaymentMethod());
-        saveManualField(contract.getContractId(), "payment_term", "付款期限", req.getPaymentTerm());
-        saveManualField(contract.getContractId(), "dispute_court", "争议法院", req.getDisputeCourt());
-        saveManualField(contract.getContractId(), "origin_warehouse", "起运仓库", req.getOriginWarehouse());
-        saveManualField(contract.getContractId(), "delivery_area", "配送区域", req.getDeliveryArea());
-        saveManualField(contract.getContractId(), "delivery_address", "配送地址", req.getDeliveryAddress());
-        saveManualField(contract.getContractId(), "delivery_mode", "配送方式", req.getDeliveryMode());
-        saveManualField(contract.getContractId(), "delivery_time_requirement", "时效要求", req.getDeliveryTimeRequirement());
-        saveManualField(contract.getContractId(), "service_period", "服务期限", req.getServicePeriod());
-        saveManualField(contract.getContractId(), "single_weight_limit", "单件重量限制", req.getSingleWeightLimit());
-        saveManualField(contract.getContractId(), "single_volume_limit", "单件体积限制", req.getSingleVolumeLimit());
-        saveManualField(contract.getContractId(), "claim_period", "投诉索赔期限", req.getClaimPeriod());
-        saveManualField(contract.getContractId(), "pickup_time_limit", "提货时限", req.getPickupTimeLimit());
-        saveManualField(contract.getContractId(), "storage_fee_standard", "保管费标准", req.getStorageFeeStandard());
-        saveManualField(contract.getContractId(), "delivery_time_standard", "配送时效", req.getDeliveryTimeStandard());
-        saveManualField(contract.getContractId(), "insurance_option", "保险方式", req.getInsuranceOption());
-        saveManualField(contract.getContractId(), "penalty_rate", "滞纳金比例", req.getPenaltyRate());
-        saveManualField(contract.getContractId(), "party_a_address", "甲方地址", req.getPartyAAddress());
-        saveManualField(contract.getContractId(), "party_a_legal_person", "甲方法定代表人", req.getPartyALegalPerson());
-        saveManualField(contract.getContractId(), "party_a_phone", "甲方联系电话", req.getPartyAPhone());
-        saveManualField(contract.getContractId(), "party_b_address", "乙方地址", req.getPartyBAddress());
-        saveManualField(contract.getContractId(), "party_b_legal_person", "乙方法定代表人", req.getPartyBLegalPerson());
-        saveManualField(contract.getContractId(), "party_b_phone", "乙方联系电话", req.getPartyBPhone());
-        saveManualField(contract.getContractId(), "service_scope", "服务范围说明", req.getServiceScope());
-        saveManualField(contract.getContractId(), "service_standard", "服务标准", req.getServiceStandard());
-        saveManualField(contract.getContractId(), "service_period", "服务期间说明", req.getServicePeriod());
-        saveManualField(contract.getContractId(), "fee_structure", "费用构成", req.getFeeStructure());
-        saveManualField(contract.getContractId(), "payment_date", "付款日期", req.getPaymentDate());
-        saveManualField(contract.getContractId(), "exception_handling", "异常处理机制", req.getExceptionHandling());
-        saveManualField(contract.getContractId(), "penalty_rate", "违约金比例", req.getPenaltyRate());
+        Long contractId = contract.getContractId();
 
+        // ⭐⭐⭐ 第一步：调用解析（NLP）
+        contractParseService.parseContract(contractId);
+
+// ⭐⭐⭐ 第二步：拿解析结果
+        List<ContractField> parsedFields =
+                contractFieldRepository.findByContractIdOrderBySortOrderAsc(contractId);
+
+// ⭐⭐⭐ 转成 map
+        Map<String, Object> parsedMap = new HashMap<>();
+        for (ContractField f : parsedFields) {
+            if (f.getFieldValue() != null && !f.getFieldValue().isBlank()) {
+                parsedMap.put(f.getFieldKey(), f.getFieldValue());
+            }
+        }
+
+        // ⭐ 1. 获取模板
+        Template template = templateRepository.findById(req.getTemplateId())
+                .orElseThrow(() -> new RuntimeException("模板不存在"));
+
+        // ⭐ 2. 提取所有字段 key
+        Set<String> templateKeys = extractFieldKeys(template.getContent());
+
+        // ⭐ 3. 提取中文 label
+        Map<String, String> labelMap = extractFieldLabels(template.getContent());
+
+        // ⭐ 5. 合并字段（核心！！！）
+        Map<String, Object> finalFields = new LinkedHashMap<>();
+
+// ⭐ 优先级：用户输入 > NLP解析 > 默认待确认
+
+// 1️⃣ NLP解析结果
+        if (parsedMap != null) {
+            finalFields.putAll(parsedMap);
+        }
+
+// 2️⃣ 用户输入覆盖（最高优先级）
+        if (inputFields != null) {
+            inputFields.forEach((k, v) -> {
+                if (v != null && !v.toString().isBlank()) {
+                    finalFields.put(k, v);
+                }
+            });
+        }
+
+// 3️⃣ 补齐缺失字段
+        for (String key : templateKeys) {
+            finalFields.putIfAbsent(key, "【待确认】");
+        }
+
+        // ⭐ 清空旧字段
+        contractFieldRepository.deleteByContractId(contractId);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // ⭐ 保存
+        // ⭐ 保存字段
+        finalFields.forEach((key, value) -> {
+
+            String strValue = value == null ? "" : value.toString().trim();
+
+            // 没有值就统一显示【待确认】
+            if (strValue.isBlank()) {
+                strValue = "【待确认】";
+            }
+
+            // 判断是不是用户真实填写
+            boolean hasRealValue = !"【待确认】".equals(strValue);
+
+            ContractField field = ContractField.builder()
+                    .contractId(contractId)
+                    .fieldKey(key)
+                    .fieldName(labelMap.getOrDefault(key, key))
+                    .fieldValue(strValue)
+                    .sourceRef(hasRealValue ? "form_input" : "pending")
+                    .confidence(hasRealValue ? 1.0 : 0.0)
+                    .updatedBy(1L)
+                    .updatedAt(now)
+                    .build();
+
+            contractFieldRepository.save(field);
+        });
 
         return ContractGenerateDto.ConfirmResp.builder()
-                .contractId(contract.getContractId())
+                .contractId(contractId)
                 .contractNo(contract.getContractNo())
                 .versionId(version.getVersionId())
                 .status(contract.getStatus())
                 .build();
     }
 
+    private Set<String> extractFieldKeys(String content) {
+        Set<String> keys = new LinkedHashSet<>();
+        Matcher m = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}").matcher(content);
+        while (m.find()) {
+            keys.add(m.group(1));
+        }
+        return keys;
+    }
+
+    private Map<String, String> extractFieldLabels(String content) {
+
+        Map<String, String> map = new LinkedHashMap<>();
+
+        // 1️⃣ 先收集全部 key
+        Pattern keyPattern = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher keyMatcher = keyPattern.matcher(content);
+
+        while (keyMatcher.find()) {
+            map.putIfAbsent(keyMatcher.group(1), keyMatcher.group(1));
+        }
+
+        // 2️⃣ 再匹配中文 label
+        Pattern labelPattern = Pattern.compile("([^\\n：:]{2,})[：:]\\s*\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher labelMatcher = labelPattern.matcher(content);
+
+        while (labelMatcher.find()) {
+            String label = labelMatcher.group(1).trim();
+            String key = labelMatcher.group(2).trim();
+
+            map.put(key, label);
+        }
+
+        return map;
+    }
     /**
      * =========================
      * 5. 新增逻辑：合同列表

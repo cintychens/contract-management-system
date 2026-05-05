@@ -2,7 +2,7 @@ package com.contract.contract_backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
+import lombok.Builder;
 import java.time.LocalDateTime;
 
 @Entity

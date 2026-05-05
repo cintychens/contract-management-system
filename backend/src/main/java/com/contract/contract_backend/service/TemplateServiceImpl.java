@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -270,19 +272,35 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Transactional
     protected void rebuildTemplateFieldBinds(Template template) {
+
+        // 1️⃣ 先删旧绑定（避免脏数据）
         templateFieldBindRepository.deleteByTemplateId(template.getTemplateId());
 
-        Set<String> fieldKeys = extractFieldKeys(template.getContent());
+        String content = template.getContent();
+
+        // 2️⃣ 提取字段顺序（按模板出现顺序）
+        Set<String> fieldKeys = extractFieldKeys(content);
+
+        // 3️⃣ 提取中文 label
+        Map<String, String> labelMap = extractFieldLabels(content);
+
         LocalDateTime now = LocalDateTime.now();
 
+        int sort = 1; // ⭐ 保证前端顺序
+
         for (String fieldKey : fieldKeys) {
+
+            // ⭐ 获取中文名（优先模板）
+            String label = labelMap.getOrDefault(fieldKey, fieldKey);
+
+            // 4️⃣ 查找或创建字段定义
             TemplateField field = templateFieldRepository.findByFieldKey(fieldKey)
                     .orElseGet(() -> {
-                        // ⭐ 自动创建字段
+
                         TemplateField newField = new TemplateField();
 
                         newField.setFieldKey(fieldKey);
-                        newField.setFieldName(fieldKey);
+                        newField.setFieldName(label); // ⭐ 用中文
                         newField.setFieldType("text");
                         newField.setRequiredFlag(false);
                         newField.setSortOrder(999);
@@ -291,13 +309,20 @@ public class TemplateServiceImpl implements TemplateService {
                         return templateFieldRepository.save(newField);
                     });
 
+            // ⭐ 如果字段已存在，但名字是旧的（英文），更新它
+            if (!label.equals(field.getFieldName())) {
+                field.setFieldName(label);
+                templateFieldRepository.save(field);
+            }
+
+            // 5️⃣ 绑定模板字段
             TemplateFieldBind bind = TemplateFieldBind.builder()
                     .templateId(template.getTemplateId())
-                    .fieldKey(field.getFieldKey())
-                    .fieldNameSnapshot(field.getFieldName())
+                    .fieldKey(fieldKey)
+                    .fieldNameSnapshot(label) // ⭐ 用模板中文
                     .fieldTypeSnapshot(field.getFieldType())
                     .requiredFlag(field.getRequiredFlag())
-                    .sortOrder(field.getSortOrder())
+                    .sortOrder(sort++) // ⭐ 顺序递增（关键）
                     .status(field.getStatus() == null ? "ENABLED" : field.getStatus())
                     .createdAt(now)
                     .updatedAt(now)
@@ -305,6 +330,32 @@ public class TemplateServiceImpl implements TemplateService {
 
             templateFieldBindRepository.save(bind);
         }
+    }
+
+    private Map<String, String> extractFieldLabels(String content) {
+
+        Map<String, String> map = new LinkedHashMap<>();
+
+        // 1️⃣ 全量 key
+        Pattern keyPattern = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher keyMatcher = keyPattern.matcher(content);
+
+        while (keyMatcher.find()) {
+            String key = keyMatcher.group(1);
+            map.putIfAbsent(key, key);
+        }
+
+        // 2️⃣ 中文 label
+        Pattern labelPattern = Pattern.compile("([^\\n：:]{2,})[：:]\\s*\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher labelMatcher = labelPattern.matcher(content);
+
+        while (labelMatcher.find()) {
+            String label = labelMatcher.group(1).trim();
+            String key = labelMatcher.group(2).trim();
+            map.put(key, label);
+        }
+
+        return map;
     }
 
     private AdminTemplateDto.TemplateRow toRow(Template t) {

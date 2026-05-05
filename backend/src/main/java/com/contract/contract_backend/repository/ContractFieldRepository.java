@@ -15,4 +15,6 @@ public interface ContractFieldRepository extends JpaRepository<ContractField, Lo
     boolean existsByFieldKey(String fieldKey);
 
     void deleteByContractId(Long contractId);
+
+
 }

@@ -4,7 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 public class ContractGenerateDto {
 
     @Data
@@ -148,6 +150,15 @@ public class ContractGenerateDto {
         private String feeStructure;
         private String paymentDate;
         private String exceptionHandling;
+        private Map<String, Object> fields = new LinkedHashMap<>();
+
+        @JsonAnySetter
+        public void putField(String key, Object value) {
+            fields.put(key, value);
+        }
+        public Map<String, Object> getFields() {
+            return fields;
+        }
     }
 
     @Data
@@ -160,4 +171,5 @@ public class ContractGenerateDto {
         private Long versionId;
         private String status;
     }
+
 }

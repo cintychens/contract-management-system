@@ -13,6 +13,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequiredArgsConstructor
@@ -46,8 +49,47 @@ public class TemplateController {
      * 新增：查询模板字段
      */
     @GetMapping("/{id}/fields")
-    public List<AdminTemplateDto.TemplateFieldRow> listTemplateFields(@PathVariable("id") Long id) {
-        return templateService.listTemplateFields(id);
+    public List<Map<String, Object>> listTemplateFields(@PathVariable("id") Long id) {
+
+        AdminTemplateDto.TemplateDetail template = templateService.getTemplate(id);
+
+        if (template == null || template.getContent() == null) {
+            throw new IllegalArgumentException("模板不存在或内容为空");
+        }
+
+        String content = template.getContent();
+
+        Map<String, String> fieldMap = new LinkedHashMap<>();
+
+        // ✅ 第一步：提取所有 ${xxx}
+        Pattern keyPattern = Pattern.compile("\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher keyMatcher = keyPattern.matcher(content);
+
+        while (keyMatcher.find()) {
+            String key = keyMatcher.group(1);
+            fieldMap.putIfAbsent(key, key);
+        }
+
+        // ✅ 第二步：提取中文标签（覆盖）
+        Pattern labelPattern = Pattern.compile("([^\\n：:]{2,})[：:]\\s*\\$\\{([a-zA-Z0-9_]+)}");
+        Matcher labelMatcher = labelPattern.matcher(content);
+
+        while (labelMatcher.find()) {
+            String label = labelMatcher.group(1).trim();
+            String key = labelMatcher.group(2).trim();
+
+            fieldMap.put(key, label);
+        }
+
+        // ✅ 返回
+        return fieldMap.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("fieldKey", e.getKey());
+                    m.put("fieldName", e.getValue());
+                    return m;
+                })
+                .toList();
     }
 
     @PostMapping
