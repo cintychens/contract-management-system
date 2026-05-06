@@ -2025,23 +2025,26 @@ if (contract.status === 'TERMINATED') {
                 color = '#28a745';
             }
         }
+        else if (item.name === '最终确认' && item.status === 'COMPLETED') {
+            statusText = '合同履约完成';
+            color = '#28a745';
+        }
         else if (item.status === 'REWORK') {
-    statusText = '整改中（业务处理中）';
-    color = '#1890ff';
-}
-else if (item.status === 'FAILED' && item.responsibleRole === 'LEGAL') {
-    statusText = '验收不通过（待法务处理）';
-    color = '#dc3545';
-}
-else if (item.status === 'FAILED' && item.responsibleRole === 'BUSINESS') {
-    statusText = '整改中（业务处理中）';
-    color = '#1890ff';
-}
-else if (item.delayReason) {
-    statusText = '已上报延期';
-    color = '#f59e0b';
-}
-
+            statusText = '整改中（业务处理中）';
+            color = '#1890ff';
+        }
+        else if (item.status === 'FAILED' && item.responsibleRole === 'LEGAL') {
+            statusText = '验收不通过（待法务处理）';
+            color = '#dc3545';
+        }
+        else if (item.status === 'FAILED' && item.responsibleRole === 'BUSINESS') {
+            statusText = '整改中（业务处理中）';
+            color = '#1890ff';
+        }
+        else if (item.delayReason) {
+            statusText = '已上报延期';
+            color = '#f59e0b';
+        }
         else if (risk === 'OVERDUE') {
             statusText = '已逾期';
             color = '#dc3545';
@@ -2057,26 +2060,27 @@ else if (item.delayReason) {
 
         // ⭐ 是否可操作
         const canOperate =
-        currentContract?.status !== 'TERMINATED' &&
-    ['ACTIVE', 'IN_PROGRESS', 'REWORK'].includes(currentContract?.status) &&
-    (
-        realStatus !== 'COMPLETED' ||
-        item.status === 'REWORK' ||
-        item.status === 'PENDING'   // ⭐ 新增
-    ) &&
-    (role === item.responsibleRole || role === 'ADMIN') &&
-    (!prev || getRealStatus(prev) === 'COMPLETED');
+            currentContract?.status !== 'TERMINATED' &&
+            ['ACTIVE', 'IN_PROGRESS', 'REWORK'].includes(currentContract?.status) &&
+            (
+                realStatus !== 'COMPLETED' ||
+                item.status === 'REWORK' ||
+                item.status === 'PENDING'
+            ) &&
+            (role === item.responsibleRole || role === 'ADMIN') &&
+            (!prev || getRealStatus(prev) === 'COMPLETED');
 
         html += `
         <div class="${className}">
             <div class="timeline-dot"></div>
 
             <div class="timeline-content">
-            ${item.name === '发货' ? renderTransportUI(list) : ''}
+
+                ${item.name === '发货' ? renderTransportUI(list) : ''}
 
                 <div class="timeline-title">${item.name}</div>
 
-                <!-- ⭐ 验收（业务） -->
+                <!-- ⭐ 验收 -->
                 ${item.name === '验收'
                     && role === 'BUSINESS'
                     && prev
@@ -2092,62 +2096,34 @@ else if (item.delayReason) {
                     </div>
                     ` : ''}
 
-                <!-- ⭐⭐⭐ 法务处理（重点改这里） -->
+                <!-- ⭐ 法务处理 -->
                 ${item.status === 'FAILED'
-   && role === 'LEGAL'
-   && role === item.responsibleRole
-? `
-                   <div style="margin-top:10px;">
-
-                        <textarea id="legal-reason-${item.id}"
-                            placeholder="问题说明（例如：运输破损）"
+                    && role === 'LEGAL'
+                    && role === item.responsibleRole
+                    ? `
+                    <div style="margin-top:10px;">
+                        <textarea id="legal-reason-${item.id}" placeholder="问题说明"
                             style="width:100%;margin-bottom:6px;"></textarea>
 
-                        <select id="legal-resp-${item.id}" style="margin-bottom:6px;">
+                        <select id="legal-resp-${item.id}">
                             <option value="乙方">责任方：乙方</option>
                             <option value="甲方">责任方：甲方</option>
                         </select>
 
-                        <select id="legal-action-${item.id}" style="margin-bottom:6px;">
+                        <select id="legal-action-${item.id}">
                             <option value="REWORK">重新发货</option>
                             <option value="COMPENSATE">赔偿后继续</option>
                             <option value="TERMINATE">终止合同</option>
                         </select>
 
-                        <button onclick="legalContinue(${item.id})"
-                            style="background:#1890ff;color:white;">要求整改</button>
-
-                        <button onclick="legalTerminate(${item.id})"
-                            style="background:#dc3545;color:white;margin-left:6px;">终止合同</button>
-
+                        <button onclick="legalContinue(${item.id})">整改</button>
+                        <button onclick="legalTerminate(${item.id})">终止</button>
                     </div>
-                ` : ''}
+                    ` : ''}
 
                 <div>负责人：${getRoleText(item.responsibleRole)}</div>
-
                 <div>预计时间：${formatDateTime(item.expectedDate)}</div>
                 <div>实际时间：${formatDateTime(item.actualDate)}</div>
-
-                <!-- ⭐⭐⭐ 法务结果展示 -->
-                ${item.legalOpinion
-                    ? `<div style="color:#dc3545;">法务意见：${item.legalOpinion}</div>`
-                    : ''}
-
-                ${item.responsibility
-                    ? `<div>责任方：${item.responsibility}</div>`
-                    : ''}
-
-                ${item.handleAction
-                    ? `<div>处理方式：${
-                        item.handleAction === 'REWORK' ? '重新发货' :
-                        item.handleAction === 'COMPENSATE' ? '赔偿后继续' :
-                        item.handleAction === 'TERMINATE' ? '终止合同' : '-'
-                    }</div>`
-                    : ''}
-
-                ${item.delayTime
-                    ? `<div>处理时间：${formatDateTime(item.delayTime)}</div>`
-                    : ''}
 
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
@@ -2169,26 +2145,39 @@ else if (item.delayReason) {
 
                             <div class="btn-row">
 
+                                <!-- ⭐⭐⭐ 最终确认按钮 -->
+                                ${item.name === '最终确认'
+                                    && role === 'BUSINESS'
+                                    && prev
+                                    && getRealStatus(prev) === 'COMPLETED'
+                                    && item.status !== 'COMPLETED'
+                                    ? `
+                                    <button onclick="completeMilestone(${item.id})"
+                                        style="background:#28a745;color:white;">
+                                        ✅ 最终确认（完成合同）
+                                    </button>
+                                    ` : ''}
+
                                 ${item.status === 'REWORK' && item.name === '发货' ? `
-    <button onclick="restartTransport(${item.id})"
-        style="background:#1890ff;color:white;">
-        🔁 重新发货
-    </button>
-` : ''}
-                                ${item.name !== '验收' ? `
+                                    <button onclick="restartTransport(${item.id})"
+                                        style="background:#1890ff;color:white;">
+                                        🔁 重新发货
+                                    </button>
+                                ` : ''}
+
+                                ${item.name !== '验收' && item.name !== '最终确认' ? `
                                     <button class="delay-btn" data-id="${item.id}">
                                         上报延期
                                     </button>
                                 ` : ''}
 
-                                ${item.status !== 'FAILED' ? `
+                                ${item.status !== 'FAILED' && item.name !== '最终确认' ? `
                                     <button class="complete-btn" data-id="${item.id}">
                                         最终完成
                                     </button>
                                 ` : ''}
 
                             </div>
-
                         </div>
                         `
                         : ''
@@ -2201,7 +2190,7 @@ else if (item.delayReason) {
 
     container.innerHTML = html;
 
-    // ⭐ 绑定按钮
+    // ⭐ 按钮绑定
     setTimeout(() => {
 
         document.querySelectorAll('.complete-btn').forEach(btn => {

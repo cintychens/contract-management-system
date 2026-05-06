@@ -57,6 +57,7 @@ public class ContractMilestoneService {
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
+        // ⭐ 顺序校验（自动支持5节点）
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId().equals(id)) {
                 if (i > 0) {
@@ -71,6 +72,7 @@ public class ContractMilestoneService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        // 日志
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
@@ -85,6 +87,7 @@ public class ContractMilestoneService {
         m.setStatus("COMPLETED");
         repository.save(m);
 
+        // ⭐⭐⭐ 自动判断是否全部完成（5个节点全部完成才结束）
         boolean allDone = repository
                 .findByContractIdOrderBySortOrder(m.getContractId())
                 .stream()
@@ -96,8 +99,26 @@ public class ContractMilestoneService {
         }
     }
 
+
     public void complete(Long id) {
         complete(id, "SYSTEM", "SYSTEM");
+    }
+
+    public void completeWithState(Long id, String role, String username) {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+
+        complete(id, role, username);
+
+        // ⭐ 可选：付款后切状态
+        if ("付款".equals(m.getName())) {
+            Contract contract = contractRepository.findById(m.getContractId())
+                    .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+            contract.setStatus(ContractStatus.IN_PROGRESS);
+            contractRepository.save(contract);
+        }
     }
 
     public void initMilestones(Long contractId, LocalDate startDate) {
@@ -130,7 +151,14 @@ public class ContractMilestoneService {
         m4.setSortOrder(4);
         m4.setStatus("PENDING");
 
-        repository.saveAll(List.of(m1, m2, m3, m4));
+        ContractMilestone m5 = new ContractMilestone();
+        m5.setContractId(contractId);
+        m5.setName("最终确认");
+        m5.setResponsibleRole("BUSINESS");
+        m5.setSortOrder(5);
+        m5.setStatus("PENDING");
+
+        repository.saveAll(List.of(m1, m2, m3, m4, m5));
     }
 
     public void setExpected(Long id, LocalDateTime expectedDate, String role) {
