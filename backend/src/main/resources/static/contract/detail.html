@@ -998,6 +998,29 @@ textarea {
                     查看履约记录
                 </button>
 
+                <div class="content-card">
+                    <div class="section-title">运输运单记录</div>
+
+                    <button onclick="toggleTransport()" id="transportBtn"
+                            style="margin-bottom:10px;">
+                        查看运单记录
+                    </button>
+
+                    <div id="transportContainer" style="display:none;">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>运单号</th>
+                                <th>状态</th>
+                                <th>发货时间</th>
+                                <th>到货时间</th>
+                            </tr>
+                            </thead>
+                            <tbody id="transportTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div id="logContainer" style="display:none;">
                     <table>
                         <thead>
@@ -1455,6 +1478,66 @@ if (contract.status === 'TERMINATED') {
     `;
 }
 
+    function toggleTransport() {
+    const el = document.getElementById("transportContainer");
+    const btn = document.getElementById("transportBtn");
+
+    if (el.style.display === "none") {
+        el.style.display = "block";
+        btn.innerText = "收起运单记录";
+        loadTransport();  // ⭐加载数据
+    } else {
+        el.style.display = "none";
+        btn.innerText = "查看运单记录";
+    }
+}
+
+    async function loadTransport() {
+
+    const contractId = getContractId();
+
+    try {
+        const resp = await authFetch(`/api/transport/${contractId}`);
+        if (!resp.ok) throw new Error("获取运单失败");
+
+        const result = await resp.json();
+        const list = result.data || [];
+
+        const tbody = document.getElementById("transportTable");
+
+        if (!list.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align:center;color:#999;">
+                        暂无运单记录
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = list.map(item => `
+            <tr>
+                <td style="font-weight:bold;color:#1a4b75;">
+                    ${item.trackingNo}
+                </td>
+                <td>
+                    ${item.status === 'SHIPPED'
+                        ? '运输中'
+                        : item.status === 'ARRIVED'
+                            ? '已到达'
+                            : item.status}
+                </td>
+                <td>${formatDateTime(item.shipTime)}</td>
+                <td>${formatDateTime(item.arriveTime)}</td>
+            </tr>
+        `).join('');
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 function handleFlowSubmit(contractId) {
     postFlowAction(`/api/contracts/${contractId}/flow/submit`, contractId);
 }
@@ -1787,7 +1870,7 @@ if (contract.status === 'TERMINATED') {
     // 3. 禁用输入
     document.querySelectorAll("input, textarea, select").forEach(el => {
         el.disabled = true;
-    });0
+    });
 }
 
 
@@ -1976,7 +2059,6 @@ if (contract.status === 'TERMINATED') {
 
     if (item.status === 'REWORK') return 'REWORK';
 
-    // ⭐ 失败状态优先判断
     if (item.status === 'FAILED') return 'FAILED';
 
     if (item.actualDate) return 'COMPLETED';
@@ -2158,12 +2240,12 @@ if (contract.status === 'TERMINATED') {
                                     </button>
                                     ` : ''}
 
-                                ${item.status === 'REWORK' && item.name === '发货' ? `
-                                    <button onclick="restartTransport(${item.id})"
-                                        style="background:#1890ff;color:white;">
-                                        🔁 重新发货
-                                    </button>
-                                ` : ''}
+                                ${realStatus === 'REWORK' && item.name === '发货' ? `
+    <button onclick="restartTransport(${getContractId()})"
+        style="background:#1890ff;color:white;">
+        🔁 重新发货
+    </button>
+` : ''}
 
                                 ${item.name !== '验收' && item.name !== '最终确认' ? `
                                     <button class="delay-btn" data-id="${item.id}">
@@ -2172,7 +2254,7 @@ if (contract.status === 'TERMINATED') {
                                 ` : ''}
 
                                 ${item.status !== 'FAILED' && item.name !== '最终确认' ? `
-                                    <button class="complete-btn" data-id="${item.id}">
+                                    <button onclick="completeMilestone(${item.id})">
                                         最终完成
                                     </button>
                                 ` : ''}
@@ -2190,15 +2272,6 @@ if (contract.status === 'TERMINATED') {
 
     container.innerHTML = html;
 
-    // ⭐ 按钮绑定
-    setTimeout(() => {
-
-        document.querySelectorAll('.complete-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                completeMilestone(this.dataset.id);
-            });
-        });
-
         document.querySelectorAll('.delay-btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 const container = this.closest('.timeline-content');
@@ -2207,10 +2280,22 @@ if (contract.status === 'TERMINATED') {
             });
         });
 
-    }, 0);
-
     renderProgress(list);
     generateAlerts(list);
+}
+
+    async function restartTransport(contractId) {
+
+    console.log("🔥 触发重新发货", contractId);
+
+    await authFetch(`/api/transport/reship/${contractId}`, {
+        method: "POST"
+    });
+
+    await loadTransport();      // 刷新运单
+    await loadMilestones();     // 刷新节点
+
+    alert("已重新发货（新运单）");
 }
 
     function getTransportPercent(list) {
@@ -2334,23 +2419,26 @@ if (contract.status === 'TERMINATED') {
 
     const now = Date.now();
 
-    // ⭐ 1. REWORK 优先判断（必须放前面）
+    // ⭐⭐⭐ 是否经历过 REWORK
     const hasRework = list.some(x => x.status === 'REWORK');
-    if (hasRework && (!send || !send.actualDate)) {
-        return "整改中（等待重新发货）";
-    }
 
-    // ⭐ 2. 未发货
+    // ⭐ 1. 未发货
     if (!send || !send.actualDate) {
+        if (hasRework) return "整改中（等待重新发货）";
         return "未发货";
     }
 
-    // ⭐ 3. 已完成（必须点击到货）
+    // ⭐ 2. 已完成
     if (arrive && arrive.actualDate) {
         return "已到达（运输完成）";
     }
 
-    // ⭐ 4. 时间缺失
+    // ⭐⭐⭐ 3. REWORK 后运输（核心修改）
+    if (hasRework) {
+        return "运输中";
+    }
+
+    // ⭐ 4. 没时间数据
     if (!start || !end) {
         return "运输中";
     }
@@ -2362,30 +2450,19 @@ if (contract.status === 'TERMINATED') {
         return "运输延误（未完成）";
     }
 
-    // ⭐ 6. 正常运输
-    return `运输中（预计：${formatDate(start)} → ${formatDate(end)}）`;
+    // ⭐ 6. 正常运输（才显示预计）
+    return `运输中（预计：${formatDateTime(start)} → ${formatDateTime(end)}）`;
 }
 
-    function formatDate(value) {
-    if (!value) return '-';
+    async function restartTransport(contractId) {
 
-    try {
-        const d = new Date(value);
-        return (d.getMonth() + 1) + '-' + d.getDate();
-    } catch {
-        return value;
-    }
-}
-
-    async function restartTransport(id) {
-
-    await authFetch(`/api/milestones/${id}/complete`, {
+    await authFetch(`/api/transport/reship/${contractId}`, {
         method: "POST"
     });
 
     await loadMilestones();
 
-    alert("已重新发货");
+    alert("已重新发货（新运单）");
 }
 
     async function acceptPass(id) {
@@ -2786,20 +2863,18 @@ async function reportDelayWithReason(id, reason) {
     async function completeMilestone(id) {
 
     try {
-        const resp = await authFetch(`/api/milestones/${id}/complete`, {
+        await authFetch(`/api/milestones/${id}/complete`, {
             method: 'POST'
         });
 
-        if (!resp.ok) throw new Error('完成失败');
-
+        // ⭐⭐⭐ 核心：重新加载节点
         await loadMilestones();
 
     } catch (e) {
         console.error(e);
-        alert('更新失败：' + (e.message || e));
+        alert("完成失败：" + (e.message || e));
     }
 }
-
     async function loadContractFields() {
     const contractId = getContractId();
     if (!contractId) return;

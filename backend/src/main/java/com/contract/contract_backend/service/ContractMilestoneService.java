@@ -6,6 +6,7 @@ import com.contract.contract_backend.entity.ContractMilestone;
 import com.contract.contract_backend.entity.ContractMilestoneLog;
 import com.contract.contract_backend.repository.ContractMilestoneLogRepository;
 import com.contract.contract_backend.repository.ContractMilestoneRepository;
+import com.contract.contract_backend.service.TransportService;
 import com.contract.contract_backend.dto.MilestoneAlertDTO;
 import com.contract.contract_backend.dto.AlertSummaryDTO;
 import com.contract.contract_backend.repository.ContractRepository;
@@ -29,6 +30,10 @@ public class ContractMilestoneService {
 
     @Autowired
     private ContractRepository contractRepository;
+
+    @Autowired
+    private TransportService transportService;
+
 
     public List<ContractMilestone> list(Long contractId) {
         return repository.findByContractIdOrderBySortOrder(contractId);
@@ -63,7 +68,13 @@ public class ContractMilestoneService {
                 if (i > 0) {
                     ContractMilestone prev = list.get(i - 1);
                     if (!"COMPLETED".equals(prev.getStatus())) {
-                        throw new RuntimeException("必须按顺序完成节点");
+
+                        // ⭐ 如果当前是整改流程，允许继续
+                        if (!"REWORK".equals(prev.getStatus()) &&
+                                !"REWORK".equals(m.getStatus())) {
+
+                            throw new RuntimeException("必须按顺序完成节点");
+                        }
                     }
                 }
                 break;
@@ -86,6 +97,14 @@ public class ContractMilestoneService {
         m.setActualDate(now);
         m.setStatus("COMPLETED");
         repository.save(m);
+
+        if ("发货".equals(m.getName())) {
+            transportService.createOnShip(m.getContractId());
+        }
+
+        if ("到货".equals(m.getName())) {
+            transportService.arrive(m.getContractId());
+        }
 
         // ⭐⭐⭐ 自动判断是否全部完成（5个节点全部完成才结束）
         boolean allDone = repository
@@ -452,8 +471,6 @@ public class ContractMilestoneService {
             m.setResponsibility(responsibility);
             m.setHandleAction(action);
 
-            m.setExpectedDate(null);
-
             m.setActualDate(null);     // 允许再次验收
             m.setExpectedDate(null);   // ⭐ 建议清空，重新填写时间
 
@@ -461,13 +478,18 @@ public class ContractMilestoneService {
             List<ContractMilestone> list =
                     repository.findByContractIdOrderBySortOrder(m.getContractId());
 
+            boolean reset = false;
+
             for (ContractMilestone node : list) {
 
-                if ("发货".equals(node.getName()) || "到货".equals(node.getName())) {
+                // ⭐ 从发货开始重置
+                if ("发货".equals(node.getName())) {
+                    reset = true;
+                }
 
-                    node.setActualDate(null);     // 清空完成时间
-                    node.setExpectedDate(null);   // 清空预计时间
-                    node.setStatus("PENDING");    // 回到未开始
+                if (reset) {
+                    node.setActualDate(null);
+                    node.setStatus("PENDING");
 
                     repository.save(node);
                 }
