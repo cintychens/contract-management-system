@@ -424,6 +424,8 @@ public class ContractMilestoneService {
             m.setResponsibility(responsibility);
             m.setHandleAction(action);
 
+            m.setExpectedDate(null);
+
             m.setActualDate(null);     // 允许再次验收
             m.setExpectedDate(null);   // ⭐ 建议清空，重新填写时间
 

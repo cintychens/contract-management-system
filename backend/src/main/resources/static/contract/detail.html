@@ -1738,6 +1738,11 @@ async function handleExportPdf() {
         // ⭐ 兼容 id / contractId
         await loadFlowRecords(contract.contractId || contract.id);
 
+        // ⭐⭐⭐ 新增（关键）
+if (contract.status === 'TERMINATED') {
+    lockPageUI();
+}
+
     } catch (e) {
         console.error("真实错误：", e);
 
@@ -1745,6 +1750,46 @@ async function handleExportPdf() {
             '加载失败：' + (e.message || e);
     }
 }
+
+    function lockPageUI() {
+
+    // 1. 红色提示条
+    let banner = document.getElementById("terminateBanner");
+
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "terminateBanner";
+
+        banner.style.cssText = `
+            background:#dc3545;
+            color:white;
+            padding:16px;
+            text-align:center;
+            font-weight:bold;
+            font-size:18px;
+            border-radius:12px;
+            margin-bottom:15px;
+        `;
+
+        banner.innerHTML = "⚠ 合同已终止，所有操作已锁定";
+
+        document.querySelector(".main-content")
+            .insertBefore(banner, document.querySelector(".main-content").firstChild);
+    }
+
+    // 2. 禁用所有按钮
+    document.querySelectorAll("button").forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "not-allowed";
+    });
+
+    // 3. 禁用输入
+    document.querySelectorAll("input, textarea, select").forEach(el => {
+        el.disabled = true;
+    });0
+}
+
 
     function getMilestoneLogStatusText(status) {
     const map = {
@@ -2012,6 +2057,7 @@ else if (item.delayReason) {
 
         // ⭐ 是否可操作
         const canOperate =
+        currentContract?.status !== 'TERMINATED' &&
     ['ACTIVE', 'IN_PROGRESS', 'REWORK'].includes(currentContract?.status) &&
     (
         realStatus !== 'COMPLETED' ||
@@ -2183,8 +2229,8 @@ else if (item.delayReason) {
     const sendList = list.filter(x => x.name === '发货');
     const arriveList = list.filter(x => x.name === '到货');
 
-    const send = sendList[sendList.length - 1];   // ⭐ 最新发货
-    const arrive = arriveList[arriveList.length - 1]; // ⭐ 最新到货
+    const send = sendList[sendList.length - 1];       // 最新发货
+    const arrive = arriveList[arriveList.length - 1]; // 最新到货
 
     const startStr =
         window.contractFields?.shipDate ||
@@ -2194,29 +2240,39 @@ else if (item.delayReason) {
         window.contractFields?.deliveryDate ||
         window.contractFields?.["交付时间"];
 
-    // ❗没有发货
-    if (!send || !send.actualDate) return 0;
+    // ❗1. 没有发货 → 0%
+    if (!send) return 0;
 
-    // ❗已到达（优先最高）
-    if (arrive && arrive.actualDate) return 100;
+    // ⭐⭐2. 到货完成 → 100%（必须放最前！！！）
+    if (arrive && (arrive.actualDate || arrive.status === 'COMPLETED')) {
+        return 100;
+    }
 
-    // ❗时间不存在
-    if (!startStr || !endStr) return 0;
+    // ⭐⭐3. 发货完成 → 至少20%
+    if (send.actualDate || send.status === 'COMPLETED') {
 
-    const start = new Date(startStr).getTime();
-    const end = new Date(endStr).getTime();
-    const now = Date.now();
+        // ❗没有时间 → 固定20%
+        if (!startStr || !endStr) return 20;
 
-    // ❗还没到发货时间
-    if (now <= start) return 0;
+        const start = new Date(startStr).getTime();
+        const end = new Date(endStr).getTime();
+        const now = Date.now();
 
-    // ❗已经超过预计时间但没完成 → 不给100%
-    if (now >= end) return 90;
+        // ❗还没到发货时间
+        if (now <= start) return 20;
 
-    // ⭐ 正常进度计算
-    const percent = ((now - start) / (end - start)) * 100;
+        // ❗超过预计时间但未到货 → 最高95%
+        if (now >= end) return 95;
 
-    return Math.floor(Math.max(0, Math.min(percent, 100)));
+        // ⭐ 正常进度
+        const percent = ((now - start) / (end - start)) * 100;
+
+        // ⭐ 最低20%，最高95%
+        return Math.max(20, Math.floor(percent));
+    }
+
+    // ❗4. 默认（未发货）
+    return 0;
 }
 
     function renderTransportUI(list) {
@@ -2440,25 +2496,117 @@ async function acceptFail(id) {
 
     async function legalTerminate(id) {
 
-    if (!confirm("确定终止合同吗？")) return;
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerText = "终止中...";
 
-    const resp = await authFetch(`/api/milestones/${id}/legal`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            result: "TERMINATE"
-        })
+    const reason = document.getElementById(`legal-reason-${id}`)?.value.trim();
+    const responsibility = document.getElementById(`legal-resp-${id}`)?.value;
+
+    if (!reason) {
+        alert("请填写问题说明");
+        btn.disabled = false;
+        btn.innerText = "终止合同";
+        return;
+    }
+
+    try {
+        const resp = await authFetch(`/api/milestones/${id}/legal`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                result: "TERMINATE",
+                reason,
+                responsibility
+            })
+        });
+
+        const result = await resp.json();
+
+        if (result.code === 200) {
+
+            // ✅ 强视觉反馈
+            showTerminateUI();
+
+            // ✅ 刷新数据（保险）
+            await loadContractDetail();
+            await loadMilestones();
+
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (e) {
+        alert("终止失败：" + (e.message || e));
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "终止合同";
+    }
+}
+
+    function showTerminateUI() {
+
+    // 1️⃣ 顶部红色提示
+    let banner = document.getElementById("terminateBanner");
+
+    if (!banner) {
+        banner = document.createElement("div");
+        banner.id = "terminateBanner";
+
+        banner.style.cssText = `
+            background:#dc3545;
+            color:white;
+            padding:16px;
+            text-align:center;
+            font-weight:bold;
+            font-size:18px;
+            border-radius:12px;
+            margin-bottom:15px;
+        `;
+
+        banner.innerHTML = "⚠ 合同已被法务终止，所有操作已锁定";
+
+        const main = document.querySelector(".main-content");
+        main.insertBefore(banner, main.firstChild);
+    }
+
+    // 2️⃣ 页面灰化
+    document.body.style.filter = "grayscale(0.4)";
+    document.body.style.opacity = "0.9";
+
+    // 3️⃣ 禁用所有按钮（关键）
+    document.querySelectorAll("button").forEach(btn => {
+        btn.disabled = true;
+        btn.style.cursor = "not-allowed";
+        btn.style.opacity = "0.6";
     });
 
-    const result = await resp.json();
+    // 4️⃣ 禁用所有输入框
+    document.querySelectorAll("input, textarea, select").forEach(el => {
+        el.disabled = true;
+    });
 
-    if (result.code === 200) {
-        alert("合同已终止");
-        await loadMilestones();
-    } else {
-        alert(result.message);
+    // 5️⃣ 加遮罩（彻底禁止点击）
+    let mask = document.getElementById("globalLockMask");
+
+    if (!mask) {
+        mask = document.createElement("div");
+        mask.id = "globalLockMask";
+
+        mask.style.cssText = `
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            z-index:9999;
+            background:rgba(0,0,0,0.1);
+            cursor:not-allowed;
+        `;
+
+        document.body.appendChild(mask);
     }
 }
 
