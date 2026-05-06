@@ -2572,10 +2572,6 @@ async function acceptFail(id) {
         main.insertBefore(banner, main.firstChild);
     }
 
-    // 2️⃣ 页面灰化
-    document.body.style.filter = "grayscale(0.4)";
-    document.body.style.opacity = "0.9";
-
     // 3️⃣ 禁用所有按钮（关键）
     document.querySelectorAll("button").forEach(btn => {
         btn.disabled = true;
