@@ -2128,6 +2128,48 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
         const realStatus = getRealStatus(item);
         const risk = getRiskLevel(item);
 
+        // ⭐ 在库：预计在库时间
+        let storageDaysText = '';
+
+        if (item.name === '在库') {
+            const inNode = list.find(x => x.name === '入库');
+            const outNode = list.find(x => x.name === '出库');
+
+            if (inNode && outNode) {
+                const startTime = inNode.actualDate || inNode.expectedDate;
+                const endTime = outNode.expectedDate;
+
+                if (startTime && endTime) {
+                    const start = new Date(startTime);
+                    const end = new Date(endTime);
+                    const diff = end - start;
+
+                    if (diff > 0) {
+                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        storageDaysText = `（预计在库：${days}天）`;
+                    }
+                }
+            }
+        }
+
+        // ⭐ 出库：实际在库时间
+        let actualStorageText = '';
+
+        if (item.name === '出库') {
+            const inNode = list.find(x => x.name === '入库');
+
+            if (inNode && inNode.actualDate && item.actualDate) {
+                const start = new Date(inNode.actualDate);
+                const end = new Date(item.actualDate);
+                const diff = end - start;
+
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    actualStorageText = `（实际在库：${days}天）`;
+                }
+            }
+        }
+
         // ⭐ 样式
         let className = "timeline-item";
         if (realStatus === 'COMPLETED') className += " done";
@@ -2208,59 +2250,23 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
     : ''}
 
                 <div class="timeline-title">
-    ${getMilestoneIcon(item.name)} ${item.name}
-</div>
-
-                <!-- ⭐ 验收 -->
-                ${item.name === '验收'
-                    && role === 'BUSINESS'
-                    && prev
-                    && getRealStatus(prev) === 'COMPLETED'
-                    && !['COMPLETED', 'FAILED'].includes(item.status)
-                    ? `
-                    <div style="margin-top:10px;">
-                        <button onclick="acceptPass(${item.id})"
-                            style="background:#28a745;color:white;">✅ 验收通过</button>
-
-                        <button onclick="acceptFail(${item.id})"
-                            style="background:#dc3545;color:white;margin-left:6px;">❌ 验收不通过</button>
-                    </div>
-                    ` : ''}
-
-                <!-- ⭐ 法务处理 -->
-                ${item.status === 'FAILED'
-                    && role === 'LEGAL'
-                    && role === item.responsibleRole
-                    ? `
-                    <div style="margin-top:10px;">
-                        <textarea id="legal-reason-${item.id}" placeholder="问题说明"
-                            style="width:100%;margin-bottom:6px;"></textarea>
-
-                        <select id="legal-resp-${item.id}">
-                            <option value="乙方">责任方：乙方</option>
-                            <option value="甲方">责任方：甲方</option>
-                        </select>
-
-                        <select id="legal-action-${item.id}">
-                            <option value="REWORK">重新发货</option>
-                            <option value="COMPENSATE">赔偿后继续</option>
-                            <option value="TERMINATE">终止合同</option>
-                        </select>
-
-                        <button onclick="legalContinue(${item.id})">整改</button>
-                        <button onclick="legalTerminate(${item.id})">终止</button>
-                    </div>
-                    ` : ''}
+                    ${getMilestoneIcon(item.name)} ${item.name}
+                    ${storageDaysText}
+                    ${actualStorageText}
+                </div>
 
                 <div>负责人：${getRoleText(item.responsibleRole)}</div>
-                <div>预计时间：${formatDateTime(item.expectedDate)}</div>
+
+                ${item.name !== '在库' ? `
+                    <div>预计时间：${formatDateTime(item.expectedDate)}</div>
+                ` : ''}
+
                 <div>实际时间：${formatDateTime(item.actualDate)}</div>
 
                 <div style="color:${color};font-weight:bold">
                     状态：${statusText}
                 </div>
 
-                <!-- ⭐ 操作区 -->
                 ${realStatus === 'COMPLETED'
                     ? '✔'
                     : canOperate
@@ -2276,7 +2282,6 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
 
                             <div class="btn-row">
 
-                                <!-- ⭐⭐⭐ 最终确认按钮 -->
                                 ${item.name === '最终确认'
                                     && role === 'BUSINESS'
                                     && prev
@@ -2290,11 +2295,11 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
                                     ` : ''}
 
                                 ${realStatus === 'REWORK' && item.name === '发货' ? `
-    <button onclick="restartTransport(${getContractId()})"
-        style="background:#1890ff;color:white;">
-        🔁 重新发货
-    </button>
-` : ''}
+                                    <button onclick="restartTransport(${getContractId()})"
+                                        style="background:#1890ff;color:white;">
+                                        🔁 重新发货
+                                    </button>
+                                ` : ''}
 
                                 ${item.name !== '验收' && item.name !== '最终确认' ? `
                                     <button class="delay-btn" data-id="${item.id}">
@@ -2321,13 +2326,13 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
 
     container.innerHTML = html;
 
-        document.querySelectorAll('.delay-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const container = this.closest('.timeline-content');
-                const reason = container.querySelector('textarea')?.value.trim() || "";
-                reportDelay(this.dataset.id, reason);
-            });
+    document.querySelectorAll('.delay-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const container = this.closest('.timeline-content');
+            const reason = container.querySelector('textarea')?.value.trim() || "";
+            reportDelay(this.dataset.id, reason);
         });
+    });
 
     renderProgress(list);
     generateAlerts(list);
@@ -2348,18 +2353,24 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
 }
 
     // ⭐ 根据节点名称返回图标
-function getMilestoneIcon(name) {
+    function getMilestoneIcon(name) {
     if (!name) return '📌';
 
-    if (name.includes('发货') || name.includes('到货')) return '🚚';
-    if (name.includes('验收')) return '🧾';
-    if (name.includes('付款') || name.includes('结算')) return '💰';
-
+    // ⭐ 仓储优先（避免被运输误匹配）
     if (name.includes('入库')) return '📦';
     if (name.includes('在库')) return '🏬';
     if (name.includes('出库')) return '📤';
+    if (name.includes('签收') || name.includes('交接')) return '✅'; // ⭐ 新增
 
-    if (name.includes('最终')) return '✅';
+    // ⭐ 运输
+    if (name.includes('发货') || name.includes('到货')) return '🚚';
+    if (name.includes('验收')) return '🧾';
+
+    // ⭐ 财务
+    if (name.includes('付款') || name.includes('结算')) return '💰';
+
+    // ⭐ 收尾
+    if (name.includes('最终')) return '✔️';
 
     return '📌';
 }

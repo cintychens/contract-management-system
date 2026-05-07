@@ -223,21 +223,31 @@ public class ContractMilestoneService {
             m3.setSortOrder(3);
             m3.setStatus("PENDING");
 
+            // ⭐ 新增：签收确认
             ContractMilestone m4 = new ContractMilestone();
             m4.setContractId(contractId);
-            m4.setName("结算");
-            m4.setResponsibleRole("FINANCE");
+            m4.setName("签收确认");
+            m4.setResponsibleRole("BUSINESS");
             m4.setSortOrder(4);
             m4.setStatus("PENDING");
 
+// 结算（顺序往后挪）
             ContractMilestone m5 = new ContractMilestone();
             m5.setContractId(contractId);
-            m5.setName("最终确认");
-            m5.setResponsibleRole("BUSINESS");
+            m5.setName("结算");
+            m5.setResponsibleRole("FINANCE");
             m5.setSortOrder(5);
             m5.setStatus("PENDING");
 
-            repository.saveAll(List.of(m1, m2, m3, m4, m5));
+// 最终确认
+            ContractMilestone m6 = new ContractMilestone();
+            m6.setContractId(contractId);
+            m6.setName("最终确认");
+            m6.setResponsibleRole("BUSINESS");
+            m6.setSortOrder(6);
+            m6.setStatus("PENDING");
+
+            repository.saveAll(List.of(m1, m2, m3, m4, m5, m6));
         }
 
         // =========================
