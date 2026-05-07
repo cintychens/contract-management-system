@@ -111,6 +111,7 @@ public class ContractFlowService {
     }
 
     public void financeApprove(Long contractId, Long operatorId, String comment) {
+
         Contract contract = getContractOrThrow(contractId);
         User operator = getUserOrThrow(operatorId);
 
@@ -120,18 +121,34 @@ public class ContractFlowService {
         String oldStatus = contract.getStatus();
         String oldRole = contract.getCurrentHandlerRole();
 
-        contract.setStatus(ContractStatus.PENDING_APPROVAL);
-        contract.setCurrentHandlerRole(RoleCode.APPROVER);
-        contract.setCurrentHandlerId(null);
+        // ⭐⭐⭐ 核心判断
+        boolean isTransportC =
+                "transport_c".equalsIgnoreCase(contract.getContractType());
+
+        if (isTransportC) {
+
+            // ✅ 只有C类走审批
+            contract.setStatus(ContractStatus.PENDING_APPROVAL);
+            contract.setCurrentHandlerRole(RoleCode.APPROVER);
+            contract.setCurrentHandlerId(null);
+
+        } else {
+
+            // ✅ 其他直接生效
+            contract.setStatus(ContractStatus.ACTIVE);
+            contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+            contract.setCurrentHandlerId(contract.getCreatedBy());
+            contract.setApprovedAt(LocalDateTime.now());
+        }
 
         contractRepository.save(contract);
 
         saveFlowRecord(
                 contractId,
                 oldStatus,
-                ContractStatus.PENDING_APPROVAL,
+                isTransportC ? ContractStatus.PENDING_APPROVAL : ContractStatus.ACTIVE,
                 oldRole,
-                RoleCode.APPROVER,
+                isTransportC ? RoleCode.APPROVER : RoleCode.BUSINESS,
                 FlowActionType.APPROVE,
                 operatorId,
                 comment

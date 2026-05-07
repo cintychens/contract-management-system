@@ -589,6 +589,7 @@ public class ContractServiceImpl implements ContractService {
     @Override
     @Transactional
     public void approveByFinance(Long contractId, Long operatorId, String comment) {
+
         Contract contract = getContractOrThrow(contractId);
 
         if (!ContractStatus.PENDING_FINANCE.equals(contract.getStatus())) {
@@ -597,18 +598,34 @@ public class ContractServiceImpl implements ContractService {
 
         String fromStatus = contract.getStatus();
 
-        contract.setStatus(ContractStatus.PENDING_APPROVAL);
-        contract.setCurrentHandlerRole(RoleCode.APPROVER);
-        contract.setCurrentHandlerId(null);
+        boolean isTransportC =
+                "transport_c".equalsIgnoreCase(contract.getContractType());
 
+        if (isTransportC) {
+
+            // ✅ C类 → 走审批人
+            contract.setStatus(ContractStatus.PENDING_APPROVAL);
+            contract.setCurrentHandlerRole(RoleCode.APPROVER);
+            contract.setCurrentHandlerId(null);
+
+        } else {
+
+            // ✅ A/B类 → 直接生效
+            contract.setStatus(ContractStatus.ACTIVE);
+            contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+            contract.setCurrentHandlerId(contract.getCreatedBy());
+            contract.setApprovedAt(LocalDateTime.now());
+        }
+
+        // ⭐⭐⭐⭐⭐ 这一行是关键！！！
         contractRepository.save(contract);
 
         saveFlowRecord(
                 contractId,
                 fromStatus,
-                ContractStatus.PENDING_APPROVAL,
+                isTransportC ? ContractStatus.PENDING_APPROVAL : ContractStatus.ACTIVE,
                 RoleCode.FINANCE,
-                RoleCode.APPROVER,
+                isTransportC ? RoleCode.APPROVER : RoleCode.BUSINESS,
                 "APPROVE",
                 operatorId,
                 comment

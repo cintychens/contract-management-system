@@ -1207,23 +1207,40 @@ textarea {
 }
 
     function renderFlowBar(status) {
-    const steps = [
+    const isTransportC = currentContract.contractType === 'transport_c';
+
+const steps = isTransportC
+    ? [
         { key: 'DRAFT', text: '草稿' },
         { key: 'PENDING_LEGAL', text: '法务审核' },
         { key: 'PENDING_FINANCE', text: '财务审核' },
-        { key: 'PENDING_APPROVAL', text: '审批' },
+        { key: 'PENDING_APPROVAL', text: '审批' },   // 只有C类
         { key: 'ACTIVE', text: '已生效' },
+        { key: 'COMPLETED', text: '已完成' }
+    ]
+    : [
+        { key: 'DRAFT', text: '草稿' },
+        { key: 'PENDING_LEGAL', text: '法务审核' },
+        { key: 'PENDING_FINANCE', text: '财务审核' },
+        { key: 'ACTIVE', text: '已生效' },           // ❌ 没有审批
         { key: 'COMPLETED', text: '已完成' }
     ];
 
-    const indexMap = {
+    const indexMap = isTransportC
+    ? {
         DRAFT: 0,
         PENDING_LEGAL: 1,
         PENDING_FINANCE: 2,
         PENDING_APPROVAL: 3,
         ACTIVE: 4,
-        COMPLETED: 5,
-        TERMINATED: 5
+        COMPLETED: 5
+    }
+    : {
+        DRAFT: 0,
+        PENDING_LEGAL: 1,
+        PENDING_FINANCE: 2,
+        ACTIVE: 3,
+        COMPLETED: 4
     };
 
     const currentIndex = indexMap[status] ?? 0;
@@ -1355,6 +1372,7 @@ function renderFlowSummary(contract) {
 }
 
 function renderFlowActions(contract) {
+    const isTransportC = contract.contractType === 'transport_c';
     const container = document.getElementById('flowActionButtons');
     const hintEl = document.getElementById('flowActionHint');
     container.innerHTML = '';
@@ -1401,7 +1419,7 @@ function renderFlowActions(contract) {
     return;
 }
 
-    if (contract.status === 'PENDING_APPROVAL' && role === 'APPROVER') {
+    if (contract.status === 'PENDING_APPROVAL' && role === 'APPROVER' && isTransportC) {
     hintEl.textContent = '当前等待最终审批，你可以批准或驳回合同';
     container.innerHTML = `
         <button class="action-btn primary" onclick="handleApproverApprove(${contractId})">
@@ -1427,7 +1445,7 @@ function renderFlowActions(contract) {
     return;
 }
 
-if (contract.status === 'PENDING_TERMINATION' && role === 'APPROVER') {
+if (contract.status === 'PENDING_TERMINATION' && role === 'APPROVER' && isTransportC) {
     hintEl.textContent = '当前合同处于待终止审批阶段，你可以确认终止或驳回终止申请';
     container.innerHTML = `
         <button class="action-btn danger" onclick="handleApproveTerminate(${contractId})">
