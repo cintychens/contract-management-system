@@ -956,7 +956,7 @@ document.getElementById('userRole').textContent =
         const data = result.data || {};
         dashboardContracts = data.records || [];
 
-        renderStats(dashboardContracts);
+        renderStats(dashboardContracts, data.total || 0);
         renderStatusChart(dashboardContracts);
         renderTrendChart(dashboardContracts);
         renderTasks(dashboardContracts);
@@ -997,16 +997,15 @@ document.getElementById('userRole').textContent =
     }
 }
 
-    function renderStats(contracts) {
-        const total = contracts.length;
-        const active = contracts.filter(c => c.status === 'ACTIVE').length;
-        const completed = contracts.filter(c => c.status === 'COMPLETED').length;
+    function renderStats(contracts, totalCount) {
+    const total = totalCount;
+    const active = contracts.filter(c => c.status === 'ACTIVE').length;
+    const completed = contracts.filter(c => c.status === 'COMPLETED').length;
 
-        document.getElementById('statTotalContracts').textContent = total;
-        document.getElementById('statActiveContracts').textContent = active;
-        document.getElementById('statCompletedContracts').textContent = completed;
-
-    }
+    document.getElementById('statTotalContracts').textContent = total;
+    document.getElementById('statActiveContracts').textContent = active;
+    document.getElementById('statCompletedContracts').textContent = completed;
+}
 
     function renderAlertStat() {
         const count = dashboardAlerts.length;
