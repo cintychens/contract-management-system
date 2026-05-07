@@ -599,6 +599,11 @@ textarea {
     border-radius: 6px;
 }
 
+.milestone-title {
+    font-size: 16px;
+    font-weight: 500;
+}
+
 /* ===== 预警提醒 ===== */
 .alert-summary-grid {
     display: grid;
@@ -1839,6 +1844,17 @@ async function handleExportPdf() {
         // ⭐ 兼容 id / contractId
         await loadFlowRecords(contract.contractId || contract.id);
 
+        // ⭐⭐⭐ 只在运输合同显示运单
+const isTransport = contract.contractType?.startsWith("transport");
+
+const transportBtn = document.getElementById("transportBtn");
+const transportBox = document.getElementById("transportContainer");
+
+if (!isTransport) {
+    if (transportBtn) transportBtn.style.display = "none";
+    if (transportBox) transportBox.style.display = "none";
+}
+
         // ⭐⭐⭐ 新增（关键）
 if (contract.status === 'TERMINATED') {
     lockPageUI();
@@ -1943,13 +1959,23 @@ if (contract.status === 'TERMINATED') {
 
     for (const item of list) {
 
-        if (item.name === '发货' && !item.expectedDate && delivery) {
-            await setExpectedAuto(item.id, delivery);
-        }
+        // ⭐ 运输
+if (item.name === '发货' && !item.expectedDate && delivery) {
+    await setExpectedAuto(item.id, delivery);
+}
 
-        if (item.name === '到货' && !item.expectedDate && arrival) {
-            await setExpectedAuto(item.id, arrival);
-        }
+if (item.name === '到货' && !item.expectedDate && arrival) {
+    await setExpectedAuto(item.id, arrival);
+}
+
+// ⭐ 仓储（新增）
+if (item.name === '入库' && !item.expectedDate && delivery) {
+    await setExpectedAuto(item.id, delivery);
+}
+
+if (item.name === '出库' && !item.expectedDate && arrival) {
+    await setExpectedAuto(item.id, arrival);
+}
 
     }
 
@@ -2176,9 +2202,14 @@ if (contract.status === 'TERMINATED') {
 
             <div class="timeline-content">
 
-                ${item.name === '发货' ? renderTransportUI(list) : ''}
+                ${currentContract.contractType?.startsWith("transport")
+    && item.name === '发货'
+    ? renderTransportUI(list)
+    : ''}
 
-                <div class="timeline-title">${item.name}</div>
+                <div class="timeline-title">
+    ${getMilestoneIcon(item.name)} ${item.name}
+</div>
 
                 <!-- ⭐ 验收 -->
                 ${item.name === '验收'
@@ -2314,6 +2345,23 @@ if (contract.status === 'TERMINATED') {
     await loadMilestones();     // 刷新节点
 
     alert("已重新发货（新运单）");
+}
+
+    // ⭐ 根据节点名称返回图标
+function getMilestoneIcon(name) {
+    if (!name) return '📌';
+
+    if (name.includes('发货') || name.includes('到货')) return '🚚';
+    if (name.includes('验收')) return '🧾';
+    if (name.includes('付款') || name.includes('结算')) return '💰';
+
+    if (name.includes('入库')) return '📦';
+    if (name.includes('在库')) return '🏬';
+    if (name.includes('出库')) return '📤';
+
+    if (name.includes('最终')) return '✅';
+
+    return '📌';
 }
 
     function getTransportPercent(list) {

@@ -62,14 +62,13 @@ public class ContractMilestoneService {
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
-        // ⭐ 顺序校验（自动支持5节点）
+        // ⭐ 顺序校验（保持不变）
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId().equals(id)) {
                 if (i > 0) {
                     ContractMilestone prev = list.get(i - 1);
                     if (!"COMPLETED".equals(prev.getStatus())) {
 
-                        // ⭐ 如果当前是整改流程，允许继续
                         if (!"REWORK".equals(prev.getStatus()) &&
                                 !"REWORK".equals(m.getStatus())) {
 
@@ -83,7 +82,7 @@ public class ContractMilestoneService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 日志
+        // ⭐ 日志（保持不变）
         ContractMilestoneLog log = new ContractMilestoneLog();
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
@@ -98,15 +97,23 @@ public class ContractMilestoneService {
         m.setStatus("COMPLETED");
         repository.save(m);
 
-        if ("发货".equals(m.getName())) {
-            transportService.createOnShip(m.getContractId());
-        }
+        // =========================
+        // ⭐⭐⭐ 这里是唯一修改点
+        // =========================
+        if (contract.getContractType() != null &&
+                contract.getContractType().startsWith("transport")) {
 
-        if ("到货".equals(m.getName())) {
-            transportService.arrive(m.getContractId());
-        }
+            if ("发货".equals(m.getName())) {
+                transportService.createOnShip(m.getContractId());
+            }
 
-        // ⭐⭐⭐ 自动判断是否全部完成（5个节点全部完成才结束）
+            if ("到货".equals(m.getName())) {
+                transportService.arrive(m.getContractId());
+            }
+        }
+        // =========================
+
+        // ⭐ 完成判断（保持不变）
         boolean allDone = repository
                 .findByContractIdOrderBySortOrder(m.getContractId())
                 .stream()
@@ -142,42 +149,103 @@ public class ContractMilestoneService {
 
     public void initMilestones(Long contractId, LocalDate startDate) {
 
-        ContractMilestone m1 = new ContractMilestone();
-        m1.setContractId(contractId);
-        m1.setName("发货");
-        m1.setResponsibleRole("BUSINESS");
-        m1.setSortOrder(1);
-        m1.setStatus("PENDING");
+        Contract contract = contractRepository.findById(contractId)
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
 
-        ContractMilestone m2 = new ContractMilestone();
-        m2.setContractId(contractId);
-        m2.setName("到货");
-        m2.setResponsibleRole("BUSINESS");
-        m2.setSortOrder(2);
-        m2.setStatus("PENDING");
+        String type = contract.getContractType();
 
-        ContractMilestone m3 = new ContractMilestone();
-        m3.setContractId(contractId);
-        m3.setName("验收");
-        m3.setResponsibleRole("BUSINESS");
-        m3.setSortOrder(3);
-        m3.setStatus("PENDING");
+        // =========================
+        // 🚚 运输合同（保持你原来的逻辑）
+        // =========================
+        if (type != null && type.startsWith("transport")) {
 
-        ContractMilestone m4 = new ContractMilestone();
-        m4.setContractId(contractId);
-        m4.setName("付款");
-        m4.setResponsibleRole("FINANCE");
-        m4.setSortOrder(4);
-        m4.setStatus("PENDING");
+            ContractMilestone m1 = new ContractMilestone();
+            m1.setContractId(contractId);
+            m1.setName("发货");
+            m1.setResponsibleRole("BUSINESS");
+            m1.setSortOrder(1);
+            m1.setStatus("PENDING");
 
-        ContractMilestone m5 = new ContractMilestone();
-        m5.setContractId(contractId);
-        m5.setName("最终确认");
-        m5.setResponsibleRole("BUSINESS");
-        m5.setSortOrder(5);
-        m5.setStatus("PENDING");
+            ContractMilestone m2 = new ContractMilestone();
+            m2.setContractId(contractId);
+            m2.setName("到货");
+            m2.setResponsibleRole("BUSINESS");
+            m2.setSortOrder(2);
+            m2.setStatus("PENDING");
 
-        repository.saveAll(List.of(m1, m2, m3, m4, m5));
+            ContractMilestone m3 = new ContractMilestone();
+            m3.setContractId(contractId);
+            m3.setName("验收");
+            m3.setResponsibleRole("BUSINESS");
+            m3.setSortOrder(3);
+            m3.setStatus("PENDING");
+
+            ContractMilestone m4 = new ContractMilestone();
+            m4.setContractId(contractId);
+            m4.setName("付款");
+            m4.setResponsibleRole("FINANCE");
+            m4.setSortOrder(4);
+            m4.setStatus("PENDING");
+
+            ContractMilestone m5 = new ContractMilestone();
+            m5.setContractId(contractId);
+            m5.setName("最终确认");
+            m5.setResponsibleRole("BUSINESS");
+            m5.setSortOrder(5);
+            m5.setStatus("PENDING");
+
+            repository.saveAll(List.of(m1, m2, m3, m4, m5));
+        }
+
+        // =========================
+        // 📦 仓储合同（只改名字，逻辑完全一样）
+        // =========================
+        else if (type != null && type.startsWith("warehouse")) {
+
+            ContractMilestone m1 = new ContractMilestone();
+            m1.setContractId(contractId);
+            m1.setName("入库");
+            m1.setResponsibleRole("BUSINESS");
+            m1.setSortOrder(1);
+            m1.setStatus("PENDING");
+
+            ContractMilestone m2 = new ContractMilestone();
+            m2.setContractId(contractId);
+            m2.setName("在库");
+            m2.setResponsibleRole("BUSINESS");
+            m2.setSortOrder(2);
+            m2.setStatus("PENDING");
+
+            ContractMilestone m3 = new ContractMilestone();
+            m3.setContractId(contractId);
+            m3.setName("出库");
+            m3.setResponsibleRole("BUSINESS");
+            m3.setSortOrder(3);
+            m3.setStatus("PENDING");
+
+            ContractMilestone m4 = new ContractMilestone();
+            m4.setContractId(contractId);
+            m4.setName("结算");
+            m4.setResponsibleRole("FINANCE");
+            m4.setSortOrder(4);
+            m4.setStatus("PENDING");
+
+            ContractMilestone m5 = new ContractMilestone();
+            m5.setContractId(contractId);
+            m5.setName("最终确认");
+            m5.setResponsibleRole("BUSINESS");
+            m5.setSortOrder(5);
+            m5.setStatus("PENDING");
+
+            repository.saveAll(List.of(m1, m2, m3, m4, m5));
+        }
+
+        // =========================
+        // ❗兜底（防止未知类型）
+        // =========================
+        else {
+            throw new RuntimeException("未知合同类型：" + type);
+        }
     }
 
     public void setExpected(Long id, LocalDateTime expectedDate, String role) {
