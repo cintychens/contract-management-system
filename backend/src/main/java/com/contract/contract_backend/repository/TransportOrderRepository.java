@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface TransportOrderRepository extends JpaRepository<TransportOrder, Long> {
 
-    List<TransportOrder> findByContractId(Long contractId);
+    List<TransportOrder>
+    findByContractIdOrderByIdDesc(Long contractId);
 }

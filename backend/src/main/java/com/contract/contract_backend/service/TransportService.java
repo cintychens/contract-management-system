@@ -35,14 +35,16 @@ public class TransportService {
      */
     public void arrive(Long contractId) {
 
-        List<TransportOrder> list = repo.findByContractId(contractId);
+        List<TransportOrder> list =
+                repo.findByContractIdOrderByIdDesc(contractId);
 
         if (list.isEmpty()) {
             throw new RuntimeException("运单不存在");
         }
 
         // ⭐ 取最后一个（最新运单）
-        TransportOrder order = list.get(list.size() - 1);
+        TransportOrder order =
+                list.get(0);
 
         order.setStatus("ARRIVED");
         order.setArriveTime(LocalDateTime.now());
@@ -55,7 +57,7 @@ public class TransportService {
      * 查询（前端用）
      */
     public List<TransportOrder> getByContract(Long contractId) {
-        return repo.findByContractId(contractId);
+        return repo.findByContractIdOrderByIdDesc(contractId);
     }
 
     /**

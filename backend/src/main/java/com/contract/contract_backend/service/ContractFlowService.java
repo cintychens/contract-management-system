@@ -334,8 +334,10 @@ public class ContractFlowService {
         String oldRole = contract.getCurrentHandlerRole();
 
         contract.setStatus(ContractStatus.TERMINATED);
-        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
-        contract.setCurrentHandlerId(contract.getCreatedBy());
+
+        contract.setCurrentHandlerRole(null);
+        contract.setCurrentHandlerId(null);
+
         contract.setClosedAt(LocalDateTime.now());
 
         contractRepository.save(contract);

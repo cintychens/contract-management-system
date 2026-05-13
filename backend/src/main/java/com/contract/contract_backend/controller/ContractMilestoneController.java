@@ -138,6 +138,24 @@ public class ContractMilestoneController {
         return service.getMilestoneAlerts(); // ⭐ 用你已有的 service
     }
 
+    @PostMapping("/{id}/reject")
+    public Result reject(@PathVariable Long id) {
+
+        String role = getCurrentUserRole();
+
+        service.reject(id, role);
+
+        return Result.success("验收失败");
+    }
+
+    @PostMapping("/restart/{contractId}")
+    public Result restart(@PathVariable Long contractId) {
+
+        service.restartTransport(contractId);
+
+        return Result.success("重新发货成功");
+    }
+
     // =========================
     // ⭐ 新增：履约日志接口（前端用）
     // =========================

@@ -13,6 +13,8 @@ import com.contract.contract_backend.repository.ContractRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,7 +49,15 @@ public class ContractMilestoneService {
         Contract contract = contractRepository.findById(m.getContractId())
                 .orElseThrow(() -> new RuntimeException("合同不存在"));
 
-        if (!ContractStatus.ACTIVE.equals(contract.getStatus())) {
+        // ⭐ 已终止直接禁止
+        if (ContractStatus.TERMINATED.equals(contract.getStatus())) {
+            throw new RuntimeException("合同已终止，禁止操作");
+        }
+
+// ⭐ 只有生效中的合同才能履约
+        if (!ContractStatus.ACTIVE.equals(contract.getStatus())
+                && !ContractStatus.IN_PROGRESS.equals(contract.getStatus())) {
+
             throw new RuntimeException("合同未生效，不能执行履约");
         }
 
@@ -55,35 +65,37 @@ public class ContractMilestoneService {
             throw new RuntimeException("节点已完成，不能重复操作");
         }
 
-        if (m.getExpectedDate() == null) {
-            throw new RuntimeException("请先填写预计完成时间");
-        }
-
         List<ContractMilestone> list =
                 repository.findByContractIdOrderBySortOrder(m.getContractId());
 
-        // ⭐ 顺序校验（保持不变）
+        // ⭐ 顺序校验
         for (int i = 0; i < list.size(); i++) {
+
             if (list.get(i).getId().equals(id)) {
+
                 if (i > 0) {
+
                     ContractMilestone prev = list.get(i - 1);
+
                     if (!"COMPLETED".equals(prev.getStatus())) {
 
-                        if (!"REWORK".equals(prev.getStatus()) &&
-                                !"REWORK".equals(m.getStatus())) {
+                        if (!"REWORK".equals(prev.getStatus())
+                                && !"REWORK".equals(m.getStatus())) {
 
                             throw new RuntimeException("必须按顺序完成节点");
                         }
                     }
                 }
+
                 break;
             }
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // ⭐ 日志（保持不变）
+        // ⭐ 日志
         ContractMilestoneLog log = new ContractMilestoneLog();
+
         log.setMilestoneId(id);
         log.setOldStatus(m.getStatus());
         log.setNewStatus("COMPLETED");
@@ -91,40 +103,49 @@ public class ContractMilestoneService {
         log.setOperator(username);
         log.setOperatorRole(role);
         log.setOperateTime(now);
+
         logRepository.save(log);
 
+        // ⭐ 更新节点
         m.setActualDate(now);
         m.setStatus("COMPLETED");
+
         repository.save(m);
 
         // =========================
-        // ⭐⭐⭐ 这里是唯一修改点
+        // ⭐ 运输合同运单逻辑
         // =========================
-        if (contract.getContractType() != null &&
-                contract.getContractType().startsWith("transport")) {
+        if (contract.getContractType() != null
+                && contract.getContractType().startsWith("transport")) {
 
+            // 发货 → 创建新运单
             if ("发货".equals(m.getName())) {
+
                 transportService.createOnShip(m.getContractId());
             }
 
+            // 到货 → 更新最新运单状态
             if ("到货".equals(m.getName())) {
+
                 transportService.arrive(m.getContractId());
             }
         }
-        // =========================
 
-        // ⭐ 完成判断（保持不变）
+        // =========================
+        // ⭐ 全部完成
+        // =========================
         boolean allDone = repository
                 .findByContractIdOrderBySortOrder(m.getContractId())
                 .stream()
                 .allMatch(x -> "COMPLETED".equals(x.getStatus()));
 
         if (allDone) {
+
             contract.setStatus(ContractStatus.COMPLETED);
+
             contractRepository.save(contract);
         }
     }
-
 
     public void complete(Long id) {
         complete(id, "SYSTEM", "SYSTEM");
@@ -138,13 +159,36 @@ public class ContractMilestoneService {
         complete(id, role, username);
 
         // ⭐ 可选：付款后切状态
-        if ("付款".equals(m.getName())) {
+        if ("结算".equals(m.getName())) {
             Contract contract = contractRepository.findById(m.getContractId())
                     .orElseThrow(() -> new RuntimeException("合同不存在"));
 
             contract.setStatus(ContractStatus.IN_PROGRESS);
             contractRepository.save(contract);
         }
+    }
+
+    public void reject(Long id, String role) {
+
+        ContractMilestone m = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("节点不存在"));
+        Contract contract = contractRepository.findById(m.getContractId())
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+        if (ContractStatus.TERMINATED.equals(contract.getStatus())) {
+            throw new RuntimeException("合同已终止");
+        }
+
+        if (!"验收".equals(m.getName())) {
+            throw new RuntimeException("只有验收节点可以失败");
+        }
+
+        m.setStatus("FAILED");
+
+        // ⭐ 继续由业务处理
+        m.setResponsibleRole("BUSINESS");
+
+        repository.save(m);
     }
 
     public void initMilestones(Long contractId, LocalDate startDate) {
@@ -182,7 +226,7 @@ public class ContractMilestoneService {
 
             ContractMilestone m4 = new ContractMilestone();
             m4.setContractId(contractId);
-            m4.setName("付款");
+            m4.setName("结算");
             m4.setResponsibleRole("FINANCE");
             m4.setSortOrder(4);
             m4.setStatus("PENDING");
@@ -263,6 +307,13 @@ public class ContractMilestoneService {
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
 
+        Contract contract = contractRepository.findById(m.getContractId())
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+        if (ContractStatus.TERMINATED.equals(contract.getStatus())) {
+            throw new RuntimeException("合同已终止");
+        }
+
         if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
             throw new RuntimeException("无权限设置预计时间");
         }
@@ -310,6 +361,12 @@ public class ContractMilestoneService {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
+        Contract contract = contractRepository.findById(m.getContractId())
+                .orElseThrow(() -> new RuntimeException("合同不存在"));
+
+        if (ContractStatus.TERMINATED.equals(contract.getStatus())) {
+            throw new RuntimeException("合同已终止");
+        }
 
         if (!role.equals(m.getResponsibleRole()) && !"ADMIN".equals(role)) {
             throw new RuntimeException("无权限操作");
@@ -492,11 +549,10 @@ public class ContractMilestoneService {
             }
 
             m.setStatus("FAILED");
+
+            m.setResponsibleRole("BUSINESS");
             m.setDelayReason(reason);
             m.setDelayTime(now);
-
-            // ⭐⭐⭐ 核心：切换负责人！！
-            m.setResponsibleRole("LEGAL");
         }
         else {
             throw new RuntimeException("未知验收状态");
@@ -515,6 +571,44 @@ public class ContractMilestoneService {
         log.setOperateTime(now);
         log.setRemark(reason);
         logRepository.save(log);
+    }
+
+    @Transactional
+    public void restartTransport(Long contractId) {
+
+        List<ContractMilestone> list =
+                repository.findByContractIdOrderBySortOrder(contractId);
+
+        for (ContractMilestone m : list) {
+
+            String name = m.getName() == null
+                    ? ""
+                    : m.getName().trim();
+
+            if (name.contains("发货")
+                    || name.contains("到货")
+                    || name.contains("验收")) {
+
+                m.setStatus("PENDING");
+
+                m.setActualDate(null);
+
+                m.setExpectedDate(null);
+
+                m.setDelayReason(null);
+
+                m.setDelayReported(false);
+
+                m.setDelayTime(null);
+
+                if (name.contains("验收")) {
+                    m.setResponsibleRole("BUSINESS");
+                }
+
+                repository.save(m);
+            }
+        }
+
     }
 
     public void legalProcess(Long id, String result, String role,
@@ -566,8 +660,20 @@ public class ContractMilestoneService {
                 }
 
                 if (reset) {
-                    node.setActualDate(null);
+
+                    // ⭐ 重置状态
                     node.setStatus("PENDING");
+
+                    // ⭐ 清空实际完成时间
+                    node.setActualDate(null);
+
+                    // ⭐ 清空预计时间（关键）
+                    node.setExpectedDate(null);
+
+                    // ⭐ 清空延期
+                    node.setDelayReason(null);
+                    node.setDelayReported(false);
+                    node.setDelayTime(null);
 
                     repository.save(node);
                 }
@@ -618,8 +724,25 @@ public class ContractMilestoneService {
         Contract contract = contractRepository.findById(contractId)
                 .orElseThrow(() -> new RuntimeException("合同不存在"));
 
+        // ⭐ 合同状态改成终止
         contract.setStatus(ContractStatus.TERMINATED);
+
         contractRepository.save(contract);
+
+        // ⭐ 锁定所有节点
+        List<ContractMilestone> list =
+                repository.findByContractIdOrderBySortOrder(contractId);
+
+        for (ContractMilestone m : list) {
+
+            // 已完成的不动
+            if (!"COMPLETED".equals(m.getStatus())) {
+
+                m.setStatus("TERMINATED");
+            }
+        }
+
+        repository.saveAll(list);
     }
 
 }
