@@ -24,6 +24,9 @@ public class TemplateField {
     @Column(name = "FIELD_NAME", nullable = false, length = 100)
     private String fieldName;
 
+    @Column(name = "template_id", nullable = false)
+    private Long templateId;
+
     @Column(name = "FIELD_TYPE", nullable = false, length = 50)
     private String fieldType;
 

@@ -28,3 +28,35 @@ async function uploadTemplateFile(file) {
 
     return await resp.json();
 }
+
+/* =======================================================
+   ⭐ 合同总览接口
+======================================================= */
+
+// 获取全部合同
+async function fetchAllContracts(page = 1, size = 20) {
+
+    const resp = await authFetch(
+        `/api/contracts?page=${page}&size=${size}`
+    );
+
+    if (!resp.ok) {
+        throw new Error(await resp.text());
+    }
+
+    return await resp.json();
+}
+
+// 获取合同详情
+async function fetchContractDetail(contractId) {
+
+    const resp = await authFetch(
+        `/api/contracts/${contractId}`
+    );
+
+    if (!resp.ok) {
+        throw new Error(await resp.text());
+    }
+
+    return await resp.json();
+}

@@ -311,6 +311,122 @@ function filterUsers(role, el) {
     loadUsersStats();
 }
 
+    async function loadContractOverview() {
+
+        const tbody =
+            document.getElementById(
+                "adminContractTableBody"
+            );
+
+        if (!tbody) return;
+
+        tbody.innerHTML =
+            `<tr>
+                <td colspan="7">
+                    加载中...
+                </td>
+            </tr>`;
+
+        try {
+
+            const resp =
+                await authFetch(
+                    "/api/contracts?page=1&size=20"
+                );
+
+            const result = await resp.json();
+
+            const records =
+                result.data.records || [];
+
+            tbody.innerHTML =
+                records.map(c => `
+
+                    <tr>
+                        <td>${c.contractId}</td>
+                        <td>${c.contractNo}</td>
+                        <td>${c.title}</td>
+                        <td>${c.contractType}</td>
+                        <td>${c.status}</td>
+                        <td>${c.createdAt || '-'}</td>
+
+                        <td>
+                            <button
+                                class="action-btn"
+                                onclick="viewContractDetail(${c.contractId})">
+
+                                <i class="fas fa-eye"></i>
+
+                            </button>
+                        </td>
+                    </tr>
+
+                `).join("");
+
+        } catch (e) {
+
+            tbody.innerHTML =
+                `<tr>
+                    <td colspan="7">
+                        加载失败
+                    </td>
+                </tr>`;
+        }
+    }
+
+    function renderContractOverview() {
+
+        return `
+            <div class="content-section">
+
+                <div class="section-header">
+                    <h2>
+                        <i class="fas fa-file-contract"></i>
+                        合同总览
+                    </h2>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>合同ID</th>
+                                <th>合同编号</th>
+                                <th>标题</th>
+                                <th>类型</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="adminContractTableBody">
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="content-section"
+                     id="contractDetailSection"
+                     style="display:none; margin-top:24px;">
+
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-file-lines"></i>
+                            合同详情
+                        </h2>
+                    </div>
+
+                    <div id="contractDetailContent">
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+    }
+
 function openEditUser(userId, username, roleCode, status, fullName = "", remark = "") {
     document.getElementById("editUsername").value = username;
     document.getElementById("editStatus").value = status === "ENABLED" ? "active" : "disabled";
@@ -1315,53 +1431,233 @@ async function loadRecentContracts() {
     }
 }
 
-async function viewContractDetail(contractId) {
-    const section = document.getElementById("contractDetailSection");
-    const content = document.getElementById("contractDetailContent");
+    async function viewContractDetail(contractId) {
 
-    if (!section || !content) return;
+        const section =
+            document.getElementById(
+                "contractDetailSection"
+            );
 
-    section.style.display = "block";
-    content.innerHTML = `<div style="color:#6b7b8f;">加载详情中...</div>`;
+        const content =
+            document.getElementById(
+                "contractDetailContent"
+            );
 
-    try {
-        const resp = await authFetch(`/api/contracts/${contractId}`);
-        if (!resp.ok) throw new Error(await resp.text());
+        if (!section || !content) return;
 
-        const result = await resp.json();
-        const contract = result.data || result;
+        section.style.display = "block";
 
         content.innerHTML = `
-          <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px;">
-            <div class="stat-mini-card" style="text-align:left;">
-              <div><strong>合同ID：</strong>${contract.contractId ?? "-"}</div>
-              <div><strong>合同编号：</strong>${escapeHtml(contract.contractNo ?? "-")}</div>
-              <div><strong>标题：</strong>${escapeHtml(contract.title ?? "-")}</div>
-              <div><strong>类型：</strong>${escapeHtml(contract.contractType ?? "-")}</div>
+            <div style="color:#6b7b8f;">
+                加载详情中...
             </div>
-
-            <div class="stat-mini-card" style="text-align:left;">
-              <div><strong>状态：</strong>${escapeHtml(contract.status ?? "-")}</div>
-              <div><strong>当前版本：</strong>${contract.currentVersionId ?? "-"}</div>
-              <div><strong>创建时间：</strong>${escapeHtml(contract.createdAt ?? "-")}</div>
-              <div><strong>模板ID：</strong>${contract.templateId ?? "-"}</div>
-            </div>
-          </div>
-
-          <div>
-            <h3 style="margin-bottom:10px; color:#0a1a2b;">合同正文</h3>
-            <div style="background:#f8fafc; border:1px solid #eef2f6; border-radius:16px; padding:18px; min-height:220px; white-space:pre-wrap; line-height:1.8;">
-              ${escapeHtml(contract.content || "暂无正文内容")}
-            </div>
-          </div>
         `;
 
-        section.scrollIntoView({ behavior: "smooth" });
-    } catch (e) {
-        console.error(e);
-        content.innerHTML = `<div style="color:#dc3545;">详情加载失败：${escapeHtml(String(e.message || e))}</div>`;
+        try {
+
+            // =========================
+            // 合同详情
+            // =========================
+
+            const resp =
+                await authFetch(
+                    `/api/contracts/${contractId}`
+                );
+
+            if (!resp.ok)
+                throw new Error(await resp.text());
+
+            const result =
+                await resp.json();
+
+            const contract =
+                result.data || result;
+
+            // =========================
+            // 履约节点
+            // =========================
+
+            const milestoneResp =
+                await authFetch(
+                    `/api/milestones/${contractId}`
+                );
+
+            let milestones = [];
+
+            if (milestoneResp.ok) {
+
+                const milestoneResult =
+                    await milestoneResp.json();
+
+                milestones =
+                    milestoneResult.data
+                    || milestoneResult
+                    || [];
+            }
+
+            // =========================
+            // 渲染
+            // =========================
+
+            content.innerHTML = `
+
+              <div style="
+                    display:grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap:20px;
+              ">
+
+                <div class="stat-mini-card"
+                     style="text-align:left;">
+
+                  <div>
+                    <strong>合同ID：</strong>
+                    ${contract.contractId ?? "-"}
+                  </div>
+
+                  <div>
+                    <strong>合同编号：</strong>
+                    ${escapeHtml(contract.contractNo ?? "-")}
+                  </div>
+
+                  <div>
+                    <strong>标题：</strong>
+                    ${escapeHtml(contract.title ?? "-")}
+                  </div>
+
+                  <div>
+                    <strong>类型：</strong>
+                    ${escapeHtml(contract.contractType ?? "-")}
+                  </div>
+
+                </div>
+
+                <div class="stat-mini-card"
+                     style="text-align:left;">
+
+                  <div>
+                    <strong>状态：</strong>
+                    ${escapeHtml(contract.status ?? "-")}
+                  </div>
+
+                  <div>
+                    <strong>当前版本：</strong>
+                    ${contract.currentVersionId ?? "-"}
+                  </div>
+
+                  <div>
+                    <strong>创建时间：</strong>
+                    ${escapeHtml(contract.createdAt ?? "-")}
+                  </div>
+
+                  <div>
+                    <strong>模板ID：</strong>
+                    ${contract.templateId ?? "-"}
+                  </div>
+
+                </div>
+
+              </div>
+
+              <!-- 当前履约阶段 -->
+
+              <div>
+
+                  <h3 style="
+                      margin-bottom:10px;
+                      color:#0a1a2b;
+                  ">
+                      当前履约阶段
+                  </h3>
+
+                  <div style="
+                      background:#f8fafc;
+                      border:1px solid #eef2f6;
+                      border-radius:16px;
+                      padding:20px;
+                      font-size:16px;
+                      font-weight:600;
+                      color:#1677ff;
+                  ">
+
+                      ${
+                          milestones.length
+
+                          ? (
+                              milestones.find(
+                                  m =>
+                                      m.status !== 'COMPLETED'
+                                      &&
+                                      m.status !== '完成'
+                              )?.milestoneName
+
+                              ||
+
+                              milestones.find(
+                                  m =>
+                                      m.status !== 'COMPLETED'
+                                      &&
+                                      m.status !== '完成'
+                              )?.name
+
+                              ||
+
+                              '已全部完成'
+                          )
+
+                          : '暂无履约阶段'
+                      }
+
+                  </div>
+
+              </div>
+
+              <!-- 合同正文 -->
+
+              <div>
+
+                <h3 style="
+                    margin-bottom:10px;
+                    color:#0a1a2b;
+                ">
+                    合同正文
+                </h3>
+
+                <div style="
+                    background:#f8fafc;
+                    border:1px solid #eef2f6;
+                    border-radius:16px;
+                    padding:18px;
+                    min-height:220px;
+                    white-space:pre-wrap;
+                    line-height:1.8;
+                ">
+
+                  ${escapeHtml(
+                        contract.content || "暂无正文内容"
+                    )}
+
+                </div>
+
+              </div>
+            `;
+
+            section.scrollIntoView({
+                behavior: "smooth"
+            });
+
+        } catch (e) {
+
+            console.error(e);
+
+            content.innerHTML = `
+                <div style="color:#dc3545;">
+                    详情加载失败：
+                    ${escapeHtml(String(e.message || e))}
+                </div>
+            `;
+        }
     }
-}
 
 async function uploadContractFile() {
     const fileInput = document.getElementById("contractUploadFile");

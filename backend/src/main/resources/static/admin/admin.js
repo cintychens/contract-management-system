@@ -75,6 +75,16 @@ function switchTab(tabName, el) {
                 contentArea.innerHTML = renderTemplateManagement();
                 initTemplatesPage();
                 break;
+
+            case "contracts":
+
+                contentArea.innerHTML =
+                    renderContractOverview();
+
+                loadContractOverview();
+
+                break;
+
             case "dictionary":
                 contentArea.innerHTML = renderDictionaryManagement();
                 initDictionaryPage();

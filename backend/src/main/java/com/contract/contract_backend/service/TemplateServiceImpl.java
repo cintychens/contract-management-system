@@ -299,6 +299,8 @@ public class TemplateServiceImpl implements TemplateService {
 
                         TemplateField newField = new TemplateField();
 
+                        newField.setTemplateId(template.getTemplateId());
+
                         newField.setFieldKey(fieldKey);
                         newField.setFieldName(label); // ⭐ 用中文
                         newField.setFieldType("text");
