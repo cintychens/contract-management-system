@@ -1,4 +1,4 @@
-package com.contract.contract_backend.common;
+package com.contract.contract_backend.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

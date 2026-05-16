@@ -49,11 +49,12 @@ public class ContractMilestoneController {
 
         String status = body.get("status");   // PASSED / FAILED
         String reason = body.get("reason");
+        String remark = body.get("remark");
 
         String role = getCurrentUserRole();
         String username = getCurrentUsername();
 
-        service.accept(id, status, reason, role, username);
+        service.accept(id, status, reason, role, username, remark);
 
         return Result.success("验收处理成功");
     }
@@ -87,12 +88,13 @@ public class ContractMilestoneController {
     // 完成节点
     // =========================
     @PostMapping("/{id}/complete")
-    public void complete(@PathVariable Long id) {
+    public void complete(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
 
         String role = getCurrentUserRole();
         String username = getCurrentUsername();
+        String remark = body == null ? null : body.get("remark");
 
-        service.complete(id, role, username);
+        service.complete(id, role, username, remark);
     }
 
     // =========================
@@ -104,6 +106,7 @@ public class ContractMilestoneController {
             @RequestBody Map<String, String> body) {
 
         String expected = body.get("expectedDate");
+        String remark = body.get("remark");
 
         if (expected == null || expected.isBlank()) {
             throw new RuntimeException("预计时间不能为空");
@@ -114,7 +117,8 @@ public class ContractMilestoneController {
         service.setExpected(
                 id,
                 LocalDateTime.parse(expected),
-                role
+                role,
+                remark
         );
     }
 
@@ -126,11 +130,12 @@ public class ContractMilestoneController {
                             @RequestBody Map<String,String> body) {
 
         String reason = body.get("delayReason");
+        String remark = body.get("remark");
 
         String role = getCurrentUserRole();
         String username = getCurrentUsername();
 
-        service.reportDelay(id, reason, role, username);
+        service.reportDelay(id, reason, role, username, remark);
     }
 
     @GetMapping("/alerts")
@@ -153,7 +158,7 @@ public class ContractMilestoneController {
 
         service.restartTransport(contractId);
 
-        return Result.success("重新发货成功");
+        return Result.success("重新履约成功");
     }
 
     // =========================

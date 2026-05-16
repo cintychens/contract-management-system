@@ -1003,8 +1003,23 @@ textarea {
                     查看履约记录
                 </button>
 
+                <div id="logContainer" style="display:none;">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>节点</th>
+                            <th>状态变化</th>
+                            <th>操作人</th>
+                            <th>备注</th>
+                        </tr>
+                        </thead>
+                        <tbody id="milestoneLogTable"></tbody>
+                    </table>
+                </div>
+
                 <!-- ⭐ 运单记录（不再嵌套卡片） -->
-                <div style="margin-top:15px;">
+                <div id="transportSection" style="margin-top:15px; display:none;">
                     <div class="section-title">运输运单记录</div>
 
                     <button onclick="toggleTransport()" id="transportBtn"
@@ -1025,21 +1040,6 @@ textarea {
                             <tbody id="transportTable"></tbody>
                         </table>
                     </div>
-                </div>
-
-                <div id="logContainer" style="display:none;">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>时间</th>
-                            <th>节点</th>
-                            <th>状态变化</th>
-                            <th>操作人</th>
-                            <th>备注</th>
-                        </tr>
-                        </thead>
-                        <tbody id="milestoneLogTable"></tbody>
-                    </table>
                 </div>
             </div>
 
@@ -1115,6 +1115,8 @@ textarea {
 
     let currentContractTitle = "合同文件";
     let currentContract = null;
+    let pageRefreshRunning = false;
+    let lastPageRefreshAt = 0;
 
     function authFetch(url, options = {}) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
@@ -1355,6 +1357,60 @@ document.getElementById('userRole').textContent =
     return params.get('id') || params.get('contractId');
 }
 
+    async function refreshContractPage(force = false) {
+        const now = Date.now();
+
+        if (pageRefreshRunning) {
+            return;
+        }
+
+        if (!force && now - lastPageRefreshAt < 1500) {
+            return;
+        }
+
+        pageRefreshRunning = true;
+        lastPageRefreshAt = now;
+
+        try {
+            loadUserInfo();
+
+            const contractId = getContractId();
+            await loadContractDetail();
+            await loadContractFields();
+            await loadMilestones();
+            await loadFlowRecords(contractId);
+            await Promise.resolve(loadGlobalAlerts());
+        } catch (e) {
+            console.error("刷新合同详情失败", e);
+        } finally {
+            pageRefreshRunning = false;
+        }
+    }
+
+    function setupAutoRefresh() {
+        window.addEventListener('focus', () => {
+            refreshContractPage();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                refreshContractPage();
+            }
+        });
+
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                refreshContractPage(true);
+            }
+        });
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'token' || event.key === 'userInfo') {
+                refreshContractPage(true);
+            }
+        });
+    }
+
     function safeFileName(name) {
     return name.replace(/[\\/:*?"<>|]/g, '_');
 }
@@ -1495,6 +1551,10 @@ if (contract.status === 'COMPLETED') {
 }
 
     function toggleTransport() {
+    if (!isTransportContract()) {
+        return;
+    }
+
     const el = document.getElementById("transportContainer");
     const btn = document.getElementById("transportBtn");
 
@@ -1509,6 +1569,10 @@ if (contract.status === 'COMPLETED') {
 }
 
     async function loadTransport() {
+
+    if (!isTransportContract()) {
+        return;
+    }
 
     const contractId = getContractId();
 
@@ -1679,8 +1743,7 @@ async function postFlowAction(url, contractId) {
         alert(result.data || result.message || '操作成功');
 
         document.getElementById('flowComment').value = '';
-        await loadContractDetail();
-        await loadFlowRecords(contractId);
+        await refreshContractPage(true);
     } catch (e) {
         console.error(e);
         alert('操作失败：' + (e.message || e));
@@ -1710,7 +1773,8 @@ async function handleExportWord() {
         });
 
         if (!response.ok) {
-            throw new Error('导出 Word 失败');
+            const msg = await response.text();
+            throw new Error(msg || '导出 Word 失败');
         }
 
         const blob = await response.blob();
@@ -1767,6 +1831,8 @@ async function handleExportPdf() {
         currentContract = result.data || result;
 
         console.log("当前合同：", currentContract);
+
+        updateTransportSectionVisibility();
 
         // =========================
         // ⭐ 基本信息
@@ -2116,6 +2182,58 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
     return item.status || 'PENDING';
 }
 
+    function isAcceptanceMilestone(item) {
+        const name = typeof item === 'string' ? item : item?.name;
+        return name === '验收' || name === '签收确认';
+    }
+
+    function isWarehouseContract() {
+        return currentContract?.contractType?.startsWith("warehouse");
+    }
+
+    function isTransportContract() {
+        return currentContract?.contractType?.startsWith("transport");
+    }
+
+    function updateTransportSectionVisibility() {
+        const section = document.getElementById("transportSection");
+        const container = document.getElementById("transportContainer");
+        const btn = document.getElementById("transportBtn");
+
+        if (!section) {
+            return;
+        }
+
+        if (isTransportContract()) {
+            section.style.display = "block";
+            return;
+        }
+
+        section.style.display = "none";
+
+        if (container) {
+            container.style.display = "none";
+        }
+
+        if (btn) {
+            btn.innerText = "查看运单记录";
+        }
+    }
+
+    function getMilestoneDisplayName(item) {
+        const name = typeof item === 'string' ? item : item?.name;
+
+        if (isWarehouseContract() && isAcceptanceMilestone(name)) {
+            return '签收确认';
+        }
+
+        return name || '';
+    }
+
+    function getAcceptanceDisplayName() {
+        return isWarehouseContract() ? '签收确认' : '验收';
+    }
+
     function renderMilestones(list) {
 
     const container = document.getElementById("performanceTimeline");
@@ -2229,7 +2347,7 @@ if (item.name === '出库' && !item.expectedDate && arrival) {
         }
         else if (item.status === 'FAILED') {
 
-            statusText = '验收不通过（待业务处理）';
+            statusText = `${getAcceptanceDisplayName()}不通过（待业务处理）`;
             color = '#dc3545';
         }
         else if (item.delayReason && item.status !== 'PENDING') {
@@ -2314,7 +2432,7 @@ const canOperate =
                     : ''}
 
                 <div class="timeline-title">
-                    ${getMilestoneIcon(item.name)} ${item.name}
+                    ${getMilestoneIcon(item.name)} ${getMilestoneDisplayName(item)}
                     ${storageDaysText}
                     ${actualStorageText}
                 </div>
@@ -2353,7 +2471,7 @@ const canOperate =
                             </div>
 
                             <textarea id="reason-${item.id}"
-                                      placeholder="延期原因"></textarea>
+                                      placeholder="备注 / 延期原因"></textarea>
 
                             <div class="btn-row">
 
@@ -2372,11 +2490,11 @@ const canOperate =
                                     : ''}
 
                                 ${!isTerminated && item.status === 'FAILED'
-                                    && item.name === '验收'
+                                    && isAcceptanceMilestone(item)
                                     ? `
                                     <button onclick="restartTransport(${getContractId()})"
                                             style="background:#1890ff;color:white;">
-                                        🔁 重新发货
+                                        🔁 重新履约
                                     </button>
 
                                     <button onclick="terminateContract(${getContractId()})"
@@ -2387,7 +2505,7 @@ const canOperate =
                                     : ''}
 
                                 ${!isTerminated &&
-  item.name !== '验收'
+  !isAcceptanceMilestone(item)
                                     && item.name !== '最终确认'
                                     && item.status !== 'FAILED'
                                     ? `
@@ -2398,17 +2516,17 @@ const canOperate =
                                     `
                                     : ''}
 
-                                ${item.name === '验收'
+                                ${isAcceptanceMilestone(item)
                                     && item.status !== 'FAILED'
                                     ? `
                                     <button onclick="acceptMilestone(${item.id})"
                                             style="background:#28a745;color:white;">
-                                        验收通过
+                                        ${getAcceptanceDisplayName()}通过
                                     </button>
 
                                     <button onclick="rejectMilestone(${item.id})"
                                             style="background:#dc3545;color:white;">
-                                        验收失败
+                                        ${getAcceptanceDisplayName()}失败
                                     </button>
                                     `
                                     : item.status !== 'FAILED'
@@ -2489,29 +2607,62 @@ const canOperate =
 
     async function acceptMilestone(id) {
 
-    await authFetch(`/api/milestones/${id}/complete`, {
-        method: "POST"
+    const remark = getMilestoneRemark(id);
+
+    const resp = await authFetch(`/api/milestones/${id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            status: "PASSED",
+            remark
+        })
     });
+
+    const result = await resp.json();
+
+    if (!resp.ok || result.code !== 200) {
+        throw new Error(result.message || `${getAcceptanceDisplayName()}通过失败`);
+    }
 
     await loadMilestones();
 
-    alert("验收通过");
+    alert(`${getAcceptanceDisplayName()}通过`);
 }
 
 async function rejectMilestone(id) {
 
-    await authFetch(`/api/milestones/${id}/reject`, {
-        method: "POST"
+    const remark = getMilestoneRemark(id);
+    const reason = prompt(`请输入${getAcceptanceDisplayName()}不通过原因`);
+
+    if (!reason || !reason.trim()) {
+        alert("必须填写原因");
+        return;
+    }
+
+    const resp = await authFetch(`/api/milestones/${id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            status: "FAILED",
+            reason: reason.trim(),
+            remark
+        })
     });
+
+    const result = await resp.json();
+
+    if (!resp.ok || result.code !== 200) {
+        throw new Error(result.message || `${getAcceptanceDisplayName()}失败处理失败`);
+    }
 
     await loadMilestones();
 
-    alert("验收失败，开始处理");
+    alert(`${getAcceptanceDisplayName()}失败，开始处理`);
 }
 
     async function restartTransport(contractId) {
 
-    if (!confirm("确认重新发货？")) {
+    if (!confirm("确认重新履约？")) {
         return;
     }
 
@@ -2540,14 +2691,16 @@ window.forceRefill = true;
         await loadContractDetail();
 
         // ⭐ 刷新运单
-        await loadTransport();
+        if (isTransportContract()) {
+            await loadTransport();
+        }
 
-        alert("已重新进入运输流程");
+        alert("已重新进入履约流程");
 
     } catch (e) {
 
         console.error(e);
-        alert("重新发货失败：" + e.message);
+        alert("重新履约失败：" + e.message);
     }
 }
 
@@ -2731,17 +2884,23 @@ window.forceRefill = true;
 }
 
     async function acceptPass(id) {
+    const remark = getMilestoneRemark(id);
+
     await authFetch(`/api/milestones/${id}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "PASSED" })
+        body: JSON.stringify({
+            status: "PASSED",
+            remark
+        })
     });
     loadMilestones();
 }
 
 async function acceptFail(id) {
 
-    const reason = prompt("请输入不通过原因");
+    const remark = getMilestoneRemark(id);
+    const reason = prompt(`请输入${getAcceptanceDisplayName()}不通过原因`);
 
     if (!reason) {
         alert("必须填写原因");
@@ -2755,14 +2914,15 @@ async function acceptFail(id) {
         },
         body: JSON.stringify({
             status: "FAILED",
-            reason: reason
+            reason: reason,
+            remark
         })
     });
 
     const result = await resp.json();
 
     if (result.code === 200) {
-        alert("已标记为验收不通过");
+        alert(`已标记为${getAcceptanceDisplayName()}不通过`);
         await loadMilestones();
     } else {
         alert(result.message);
@@ -2939,10 +3099,7 @@ async function acceptFail(id) {
 
     async function reportDelay(id, delayReason) {
 
-    if (!delayReason || !delayReason.trim()) {
-        alert("必须填写延期原因");
-        return;
-    }
+    const remark = delayReason ? delayReason.trim() : "";
 
     try {
         const resp = await authFetch(`/api/milestones/${id}/delay`, {
@@ -2951,8 +3108,9 @@ async function acceptFail(id) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                reason: delayReason.trim(),
-                delayReason: delayReason.trim()
+                reason: remark,
+                delayReason: remark,
+                remark
             })
         });
 
@@ -3012,7 +3170,8 @@ async function acceptFail(id) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                expectedDate: iso
+                expectedDate: iso,
+                remark: reason
             })
         });
 
@@ -3033,13 +3192,15 @@ async function acceptFail(id) {
 }
 
 async function reportDelayWithReason(id, reason) {
+    const remark = reason ? reason.trim() : "";
 
     const resp = await authFetch(`/api/milestones/${id}/delay`, {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            reason: reason.trim(),
-            delayReason: reason.trim()
+            reason: remark,
+            delayReason: remark,
+            remark
         })
     });
 
@@ -3125,6 +3286,11 @@ async function reportDelayWithReason(id, reason) {
     return 'NORMAL';
 }
 
+    function getMilestoneRemark(id) {
+    const textarea = document.getElementById(`reason-${id}`);
+    return textarea ? textarea.value.trim() : "";
+}
+
     async function completeMilestone(id) {
 
     try {
@@ -3132,7 +3298,13 @@ async function reportDelayWithReason(id, reason) {
         const resp = await authFetch(
             `/api/milestones/${id}/complete`,
             {
-                method: "POST"
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    remark: getMilestoneRemark(id)
+                })
             }
         );
 
@@ -3154,7 +3326,9 @@ if (result.code !== 200) {
 
         await loadContractDetail();
 
-        await loadTransport();
+        if (isTransportContract()) {
+            await loadTransport();
+        }
 
     } catch (e) {
 
@@ -3244,12 +3418,8 @@ if (result.code !== 200) {
 }
 
     document.addEventListener('DOMContentLoaded', async function () {
-        loadUserInfo();
-        await loadContractDetail();
-        await loadContractFields();
-        await loadMilestones();
-        await loadFlowRecords(getContractId());
-         loadGlobalAlerts();
+        setupAutoRefresh();
+        await refreshContractPage(true);
     });
 </script>
 </body>

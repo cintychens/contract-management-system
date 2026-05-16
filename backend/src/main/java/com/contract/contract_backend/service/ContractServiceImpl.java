@@ -690,67 +690,67 @@ public class ContractServiceImpl implements ContractService {
                 comment
         );
     }
-        @Override
-        @Transactional
-        public void rejectByApprover(Long contractId, Long operatorId, String comment) {
-            Contract contract = getContractOrThrow(contractId);
+    @Override
+    @Transactional
+    public void rejectByApprover(Long contractId, Long operatorId, String comment) {
+        Contract contract = getContractOrThrow(contractId);
 
-            if (!ContractStatus.PENDING_APPROVAL.equals(contract.getStatus())) {
-                throw new RuntimeException("当前合同不在最终审批阶段");
-            }
-
-            String fromStatus = contract.getStatus();
-
-            contract.setStatus(ContractStatus.DRAFT);
-            contract.setCurrentHandlerRole(RoleCode.BUSINESS);
-            contract.setCurrentHandlerId(contract.getCreatedBy());
-
-            contractRepository.save(contract);
-
-            saveFlowRecord(
-                    contractId,
-                    fromStatus,
-                    ContractStatus.DRAFT,
-                    RoleCode.APPROVER,
-                    RoleCode.BUSINESS,
-                    "REJECT",
-                    operatorId,
-                    comment
-            );
+        if (!ContractStatus.PENDING_APPROVAL.equals(contract.getStatus())) {
+            throw new RuntimeException("当前合同不在最终审批阶段");
         }
 
-        @Override
-        public List<ContractFlowRecord> getFlowRecords(Long contractId) {
-            getContractOrThrow(contractId);
-            return contractFlowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
-        }
+        String fromStatus = contract.getStatus();
 
-        private Contract getContractOrThrow(Long contractId) {
-            return contractRepository.findById(contractId)
-                    .orElseThrow(() -> new RuntimeException("合同不存在，ID=" + contractId));
-        }
+        contract.setStatus(ContractStatus.DRAFT);
+        contract.setCurrentHandlerRole(RoleCode.BUSINESS);
+        contract.setCurrentHandlerId(contract.getCreatedBy());
 
-        private void saveFlowRecord(Long contractId,
-                String fromStatus,
-                String toStatus,
-                String fromRole,
-                String toRole,
-                String actionType,
-                Long operatorId,
-                String comment) {
-            ContractFlowRecord record = ContractFlowRecord.builder()
-                    .contractId(contractId)
-                    .fromStatus(fromStatus)
-                    .toStatus(toStatus)
-                    .fromRole(fromRole)
-                    .toRole(toRole)
-                    .actionType(actionType)
-                    .operatorId(operatorId == null ? 0L : operatorId)
-                    .comment(comment)
-                    .build();
+        contractRepository.save(contract);
 
-            contractFlowRecordRepository.save(record);
-        }
+        saveFlowRecord(
+                contractId,
+                fromStatus,
+                ContractStatus.DRAFT,
+                RoleCode.APPROVER,
+                RoleCode.BUSINESS,
+                "REJECT",
+                operatorId,
+                comment
+        );
+    }
+
+    @Override
+    public List<ContractFlowRecord> getFlowRecords(Long contractId) {
+        getContractOrThrow(contractId);
+        return contractFlowRecordRepository.findByContractIdOrderByCreatedAtAsc(contractId);
+    }
+
+    private Contract getContractOrThrow(Long contractId) {
+        return contractRepository.findById(contractId)
+                .orElseThrow(() -> new RuntimeException("合同不存在，ID=" + contractId));
+    }
+
+    private void saveFlowRecord(Long contractId,
+                                String fromStatus,
+                                String toStatus,
+                                String fromRole,
+                                String toRole,
+                                String actionType,
+                                Long operatorId,
+                                String comment) {
+        ContractFlowRecord record = ContractFlowRecord.builder()
+                .contractId(contractId)
+                .fromStatus(fromStatus)
+                .toStatus(toStatus)
+                .fromRole(fromRole)
+                .toRole(toRole)
+                .actionType(actionType)
+                .operatorId(operatorId == null ? 0L : operatorId)
+                .comment(comment)
+                .build();
+
+        contractFlowRecordRepository.save(record);
+    }
 
     /**
      * =========================

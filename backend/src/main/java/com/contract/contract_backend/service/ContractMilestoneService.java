@@ -42,6 +42,10 @@ public class ContractMilestoneService {
     }
 
     public void complete(Long id, String role, String username) {
+        complete(id, role, username, null);
+    }
+
+    public void complete(Long id, String role, String username, String remark) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -103,6 +107,7 @@ public class ContractMilestoneService {
         log.setOperator(username);
         log.setOperatorRole(role);
         log.setOperateTime(now);
+        log.setRemark(normalizeRemark(remark));
 
         logRepository.save(log);
 
@@ -179,7 +184,7 @@ public class ContractMilestoneService {
             throw new RuntimeException("合同已终止");
         }
 
-        if (!"验收".equals(m.getName())) {
+        if (!isAcceptanceMilestone(m)) {
             throw new RuntimeException("只有验收节点可以失败");
         }
 
@@ -267,10 +272,10 @@ public class ContractMilestoneService {
             m3.setSortOrder(3);
             m3.setStatus("PENDING");
 
-            // ⭐ 新增：签收确认
+            // ⭐ 仓储验收：复用运输合同的验收通过/不通过逻辑
             ContractMilestone m4 = new ContractMilestone();
             m4.setContractId(contractId);
-            m4.setName("签收确认");
+            m4.setName("验收");
             m4.setResponsibleRole("BUSINESS");
             m4.setSortOrder(4);
             m4.setStatus("PENDING");
@@ -303,6 +308,10 @@ public class ContractMilestoneService {
     }
 
     public void setExpected(Long id, LocalDateTime expectedDate, String role) {
+        setExpected(id, expectedDate, role, null);
+    }
+
+    public void setExpected(Long id, LocalDateTime expectedDate, String role, String remark) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -349,15 +358,21 @@ public class ContractMilestoneService {
         log.setOperatorRole(role);
         log.setOperateTime(now);
 
-        log.setRemark("预计时间调整：" +
+        String baseRemark = "预计时间调整：" +
                 (oldDate == null ? "未设置" : oldDate.toString()) +
                 " → " +
-                expectedDate.toLocalDate().toString());
+                expectedDate.toLocalDate().toString();
+
+        log.setRemark(appendRemark(baseRemark, remark));
 
         logRepository.save(log);
     }
 
     public void reportDelay(Long id, String reason, String role, String username) {
+        reportDelay(id, reason, role, username, null);
+    }
+
+    public void reportDelay(Long id, String reason, String role, String username, String remark) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -384,15 +399,16 @@ public class ContractMilestoneService {
             throw new RuntimeException("节点已完成，不能上报延期");
         }
 
-        if (reason == null || reason.isBlank()) {
-            throw new RuntimeException("延期原因不能为空");
+        String delayReason = normalizeRemark(reason);
+        if (delayReason == null) {
+            delayReason = "未填写延期原因";
         }
 
         String oldStatus = m.getStatus();
         LocalDateTime now = LocalDateTime.now();
 
         // ⭐⭐⭐ 就是这里加
-        m.setDelayReason(reason);
+        m.setDelayReason(delayReason);
         m.setDelayReported(true);
         m.setDelayTime(now);
         repository.save(m);
@@ -407,7 +423,7 @@ public class ContractMilestoneService {
         log.setOperatorRole(role);
         log.setOperateTime(now);
         log.setDelayTime(now);
-        log.setRemark(reason);
+        log.setRemark(appendRemark(delayReason, remark));
         logRepository.save(log);
     }
 
@@ -519,6 +535,10 @@ public class ContractMilestoneService {
     }
 
     public void accept(Long id, String status, String reason, String role, String username) {
+        accept(id, status, reason, role, username, null);
+    }
+
+    public void accept(Long id, String status, String reason, String role, String username, String remark) {
 
         ContractMilestone m = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("节点不存在"));
@@ -528,7 +548,7 @@ public class ContractMilestoneService {
             throw new RuntimeException("无权限操作");
         }
 
-        if (!"验收".equals(m.getName())) {
+        if (!isAcceptanceMilestone(m)) {
             throw new RuntimeException("当前节点不是验收节点");
         }
 
@@ -569,7 +589,7 @@ public class ContractMilestoneService {
         log.setOperator(username);
         log.setOperatorRole(role);
         log.setOperateTime(now);
-        log.setRemark(reason);
+        log.setRemark(appendRemark(reason, remark));
         logRepository.save(log);
     }
 
@@ -587,7 +607,11 @@ public class ContractMilestoneService {
 
             if (name.contains("发货")
                     || name.contains("到货")
-                    || name.contains("验收")) {
+                    || name.contains("验收")
+                    || name.contains("入库")
+                    || name.contains("在库")
+                    || name.contains("出库")
+                    || name.contains("签收确认")) {
 
                 m.setStatus("PENDING");
 
@@ -601,7 +625,7 @@ public class ContractMilestoneService {
 
                 m.setDelayTime(null);
 
-                if (name.contains("验收")) {
+                if (name.contains("验收") || name.contains("签收确认")) {
                     m.setResponsibleRole("BUSINESS");
                 }
 
@@ -646,7 +670,7 @@ public class ContractMilestoneService {
             m.setActualDate(null);     // 允许再次验收
             m.setExpectedDate(null);   // ⭐ 建议清空，重新填写时间
 
-            // ========= 2. ⭐⭐⭐ 重置运输节点（核心！！！）=========
+            // ========= 2. ⭐⭐⭐ 重置履约节点（运输从发货开始，仓储从入库开始）=========
             List<ContractMilestone> list =
                     repository.findByContractIdOrderBySortOrder(m.getContractId());
 
@@ -654,8 +678,8 @@ public class ContractMilestoneService {
 
             for (ContractMilestone node : list) {
 
-                // ⭐ 从发货开始重置
-                if ("发货".equals(node.getName())) {
+                // ⭐ 运输从发货开始重置；仓储从入库开始重置
+                if ("发货".equals(node.getName()) || "入库".equals(node.getName())) {
                     reset = true;
                 }
 
@@ -717,6 +741,41 @@ public class ContractMilestoneService {
 
         // ⭐ 最后统一保存验收节点
         repository.save(m);
+    }
+
+    private boolean isAcceptanceMilestone(ContractMilestone milestone) {
+        if (milestone == null || milestone.getName() == null) {
+            return false;
+        }
+
+        String name = milestone.getName().trim();
+        return "验收".equals(name) || "签收确认".equals(name);
+    }
+
+    private String normalizeRemark(String remark) {
+        if (remark == null || remark.isBlank()) {
+            return null;
+        }
+
+        return remark.trim();
+    }
+
+    private String appendRemark(String base, String remark) {
+        String normalizedRemark = normalizeRemark(remark);
+
+        if (normalizedRemark == null) {
+            return base;
+        }
+
+        if (base == null || base.isBlank()) {
+            return normalizedRemark;
+        }
+
+        if (base.trim().equals(normalizedRemark)) {
+            return base;
+        }
+
+        return base + "；备注：" + normalizedRemark;
     }
 
     public void terminateContract(Long contractId) {

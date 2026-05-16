@@ -84,6 +84,20 @@ public class ContractController {
                 .body(data);
     }
 
+    @GetMapping("/{contractId}/export/word")
+    public ResponseEntity<byte[]> exportWord(@PathVariable Long contractId) {
+        Contract contract = contractService.getContractDetail(contractId);
+        byte[] data = contractExportService.exportWord(contractId);
+
+        String fileName = buildFileName(contract.getTitle(), ".docx");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(data);
+    }
+
     private String buildFileName(String title, String suffix) {
         String safeTitle = (title == null || title.isBlank()) ? "合同文件" : title.trim();
         return URLEncoder.encode(safeTitle + suffix, StandardCharsets.UTF_8);
