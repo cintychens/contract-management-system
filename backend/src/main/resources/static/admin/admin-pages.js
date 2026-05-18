@@ -925,9 +925,6 @@ function renderDictionaryManagement() {
 
             <div class="tabs" id="dictTabs">
                 <div class="tab active" onclick="switchDictTab('CONTRACT_FIELD', this)">合同字段</div>
-                <div class="tab" onclick="switchDictTab('NODE_TYPE', this)">履约节点类型</div>
-                <div class="tab" onclick="switchDictTab('ALERT_RULE', this)">预警规则</div>
-                <div class="tab" onclick="switchDictTab('ENUM_VALUE', this)">枚举值</div>
             </div>
 
             <div class="table-responsive">
@@ -1107,7 +1104,8 @@ async function loadDictTable() {
             const data = result.data || {};
             records = data.records || [];
         }
-
+        // 保存当前字段数据
+        window.currentDictRecords = records;
         if (!records.length) {
             tbody.innerHTML = "";
             if (emptyHint) emptyHint.style.display = "block";
@@ -1119,11 +1117,26 @@ async function loadDictTable() {
         tbody.innerHTML = records.map(item => {
             const fieldKey = item.fieldKey || item.itemKey || "-";
             const fieldName = item.fieldName || item.itemName || "-";
-            const fieldType = item.fieldType || item.valueType || "-";
-            const moduleName = item.moduleName || "-";
+const fieldType =
+    item.fieldType ||
+    item.valueType ||
+    item.type ||
+    item.field_type ||
+    "-"; moduleName = item.moduleName || "-";
             const requiredText = item.requiredFlag ? "是" : "否";
             const enumValue = item.itemValue || "-";
             const status = item.status || "ENABLED";
+
+             // ⭐ 兼容全部模板字段、单个模板字段、字典项字段
+                const realId =
+                    item.fieldId ||
+                    item.templateFieldId ||
+                    item.templateFieldBindId ||
+                    item.fieldBindId ||
+                    item.bindId ||
+                    item.itemId ||
+                    item.id ||
+                    0;
 
             const statusHtml = status === "ENABLED"
                 ? `<span class="status-badge status-active">启用</span>`
@@ -1139,10 +1152,10 @@ async function loadDictTable() {
                     <td>${escapeHtml(enumValue)}</td>
                     <td>${statusHtml}</td>
                     <td>
-                        <button class="action-btn" title="编辑" onclick="editDictItem(${item.fieldId || item.id || 0})">
+                        <button class="action-btn" title="编辑" onclick="editDictItem(${realId})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${item.fieldId || item.id || 0}, '${status}')">
+                        <button class="action-btn" title="切换状态" onclick="toggleDictStatus(${realId}, '${status}')">
                             <i class="fas fa-toggle-on"></i>
                         </button>
                     </td>
@@ -1156,22 +1169,50 @@ async function loadDictTable() {
 }
 
 async function editDictItem(id) {
-    try {
-        const resp = await authFetch(`/api/admin/dict-items/${id}`);
-        if (!resp.ok) throw new Error(await resp.text());
 
-        const result = await resp.json();
-        const item = result.data || {};
+    try {
+
+        // 当前页面所有行
+        const rows =
+            window.currentDictRecords || [];
+
+        // 找到当前项
+        const item =
+            rows.find(r => {
+                const realId =
+                    r.fieldId ||
+                    r.templateFieldId ||
+                    r.templateFieldBindId ||
+                    r.fieldBindId ||
+                    r.bindId ||
+                    r.itemId ||
+                    r.id ||
+                    0;
+
+                return String(realId) === String(id);
+            });
+
+        if (!item) {
+
+            alert("未找到字段信息");
+            return;
+        }
 
         alert(
-            "编辑功能下一步再接，这里先确认详情已拿到：\n\n" +
-            "字段编码：" + (item.itemKey || "-") + "\n" +
-            "字段名称：" + (item.itemName || "-") + "\n" +
-            "字段类型：" + (item.valueType || "-")
+            "字段详情：\n\n" +
+            "字段编码：" + (item.fieldKey || "-") + "\n" +
+            "字段名称：" + (item.fieldName || "-") + "\n" +
+            "字段类型：" + (item.fieldType || "-")
         );
+
     } catch (e) {
+
         console.error(e);
-        alert("获取字典详情失败：" + (e.message || e));
+
+        alert(
+            "获取字典详情失败："
+            + (e.message || e)
+        );
     }
 }
 
