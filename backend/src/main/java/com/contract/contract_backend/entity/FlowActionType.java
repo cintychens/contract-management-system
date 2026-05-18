@@ -1,4 +1,4 @@
-package com.contract.contract_backend.common.constant;
+package com.contract.contract_backend.entity;
 
 public class FlowActionType {
     public static final String SUBMIT = "SUBMIT";

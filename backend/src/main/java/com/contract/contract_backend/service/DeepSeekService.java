@@ -350,6 +350,10 @@ public class DeepSeekService {
 
     private Map<String, Object> normalizeFields(Map<String, Object> fields) {
 
+        if (fields == null) {
+            return new HashMap<>();
+        }
+
         Map<String, Object> normalized = new HashMap<>();
 
         for (Map.Entry<String, Object> entry : fields.entrySet()) {
@@ -412,6 +416,25 @@ public class DeepSeekService {
     public Map<String, Object> generateWithTemplate(Map<String, Object> data, String templateType) {
 
         try {
+            // ⭐ 处理智能问答模式
+            if ("qa".equalsIgnoreCase(templateType)) {
+                String question = (String) data.get("question");
+                String content = (String) data.get("content");
+                
+                if (question == null || question.isBlank()) {
+                    return Map.of("error", "问题不能为空");
+                }
+                
+                String answer = answerQuestion(question, content);
+                return Map.of(
+                        "contract", answer,
+                        "suggestion", "",
+                        "risk", "",
+                        "missing", ""
+                );
+            }
+
+            // 原有的合同优化逻辑
             String content = (String) data.get("content");
             Map<String, Object> fields = (Map<String, Object>) data.get("fields");
 
@@ -1030,5 +1053,129 @@ public class DeepSeekService {
                 "base", base.toString(),
                 "aiPart", aiPart.toString()
         );
+    }
+
+    // ===== 智能问答方法 =====
+    public String answerQuestion(String question, String content) {
+        try {
+            String contextInfo = "";
+            
+            // 如果提供了合同内容，加入到上下文中
+            if (content != null && !content.isBlank()) {
+                contextInfo = "系统数据：\n" + content.substring(0, Math.min(2500, content.length())) + "\n\n";
+            }
+
+            String systemPrompt = "你是一位专业的合同管理专家和法律顾问，擅长：1.分析合同信息和风险；2.统计和总结合同数据；3.识别合同中的关键条款和问题；4.提供合同管理建议。";
+            
+            String prompt = """
+根据以下信息回答用户的问题。信息中可能包含合同列表、统计数据或合同详细内容。
+
+%s
+
+用户问题：%s
+
+请用简洁、清晰的语言回答。如果涉及合同数据，请基于提供的信息进行分析。
+""".formatted(contextInfo, question);
+
+            Map<String, Object> requestBody = Map.of(
+                    "model", "gpt-4o-mini",
+                    "messages", new Object[]{
+                            Map.of("role", "system", "content", systemPrompt),
+                            Map.of("role", "user", "content", prompt)
+                    },
+                    "temperature", 0.7
+            );
+
+            String body = objectMapper.writeValueAsString(requestBody);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.vectorengine.ai/v1/chat/completions"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            String res = response.body();
+            JsonNode root = objectMapper.readTree(res);
+
+            // 获取 AI 的回答
+            String answer = root.get("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText();
+
+            return answer != null && !answer.isBlank() ? answer : "无法获得回答，请稍后重试。";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "抱歉，处理您的问题时出错：" + e.getMessage();
+        }
+    }
+
+    public String chat(String context, String question) {
+
+        try {
+
+            String prompt = """
+你是物流合同管理系统中的AI合同问答助手。
+
+请严格基于提供的合同内容回答问题。
+
+要求：
+1. 不要编造不存在的信息
+2. 用中文简洁回答
+3. 如果合同中没有相关内容，直接说“合同中未找到相关内容”
+4. 不要输出 markdown
+
+【合同内容】
+%s
+
+【用户问题】
+%s
+""".formatted(context, question);
+
+            Map<String, Object> body = Map.of(
+                    "model", "deepseek-chat",
+                    "messages", List.of(
+                            Map.of(
+                                    "role", "user",
+                                    "content", prompt
+                            )
+                    )
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.deepseek.com/chat/completions"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(
+                            objectMapper.writeValueAsString(body)
+                    ))
+                    .build();
+
+            HttpResponse<String> response =
+                    client.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            JsonNode root =
+                    objectMapper.readTree(response.body());
+
+            return root.path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText();
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            return "AI问答服务暂时不可用";
+        }
     }
 }

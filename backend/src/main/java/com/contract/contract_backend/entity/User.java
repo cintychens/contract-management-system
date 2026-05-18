@@ -1,7 +1,5 @@
 package com.contract.contract_backend.entity;
 
-import com.contract.contract_backend.common.constant.RoleCode;
-import com.contract.contract_backend.common.constant.UserStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;

@@ -495,10 +495,6 @@
                 <span id="globalAlertBadge" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); background:#dc3545; color:white; border-radius:12px; padding:2px 8px; font-size:12px; display:none;">0</span>
             </div>
             <div class="nav-divider"></div>
-            <div class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span>系统设置</span>
-            </div>
             <div class="nav-item" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>退出登录</span>
@@ -709,7 +705,7 @@
         );
     })
     .forEach(c => {
-        const id = String(c.id);
+        const id = String(c.id || c.contractId);
 
         contractMap[id] = {
             contractId: c.id || c.contractId,
@@ -746,20 +742,24 @@
 });
 
 // ✅ 3. 最终列表
-contractList = Object.values(contractMap).filter(c => c.total > 0);
+contractList = Object.values(contractMap);
 
 
         // =========================
 // ⭐ 4. 统计（统一标准）
 // =========================
 
-// 高风险（逾期）
+// 高风险（统计逾期节点数量）
 document.getElementById('criticalCount').innerText =
-    contractList.filter(c => c.critical > 0).length;
+    contractList.reduce((sum, c) => {
+        return sum + (c.critical || 0);
+    }, 0);
 
-// 即将到期
+// 即将到期（统计预警节点数量）
 document.getElementById('warningCount').innerText =
-    contractList.filter(c => c.warning > 0 && c.critical === 0).length;
+    contractList.reduce((sum, c) => {
+        return sum + (c.warning || 0);
+    }, 0);
 
 // 进行中（用合同数据）
 document.getElementById('processingCount').innerText =

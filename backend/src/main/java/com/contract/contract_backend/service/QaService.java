@@ -1,4 +1,9 @@
 package com.contract.contract_backend.service;
 
-public class QaService {
+import com.contract.contract_backend.dto.QaRequest;
+import com.contract.contract_backend.dto.QaResponse;
+
+public interface QaService {
+
+    QaResponse ask(QaRequest request);
 }

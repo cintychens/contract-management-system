@@ -1,4 +1,4 @@
-package com.contract.contract_backend.service.impl;
+package com.contract.contract_backend.service;
 
 import com.contract.contract_backend.common.utils.ContractNoGenerator;
 import com.contract.contract_backend.common.utils.FileTypeUtil;
@@ -20,8 +20,8 @@ import com.contract.contract_backend.service.ContractParseService;
 import com.contract.contract_backend.service.ContractService;
 import com.contract.contract_backend.service.FileStorageService;
 import com.contract.contract_backend.common.constant.ContractStatus;
-import com.contract.contract_backend.common.constant.RoleCode;
 import com.contract.contract_backend.entity.ContractFlowRecord;
+import com.contract.contract_backend.entity.RoleCode;
 import com.contract.contract_backend.repository.ContractFlowRecordRepository;
 import com.contract.contract_backend.service.ContractMilestoneService;
 

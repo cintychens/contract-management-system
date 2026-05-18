@@ -519,6 +519,325 @@
             }
         }
 
+        .ai-chat-widget {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            width: 400px;
+            height: 600px;
+            background: #ffffff;
+            border: 1px solid #d9e7f5;
+            border-radius: 20px;
+            box-shadow: 0 16px 45px rgba(20, 76, 120, 0.22);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 9999;
+        }
+
+        .ai-chat-widget.open {
+            display: flex;
+        }
+
+        .ai-chat-header {
+            background: linear-gradient(135deg, #2d6da0, #1a4b75);
+            color: #ffffff;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ai-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-chat-header .close-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .ai-chat-messages {
+            flex: 1;
+            padding: 18px;
+            overflow-y: auto;
+            background: #f8fbff;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-message {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .ai-message.user {
+            justify-content: flex-end;
+        }
+
+        .ai-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ai-avatar.assistant {
+            color: #ffffff;
+            background: #2d6da0;
+        }
+
+        .ai-avatar.user {
+            color: #2d6da0;
+            background: #e3f0ff;
+        }
+
+        .ai-message-bubble {
+            max-width: 76%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            line-height: 1.6;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .ai-message.assistant .ai-message-bubble {
+            color: #173f63;
+            background: #e8f1fb;
+            border-bottom-left-radius: 4px;
+        }
+
+        .ai-message.user .ai-message-bubble {
+            color: #ffffff;
+            background: #2d6da0;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-chat-suggestions {
+            padding: 12px 16px 0;
+            background: #ffffff;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .ai-chat-suggestions button {
+            border: 1px solid #cfe1f2;
+            border-radius: 10px;
+            background: #f7fbff;
+            color: #1a4b75;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .ai-chat-input-area {
+            padding: 14px 16px 16px;
+            background: #ffffff;
+            border-top: 1px solid #edf3f8;
+            display: flex;
+            gap: 8px;
+        }
+
+        .ai-chat-input {
+            flex: 1;
+            border: 1px solid #cfe1f2;
+            border-radius: 12px;
+            padding: 10px 12px;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            max-height: 84px;
+        }
+
+        .ai-chat-input:focus {
+            outline: none;
+            border-color: #2d6da0;
+            box-shadow: 0 0 0 3px rgba(45, 109, 160, 0.12);
+        }
+
+        .ai-send-btn,
+        .ai-chat-toggle {
+            border: none;
+            background: linear-gradient(135deg, #2d6da0, #1a4b75);
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            font-size: 17px;
+        }
+
+        .ai-send-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .ai-chat-toggle {
+    position: fixed;
+    left: calc(100vw - 120px);
+    top: calc(100vh - 140px);
+    width: 92px;
+    height: 92px;
+    border: none;
+    border-radius: 50%;
+
+    background:
+        radial-gradient(circle at 30% 30%, #7dd3fc, #2563eb 60%, #1e3a8a);
+
+    color: white;
+    font-size: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+    z-index: 9998;
+
+    box-shadow:
+        0 0 18px rgba(59,130,246,0.55),
+        0 0 38px rgba(59,130,246,0.4),
+        0 14px 36px rgba(30,58,138,0.38);
+
+    transition: all 0.3s ease;
+
+    animation: aiFloat 3s ease-in-out infinite;
+    overflow: hidden;
+}
+
+/* 外圈 */
+.ai-chat-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 2px solid rgba(125,211,252,0.45);
+
+    animation: aiPulse 2.5s infinite;
+}
+
+/* 扫描光 */
+.ai-chat-toggle::after {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 40%;
+    background: rgba(255,255,255,0.22);
+
+    transform: rotate(-25deg);
+    top: -20%;
+    left: -130%;
+
+    animation: aiScan 3s linear infinite;
+}
+
+.ai-chat-toggle:hover {
+    transform: scale(1.1);
+}
+
+.ai-chat-toggle i {
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 0 12px rgba(255,255,255,0.65);
+}
+
+@keyframes aiFloat {
+    0%,100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-7px);
+    }
+}
+
+@keyframes aiPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.75;
+    }
+    100% {
+        transform: scale(1.28);
+        opacity: 0;
+    }
+}
+
+@keyframes aiScan {
+    0% {
+        left: -130%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
+        .ai-chat-toggle.hidden {
+            display: none;
+        }
+
+        .ai-chat-toggle {
+    cursor: grab;
+}
+
+.ai-chat-toggle:active {
+    cursor: grabbing;
+}
+
+        .ai-loading {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .ai-loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2d6da0;
+            animation: aiBounce 1.2s infinite ease-in-out;
+        }
+
+        .ai-loading-dot:nth-child(2) {
+            animation-delay: 0.16s;
+        }
+
+        .ai-loading-dot:nth-child(3) {
+            animation-delay: 0.32s;
+        }
+
+        @keyframes aiBounce {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                opacity: 0.45;
+            }
+            40% {
+                transform: translateY(-7px);
+                opacity: 1;
+            }
+        }
+
 
         @media (max-width: 768px) {
             .main-content {
@@ -537,6 +856,18 @@
 
             .search-box input {
                 width: 160px;
+            }
+
+            .ai-chat-widget {
+                right: 12px;
+                bottom: 12px;
+                width: calc(100vw - 24px);
+                height: min(620px, calc(100vh - 24px));
+            }
+
+            .ai-chat-toggle {
+                right: 18px;
+                bottom: 18px;
             }
         }
     </style>
@@ -770,6 +1101,38 @@
     </div>
 </div>
 
+<button class="ai-chat-toggle" id="aiChatToggle" title="打开AI助手">
+    <i class="fas fa-robot"></i>
+</button>
+
+<div class="ai-chat-widget" id="aiChatWidget">
+    <div class="ai-chat-header">
+        <h3>
+            <i class="fas fa-robot"></i>
+            合同智能助手
+        </h3>
+        <button class="close-btn" onclick="closeAiChat()" aria-label="关闭">&times;</button>
+    </div>
+    <div class="ai-chat-messages" id="aiChatMessages">
+        <div class="ai-message assistant">
+            <div class="ai-avatar assistant"><i class="fas fa-robot"></i></div>
+            <div class="ai-message-bubble">你好，我可以读取当前系统里的所有合同信息。你可以问我合同数量、审批状态、履约节点、风险提示或某份合同的具体内容。</div>
+        </div>
+    </div>
+    <div class="ai-chat-suggestions">
+        <button type="button" onclick="useAiQuestion('帮我总结所有合同')">总结所有合同</button>
+        <button type="button" onclick="useAiQuestion('哪些合同需要我关注')">需要关注</button>
+        <button type="button" onclick="useAiQuestion('有哪些履约风险')">履约风险</button>
+        <button type="button" onclick="useAiQuestion('哪些合同还在审批中')">审批进度</button>
+    </div>
+    <div class="ai-chat-input-area">
+        <textarea class="ai-chat-input" id="aiChatInput" placeholder="请输入你想了解的合同问题..." rows="1"></textarea>
+        <button class="ai-send-btn" onclick="sendAiMessage()" id="aiSendBtn" title="发送">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
 <script>
     const state = {
         page: 1,
@@ -797,7 +1160,7 @@
 
     function replaceVars(template, data) {
         return template.replace(/\$\{(\w+)}/g, (_, key) => {
-            return data[key] || `【${key}】`;  // ⭐ 不再变空
+            return data[key] || '[' + key + ']';
         });
     }
 
@@ -826,12 +1189,15 @@
 
     function getStatusText(status) {
         const map = {
-            DRAFT: '草稿',
-            ACTIVE: '进行中',
-            COMPLETED: '已完成',
-            EXPIRED: '已到期',
-            TERMINATED: '已终止',
-            UPLOADED: '已上传'
+            DRAFT: '\u8349\u7a3f',
+            ACTIVE: '\u8fdb\u884c\u4e2d',
+            COMPLETED: '\u5df2\u5b8c\u6210',
+            EXPIRED: '\u5df2\u5230\u671f',
+            TERMINATED: '\u5df2\u7ec8\u6b62',
+            UPLOADED: '\u5df2\u4e0a\u4f20',
+            PENDING_LEGAL: '\u5f85\u6cd5\u52a1\u5ba1\u6838',
+            PENDING_FINANCE: '\u5f85\u8d22\u52a1\u5ba1\u6838',
+            PENDING_APPROVAL: '\u5f85\u5ba1\u6279'
         };
         return map[status] || status || '-';
     }
@@ -853,105 +1219,73 @@
     }
 
     function getContractTypeText(type) {
-    const map = {
-        transport: '运输合同',
-        warehouse: '仓储合同',
-        supply: '供应链协议',
-        distribution: '配送服务合同',
-        outsourcing: '物流外包合同'
-    };
-    return map[type] || type || '-';
-}
+        const map = {
+            transport: '\u8fd0\u8f93\u5408\u540c',
+            warehouse: '\u4ed3\u50a8\u5408\u540c',
+            supply: '\u4f9b\u5e94\u94fe\u534f\u8bae',
+            distribution: '\u914d\u9001\u670d\u52a1\u5408\u540c',
+            outsourcing: '\u7269\u6d41\u5916\u5305\u5408\u540c'
+        };
+        return map[type] || type || '-';
+    }
 
     function getVariableLabel(key) {
     return key; // 不再强行翻译
 }
 
     function extractFieldLabels(template) {
-    const map = {};
-
-    // ⭐⭐⭐ 更宽松版本（核心改动）
-    const regex = /(?:\d+\.\s*)?([^:\n：]{2,})[：:]\s*\$\{(\w+)\}/g;
-
-    let match;
-    while ((match = regex.exec(template)) !== null) {
-        let label = match[1].trim();
-        const key = match[2].trim();
-
-        map[key] = label;
+        const map = {};
+        const regex = /(?:^|\n)\s*(?:\d+\.\s*)?([^:\uff1a\n]{2,})[:\uff1a]\s*\$\{(\w+)\}/g;
+        let match;
+        while ((match = regex.exec(template || '')) !== null) {
+            map[match[2].trim()] = match[1].trim();
+        }
+        return map;
     }
-
-    return map;
-}
 
     function smartTranslate(key) {
+        const fullDict = {
+            party_a: '\u7532\u65b9',
+            party_b: '\u4e59\u65b9',
+            goods_name: '\u8d27\u7269\u540d\u79f0',
+            sign_date: '\u7b7e\u7ea6\u65e5\u671f',
+            amount_upper: '\u91d1\u989d\uff08\u5927\u5199\uff09'
+        };
 
-    // ⭐⭐⭐ 1. 精确匹配（最高优先级）
-    const fullDict = {
-        "party_a": "甲方",
-        "party_b": "乙方",
-        "goods_name": "货物名称",
-        "sign_日期": "签署日期",
-        "金额_upper": "金额（大写）"
-    };
+        if (fullDict[key]) {
+            return fullDict[key];
+        }
 
-    if (fullDict[key]) {
-        return fullDict[key];
+        let result = key.replace(/_/g, ' ');
+        result = result.replace(/([A-Z])/g, ' $1').toLowerCase();
+
+        const dict = {
+            party: '\u65b9',
+            goods: '\u8d27\u7269',
+            name: '\u540d\u79f0',
+            quantity: '\u6570\u91cf',
+            cargo: '\u8d27\u7269',
+            weight: '\u91cd\u91cf',
+            package: '\u5305\u88c5',
+            type: '\u7c7b\u578b',
+            transport: '\u8fd0\u8f93',
+            mode: '\u65b9\u5f0f',
+            delivery: '\u53d1\u8d27',
+            arrival: '\u5230\u8fbe',
+            amount: '\u91d1\u989d',
+            upper: '\u5927\u5199',
+            date: '\u65e5\u671f',
+            sign: '\u7b7e\u7ea6',
+            origin: '\u8d77\u8fd0\u5730',
+            destination: '\u76ee\u7684\u5730'
+        };
+
+        Object.keys(dict).forEach(k => {
+            result = result.replace(new RegExp(k, 'g'), dict[k]);
+        });
+
+        return result.trim();
     }
-
-    // ⭐ 2. 统一格式
-    let result = key.replace(/_/g, ' ');
-    result = result.replace(/([A-Z])/g, ' $1');
-    result = result.toLowerCase();
-
-    // ⭐ 3. 单词翻译
-    const dict = {
-        // 基础
-        party: '方',
-        goods: '货物',
-        name: '名称',
-        quantity: '数量',
-
-        // 物流
-        cargo: '货物',
-        weight: '重量',
-        package: '包装',
-        type: '类型',
-        transport: '运输',
-        mode: '方式',
-
-        // 时间/金额
-        delivery: '发货',
-        arrival: '到达',
-        amount: '金额',
-        upper: '大写',
-        date: '日期',
-        sign: '签署',
-
-        // 地点
-        origin: '起运地',
-        destination: '目的地'
-    };
-
-    Object.keys(dict).forEach(k => {
-        result = result.replace(new RegExp(k, 'g'), dict[k]);
-    });
-
-    // ⭐⭐⭐ 4. 组合优化（必须放这里）
-    result = result
-        .replace('方 a', '甲方')
-        .replace('方 b', '乙方')
-        .replace('发货 日期', '发货日期')
-        .replace('到达 日期', '到达日期')
-        .replace('签署 日期', '签署日期')
-        .replace('金额 大写', '金额')
-        .replace('金额 upper', '金额')
-        .replace('货物 重量', '货物重量')
-        .replace('包装 类型', '包装类型')
-        .replace('运输 方式', '运输方式');
-
-    return result.trim();
-}
 
     function loadUserInfo() {
         try {
@@ -970,18 +1304,16 @@
                 LEGAL: '法务',
                 FINANCE: '财务',
                 APPROVER: '审批人',
-               USER: '普通用户'
+                USER: '普通用户'
             };
             const role = (userInfo.roleCode || userInfo.role || '').toUpperCase();
 
-            document.getElementById('userRole').textContent =
-                roleMap[role] || '普通用户';
+            document.getElementById('userRole').textContent = roleMap[role] || '用户';
         } catch (e) {
             console.error(e);
             window.location.href = '/auth/login.html';
         }
     }
-
     async function loadContracts() {
         const tbody = document.getElementById('contractTableBody');
         const emptyHint = document.getElementById('contractEmptyHint');
@@ -1014,7 +1346,10 @@
             const totalPages = data.totalPages ?? Math.ceil(total / size);
             state.totalPages = totalPages || 1;
 
-            pageInfo.textContent = `第 ${page} / ${totalPages || 1} 页 · 共 ${total} 条`;
+            pageInfo.textContent =
+            '第 ' + page +
+    ' 页 / 共 ' + (totalPages || 1) +
+    ' 页 · 总计 ' + total + ' 条';
             prevBtn.disabled = page <= 1;
             nextBtn.disabled = totalPages ? page >= totalPages : records.length < size;
 
@@ -1093,7 +1428,7 @@ function hideLoading() {
             <option value="">请选择模板</option>
             ${list.map(t => `
                 <option value="${t.templateId}" data-contract-type="${escapeHtml(t.contractType || '')}">
-                    ${escapeHtml(t.name)}${t.contractType ? `（${escapeHtml(t.contractType)}）` : ''}
+                    ${escapeHtml(t.name)}${t.contractType ? ' (' + escapeHtml(t.contractType) + ')' : ''}
                 </option>
             `).join('')}
         `;
@@ -1106,7 +1441,7 @@ function hideLoading() {
         };
     } catch (e) {
         console.error(e);
-        alert('加载模板失败：' + (e.message || e));
+        alert('Load templates failed: ' + (e.message || e));
     }
 }
 
@@ -1181,7 +1516,7 @@ function hideLoading() {
             const title = document.getElementById('generateContractTitle').value.trim();
 
             if (!templateId) return alert('请选择模板');
-            if (!title) return alert('请输入合同标题');
+            if (!title) return alert('Please enter contract title');
 
             const payload = { templateId: Number(templateId), title };
 
@@ -1224,7 +1559,7 @@ document.getElementById('generatePreview').innerText = finalText;
 
             alert('生成成功');
         } catch (e) {
-            alert('生成失败：' + e.message);
+        alert('Generate failed: ' + e.message);
         }
     }
 
@@ -1339,7 +1674,7 @@ document.getElementById('generatePreview').innerText = finalText;
 
     } catch (e) {
         console.error(e);
-        alert("AI生成失败：" + e.message);
+        alert('AI generate failed: ' + e.message);
     } finally {
         hideLoading();
     }
@@ -1353,7 +1688,7 @@ document.getElementById('generatePreview').innerText = finalText;
 
     // 替换 input 为值
     clone.querySelectorAll("input.contract-input").forEach(input => {
-        const value = input.value.trim() || "【未填写】";
+        const value = input.value.trim() || '[not filled]';
         input.replaceWith(document.createTextNode(value));
     });
 
@@ -1366,57 +1701,146 @@ document.getElementById('generatePreview').innerText = finalText;
 }
 
     function renderEditableContract(text) {
-
-    if (!text) return "";
-
-    // ⭐ 1. 统一换行
-    text = text.replace(/\r\n/g, "\n");
-
-    // ⭐ 2. 修复“合同名称 + 合同类型”粘在一行
-    text = text.replace(/^(.+?)(物流运输合同|仓储服务合同|运输合同)/, "$1\n$2");
-
-    // ⭐ 3. 标题后换行
-    text = text.replace(/(合同)/, "$1\n");
-
-    // ⭐ 4. 甲乙方换行
-    text = text
-        .replace(/(甲方.*?)(乙方)/, "$1\n$2")
-        .replace(/(乙方.*?)(根据)/, "$1\n$2");
-
-    // ⭐ 5. 条款结构换行
-    text = text
-        .replace(/([一二三四五六七八九十]+、)/g, "\n$1")
-        .replace(/(\d+\.)/g, "\n$1");
-
-    // ⭐⭐ 工具函数：snake_case → camelCase
-    function toCamel(str) {
-        return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+        if (!text) return '';
+        return escapeHtml(text)
+            .replace(/\$\{(.*?)\}/g, (_, key) => {
+                const safeKey = escapeHtml(key);
+                return `<input class="contract-input" data-key="${safeKey}" placeholder="${safeKey}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+            })
+            .replace(/\{\{(.*?)\}\}/g, (_, key) => {
+                const safeKey = escapeHtml(key);
+                return `<input class="contract-input" data-key="${safeKey}" placeholder="${safeKey}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+            })
+            .replace(/\n/g, '<br>');
     }
 
-    // ⭐ 6. 先处理变量（避免 <br> 破坏 input）
-    // ${xxx}
-    text = text.replace(/\$\{(.*?)\}/g, (match, key) => {
-        return `<input class="contract-input" data-key="${key}" placeholder="${key}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+    // ===== 合同管理页 AI 聊天机器人 =====
+    function openAiChat() {
+        document.getElementById('aiChatWidget')?.classList.add('open');
+        document.getElementById('aiChatToggle')?.classList.add('hidden');
+        document.getElementById('aiChatInput')?.focus();
+    }
+
+    function closeAiChat() {
+        document.getElementById('aiChatWidget')?.classList.remove('open');
+        document.getElementById('aiChatToggle')?.classList.remove('hidden');
+    }
+
+    function useAiQuestion(question) {
+        const input = document.getElementById('aiChatInput');
+        if (!input) return;
+        openAiChat();
+        input.value = question;
+        input.focus();
+    }
+
+    async function sendAiMessage() {
+        const input = document.getElementById('aiChatInput');
+        const sendBtn = document.getElementById('aiSendBtn');
+        const message = input?.value.trim();
+        if (!message) return;
+
+        addAiMessage('user', escapeHtml(message));
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        const loadingMsg = addAiMessage(
+            'assistant',
+            '<div class="ai-loading"><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div></div>'
+        );
+
+        try {
+            // 获取当前页面的合同信息作为上下文
+            const tbody = document.getElementById('contractTableBody');
+            let contractsContext = '当前系统合同情况：';
+            if (tbody && tbody.children.length > 0) {
+                const rows = Array.from(tbody.querySelectorAll('tr')).slice(0, 5);
+                const contracts = rows.map(row => {
+                    const cells = row.querySelectorAll('td');
+                    return {
+                        id: cells[0]?.textContent.trim(),
+                        no: cells[1]?.textContent.trim(),
+                        title: cells[2]?.textContent.trim(),
+                        type: cells[3]?.textContent.trim(),
+                        status: cells[4]?.textContent.trim(),
+                        createdAt: cells[5]?.textContent.trim()
+                    };
+                }).filter(c => c.id);
+                contractsContext += contracts.map(c => `合同"${c.title}"(编号:${c.no},类型:${c.type},状态:${c.status})`).join('；');
+            }
+
+            const response = await authFetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: contractsContext + '\n用户问题：' + message,
+                    templateType: 'qa',
+                    question: message
+                })
+            });
+            const result = await response.json();
+            loadingMsg.remove();
+
+            if (result.success) {
+                addAiMessage('assistant', formatAiResponse(result.data?.contract || 'No answer was generated.'));
+            } else {
+                addAiMessage('assistant', 'Sorry, ' + (result.message || 'I cannot answer right now.'));
+            }
+        } catch (error) {
+            loadingMsg.remove();
+            console.error('AI request failed:', error);
+            addAiMessage('assistant', 'Network error. Please check whether the backend service is running.');
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    function addAiMessage(role, content) {
+        const messagesContainer = document.getElementById('aiChatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `ai-message ${role}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = `ai-avatar ${role}`;
+        avatar.innerHTML = role === 'user'
+            ? '<i class="fas fa-user"></i>'
+            : '<i class="fas fa-robot"></i>';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-message-bubble';
+        bubble.innerHTML = content;
+
+        if (role === 'user') {
+            messageDiv.appendChild(bubble);
+            messageDiv.appendChild(avatar);
+        } else {
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubble);
+        }
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return messageDiv;
+    }
+
+    function formatAiResponse(text) {
+        return escapeHtml(text || '')
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    document.getElementById('aiChatToggle')?.addEventListener('click', openAiChat);
+    document.getElementById('aiChatInput')?.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAiMessage();
+        }
     });
-
-    // ⭐ 新增：{{xxx}} 支持
-    text = text.replace(/\{\{(.*?)\}\}/g, (match, key) => {
-
-        const camelKey = toCamel(key); // contact_person → contactPerson
-
-        return `<input class="contract-input" data-key="${camelKey}" placeholder="${camelKey}" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
+    document.getElementById('aiChatInput')?.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 84) + 'px';
     });
-
-    // ⭐ 7. 【待确认】 → 输入框
-    text = text.replace(/【待确认】/g, () => {
-        return `<input class="contract-input" placeholder="请填写" style="border:1px solid #f97316;border-radius:4px;padding:2px 6px;width:120px;background:#fff7ed;" />`;
-    });
-
-    // ⭐ 8. 最后再换行（必须最后做）
-    text = text.replace(/\n/g, "<br>");
-
-    return text;
-}
 
     /* ===== 页面初始化 ===== */
     document.addEventListener('DOMContentLoaded', function () {
@@ -1473,7 +1897,7 @@ document.getElementById('generatePreview').innerText = finalText;
             if (typeof openGenerateContractModal === 'function') {
                 openGenerateContractModal();
             } else {
-                console.error('openSmartModal 未定义');
+                console.error('openGenerateContractModal is not defined');
             }
         }, 300);
     }
@@ -1504,7 +1928,7 @@ async function saveGeneratedContract() {
         const contractType = selectedOption?.dataset.contractType || '';
 
         if (!templateId) return alert('请选择模板');
-        if (!title) return alert('请输入标题');
+            if (!title) return alert('Please enter contract title');
         if (!content) return alert('请先生成草稿');
         if (!contractType) return alert('未获取到合同类型');
 
@@ -1539,9 +1963,109 @@ async function saveGeneratedContract() {
 
     } catch (e) {
         console.error(e);
-        alert('保存失败：' + (e.message || e));
+        alert('Load templates failed: ' + (e.message || e));
     }
 }
+
+    // ===== AI机器人拖拽 =====
+
+(function () {
+
+    const toggleBtn = document.getElementById('aiChatToggle');
+    const chatWidget = document.getElementById('aiChatWidget');
+
+    let isDragging = false;
+
+    let startX = 0;
+    let startY = 0;
+
+    let initialX = 0;
+    let initialY = 0;
+
+    function startDrag(e) {
+
+        isDragging = true;
+
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+
+        startX = clientX;
+        startY = clientY;
+
+        const rect = toggleBtn.getBoundingClientRect();
+
+        initialX = rect.left;
+        initialY = rect.top;
+
+        toggleBtn.style.transition = 'none';
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', stopDrag);
+    }
+
+    function drag(e) {
+
+        if (!isDragging) return;
+
+        e.preventDefault();
+
+        const clientX = e.clientX || e.touches?.[0]?.clientX;
+        const clientY = e.clientY || e.touches?.[0]?.clientY;
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        let left = initialX + dx;
+        let top = initialY + dy;
+
+        // 边界限制
+        const maxLeft = window.innerWidth - toggleBtn.offsetWidth;
+        const maxTop = window.innerHeight - toggleBtn.offsetHeight;
+
+        left = Math.max(0, Math.min(left, maxLeft));
+        top = Math.max(0, Math.min(top, maxTop));
+
+        // 更新机器人位置
+        toggleBtn.style.left = left + 'px';
+        toggleBtn.style.top = top + 'px';
+
+        toggleBtn.style.right = 'auto';
+        toggleBtn.style.bottom = 'auto';
+
+        // AI聊天窗口跟随
+        if (chatWidget.classList.contains('open')) {
+
+            chatWidget.style.left =
+                (left - 320) + 'px';
+
+            chatWidget.style.top =
+                Math.max(10, top - 500) + 'px';
+
+            chatWidget.style.right = 'auto';
+            chatWidget.style.bottom = 'auto';
+        }
+    }
+
+    function stopDrag() {
+
+        isDragging = false;
+
+        toggleBtn.style.transition = 'all 0.3s ease';
+
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('mouseup', stopDrag);
+
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('touchend', stopDrag);
+    }
+
+    toggleBtn.addEventListener('mousedown', startDrag);
+    toggleBtn.addEventListener('touchstart', startDrag);
+
+})();
 
 </script>
 

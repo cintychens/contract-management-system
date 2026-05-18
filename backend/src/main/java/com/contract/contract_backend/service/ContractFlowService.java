@@ -1,10 +1,10 @@
 package com.contract.contract_backend.service;
 
 import com.contract.contract_backend.common.constant.ContractStatus;
-import com.contract.contract_backend.common.constant.FlowActionType;
-import com.contract.contract_backend.common.constant.RoleCode;
 import com.contract.contract_backend.entity.Contract;
 import com.contract.contract_backend.entity.ContractFlowRecord;
+import com.contract.contract_backend.entity.FlowActionType;
+import com.contract.contract_backend.entity.RoleCode;
 import com.contract.contract_backend.entity.User;
 import com.contract.contract_backend.repository.ContractFlowRecordRepository;
 import com.contract.contract_backend.repository.ContractRepository;

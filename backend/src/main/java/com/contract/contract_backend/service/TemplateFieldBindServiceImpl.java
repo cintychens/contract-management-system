@@ -1,4 +1,4 @@
-package com.contract.contract_backend.service.impl;
+package com.contract.contract_backend.service;
 
 import com.contract.contract_backend.dto.AdminTemplateFieldBindDto;
 import com.contract.contract_backend.entity.SysDictItem;

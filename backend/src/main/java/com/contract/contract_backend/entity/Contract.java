@@ -1,7 +1,6 @@
 package com.contract.contract_backend.entity;
 
 import com.contract.contract_backend.common.constant.ContractStatus;
-import com.contract.contract_backend.common.constant.RoleCode;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
