@@ -18,8 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ContractAiContextService {
 
-    private static final int MAX_CONTEXT_CHARS = 24000;
-    private static final int MAX_CONTRACT_CONTENT_CHARS = 2500;
+    // 移除限制以支持无限制读取所有合同
+    private static final int MAX_CONTEXT_CHARS = Integer.MAX_VALUE;
+    private static final int MAX_CONTRACT_CONTENT_CHARS = Integer.MAX_VALUE;
 
     private final ContractRepository contractRepository;
     private final ContractFieldRepository contractFieldRepository;
@@ -40,13 +41,9 @@ public class ContractAiContextService {
 
         for (Contract contract : contracts) {
             appendContract(sb, contract);
-            if (sb.length() >= MAX_CONTEXT_CHARS) {
-                sb.append("\nMore contracts exist, but the context was truncated because it is too long.");
-                break;
-            }
         }
 
-        return limit(sb.toString(), MAX_CONTEXT_CHARS);
+        return sb.toString();
     }
 
     private void appendContract(StringBuilder sb, Contract contract) {
@@ -82,7 +79,6 @@ public class ContractAiContextService {
         sb.append("Fields:\n");
         fields.stream()
                 .filter(field -> field.getFieldValue() != null && !field.getFieldValue().isBlank())
-                .limit(12)
                 .forEach(field -> sb.append("- ")
                         .append(value(field.getFieldName()))
                         .append(": ")
@@ -98,7 +94,7 @@ public class ContractAiContextService {
         }
 
         sb.append("Flow records:\n");
-        records.stream().limit(8).forEach(record -> sb.append("- ")
+        records.stream().forEach(record -> sb.append("- ")
                 .append(value(record.getActionType()))
                 .append(": ")
                 .append(value(record.getFromStatus()))
@@ -119,7 +115,7 @@ public class ContractAiContextService {
         }
 
         sb.append("Milestones:\n");
-        milestones.stream().limit(10).forEach(milestone -> sb.append("- ")
+        milestones.stream().forEach(milestone -> sb.append("- ")
                 .append(value(milestone.getName()))
                 .append(": ")
                 .append(value(milestone.getStatus()))

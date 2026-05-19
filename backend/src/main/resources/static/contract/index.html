@@ -1735,66 +1735,203 @@ document.getElementById('generatePreview').innerText = finalText;
     }
 
     async function sendAiMessage() {
-        const input = document.getElementById('aiChatInput');
-        const sendBtn = document.getElementById('aiSendBtn');
-        const message = input?.value.trim();
-        if (!message) return;
 
-        addAiMessage('user', escapeHtml(message));
-        input.value = '';
-        input.style.height = 'auto';
-        sendBtn.disabled = true;
+    const input =
+        document.getElementById('aiChatInput');
 
-        const loadingMsg = addAiMessage(
-            'assistant',
-            '<div class="ai-loading"><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div></div>'
+    const sendBtn =
+        document.getElementById('aiSendBtn');
+
+    const message =
+        input?.value.trim();
+
+    if (!message) return;
+
+    // 用户消息
+    addAiMessage(
+        'user',
+        escapeHtml(message)
+    );
+
+    input.value = '';
+    input.style.height = 'auto';
+
+    sendBtn.disabled = true;
+
+    // loading
+    const loadingMsg = addAiMessage(
+        'assistant',
+        `
+        <div class="ai-loading">
+            <div class="ai-loading-dot"></div>
+            <div class="ai-loading-dot"></div>
+            <div class="ai-loading-dot"></div>
+        </div>
+        `
+    );
+
+    try {
+
+        // =========================
+        // ⭐ 读取真实合同信息
+        // =========================
+
+        let contractsContext =
+            "当前系统合同信息：\n\n";
+
+        // 获取合同列表
+        const listResp =
+            await authFetch(
+                '/api/contracts?page=1&size=10'
+            );
+
+        if (!listResp.ok) {
+            throw new Error('获取合同列表失败');
+        }
+
+        const listResult =
+            await listResp.json();
+
+        const records =
+            listResult?.data?.records || [];
+
+        // 没有合同
+        if (!records.length) {
+
+            contractsContext +=
+                "当前系统暂无合同数据。\n";
+        }
+
+        // =========================
+        // ⭐ 读取每个合同详情
+        // =========================
+
+        for (const contract of records) {
+
+            try {
+
+                const detailResp =
+                    await authFetch(
+                        `/api/contracts/${contract.contractId}`
+                    );
+
+                if (!detailResp.ok) {
+                    continue;
+                }
+
+                const detailResult =
+                    await detailResp.json();
+
+                const detail =
+                    detailResult.data || {};
+
+                contractsContext += `
+合同ID：${detail.contractId || '-'}
+
+合同编号：${detail.contractNo || '-'}
+
+合同标题：${detail.title || '-'}
+
+合同类型：${detail.contractTypeName || detail.contractType || '-'}
+
+合同状态：${getStatusText(detail.status)}
+
+创建时间：${formatDateTime(detail.createdAt)}
+
+合同正文：
+${detail.contentText || detail.content || detail.draftContent || '无合同正文'}
+
+========================================
+
+`;
+
+            } catch (e) {
+
+                console.error(
+                    '读取合同详情失败',
+                    contract.contractId,
+                    e
+                );
+            }
+        }
+
+        // =========================
+        // ⭐ 调用 AI
+        // =========================
+
+        const response =
+            await authFetch(
+                '/api/ai/generate',
+                {
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+
+                    body: JSON.stringify({
+
+                        // ⭐ 真实合同上下文
+                        content: contractsContext,
+
+                        // QA模式
+                        templateType: 'qa',
+
+                        // 用户问题
+                        question: message
+                    })
+                }
+            );
+
+        const result =
+            await response.json();
+
+        loadingMsg.remove();
+
+        // =========================
+        // ⭐ AI回答
+        // =========================
+
+        if (result.success) {
+
+            const aiText =
+                result.data?.contract ||
+                result.data?.answer ||
+                '未生成回答';
+
+            addAiMessage(
+                'assistant',
+                formatAiResponse(aiText)
+            );
+
+        } else {
+
+            addAiMessage(
+                'assistant',
+                'AI回答失败：' +
+                (result.message || '未知错误')
+            );
+        }
+
+    } catch (error) {
+
+        loadingMsg.remove();
+
+        console.error(
+            'AI request failed:',
+            error
         );
 
-        try {
-            // 获取当前页面的合同信息作为上下文
-            const tbody = document.getElementById('contractTableBody');
-            let contractsContext = '当前系统合同情况：';
-            if (tbody && tbody.children.length > 0) {
-                const rows = Array.from(tbody.querySelectorAll('tr')).slice(0, 5);
-                const contracts = rows.map(row => {
-                    const cells = row.querySelectorAll('td');
-                    return {
-                        id: cells[0]?.textContent.trim(),
-                        no: cells[1]?.textContent.trim(),
-                        title: cells[2]?.textContent.trim(),
-                        type: cells[3]?.textContent.trim(),
-                        status: cells[4]?.textContent.trim(),
-                        createdAt: cells[5]?.textContent.trim()
-                    };
-                }).filter(c => c.id);
-                contractsContext += contracts.map(c => `合同"${c.title}"(编号:${c.no},类型:${c.type},状态:${c.status})`).join('；');
-            }
+        addAiMessage(
+            'assistant',
+            '网络异常或后端服务未启动'
+        );
 
-            const response = await authFetch('/api/ai/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: contractsContext + '\n用户问题：' + message,
-                    templateType: 'qa',
-                    question: message
-                })
-            });
-            const result = await response.json();
-            loadingMsg.remove();
+    } finally {
 
-            if (result.success) {
-                addAiMessage('assistant', formatAiResponse(result.data?.contract || 'No answer was generated.'));
-            } else {
-                addAiMessage('assistant', 'Sorry, ' + (result.message || 'I cannot answer right now.'));
-            }
-        } catch (error) {
-            loadingMsg.remove();
-            console.error('AI request failed:', error);
-            addAiMessage('assistant', 'Network error. Please check whether the backend service is running.');
-        } finally {
-            sendBtn.disabled = false;
-        }
+        sendBtn.disabled = false;
     }
+}
 
     function addAiMessage(role, content) {
         const messagesContainer = document.getElementById('aiChatMessages');
